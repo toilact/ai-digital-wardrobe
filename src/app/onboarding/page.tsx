@@ -30,7 +30,7 @@ export default function OnboardingPage() {
       if (!user) return;
       const profile = await getUserProfile(user.uid);
       if (profile) {
-        router.replace("/wardrobe/upload");
+        router.replace("/dashboard");
         return;
       }
       setChecking(false);
@@ -62,7 +62,7 @@ export default function OnboardingPage() {
         waistCm: waistCm === "" ? undefined : waistCm,
         hipCm: hipCm === "" ? undefined : hipCm,
       });
-      router.replace("/wardrobe/upload");
+      router.replace("/dashboard");
     } catch (e) {
       console.error(e);
       alert("Lưu thông tin thất bại.");

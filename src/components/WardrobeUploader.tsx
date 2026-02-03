@@ -1,9 +1,6 @@
 "use client";
 
 import { useAuth } from "@/lib/AuthContext";
-import { db, storage } from "@/lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -27,33 +24,37 @@ export default function WardrobeUploader() {
 
     setUploading(true);
     try {
-      // 1) Upload lên Storage theo UID
-      const ext = file.name.split(".").pop() || "jpg";
-      const filename = `${Date.now()}.${ext}`;
-      const storagePath = `wardrobe/${user.uid}/${filename}`;
-      const storageRef = ref(storage, storagePath);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+      formData.append("color", color);
 
-      await uploadBytes(storageRef, file);
-      const imageUrl = await getDownloadURL(storageRef);
+      // ✅ Lấy Firebase ID token để backend verify
+      const idToken = await user.getIdToken();
 
-      // 2) Lưu metadata vào Firestore
-      await addDoc(collection(db, "wardrobeItems"), {
-        uid: user.uid,
-        imageUrl,
-        storagePath,
-        category,
-        color,
-        createdAt: serverTimestamp(),
+      const res = await fetch("/api/wardrobe/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: formData,
       });
 
-      alert("Đã thêm vào tủ đồ ✅");
-      setFile(null);
+      const data = await res.json();
 
-      // Option: sau upload chuyển sang trang list tủ
+      if (!res.ok) {
+        alert(data?.message || "Upload thất bại.");
+        return;
+      }
+
+      console.log("UPLOAD RESULT:", data);
+      alert("Đã thêm vào tủ đồ ✅");
+
+      setFile(null);
       router.push("/wardrobe");
     } catch (e) {
       console.error(e);
-      alert("Upload thất bại. Kiểm tra Storage/Rules.");
+      alert("Upload thất bại (lỗi mạng hoặc API).");
     } finally {
       setUploading(false);
     }
