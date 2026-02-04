@@ -51,8 +51,8 @@ export default function Dashboard() {
     <main className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Xin chào {user.displayName}</h1>
-          <p className="text-gray-500">{user.email}</p>
+          <h1 className="text-2xl font-semibold">Xin chào {user.displayName || user.email?.split('@')[0]}</h1>
+          <p className="text-gray-500">@{user.email?.split('@')[0]}</p>
         </div>
 
         <LogoutButton />

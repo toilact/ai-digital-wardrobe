@@ -7,8 +7,10 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   AuthError,
+  onAuthStateChanged,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 function firebaseMsg(err: unknown) {
   const e = err as AuthError;
@@ -16,9 +18,9 @@ function firebaseMsg(err: unknown) {
 
   switch (code) {
     case "auth/email-already-in-use":
-      return "Email này đã được sử dụng. Hãy đăng nhập hoặc dùng email khác.";
+      return "Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.";
     case "auth/invalid-email":
-      return "Email không hợp lệ.";
+      return "Định dạng email nội bộ không hợp lệ.";
     case "auth/weak-password":
       return "Mật khẩu quá yếu. Firebase yêu cầu ít nhất 6 ký tự.";
     case "auth/operation-not-allowed":
@@ -33,24 +35,27 @@ function firebaseMsg(err: unknown) {
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onRegister = async () => {
     // Validate trước cho chắc
-    if (!email.trim() || !pass) return alert("Nhập email và mật khẩu.");
+    const uname = username.trim().toLowerCase();
+    if (!uname || !pass) return alert("Nhập tên đăng nhập và mật khẩu.");
+    if (!/^[a-z0-9_\-]{3,32}$/.test(uname))
+      return alert("Tên đăng nhập chỉ gồm chữ, số, gạch dưới hoặc gạch ngang (3-32 ký tự).");
     if (pass.length < 6) return alert("Mật khẩu phải từ 6 ký tự trở lên.");
     if (pass !== confirm) return alert("Mật khẩu nhập lại không khớp.");
 
     setLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        pass
-      );
+
+      // Tạo email giả để Firebase dùng làm identifier
+      const fakeEmail = `${uname}@adw.local`;
+
+      const cred = await createUserWithEmailAndPassword(auth, fakeEmail, pass);
 
       // set displayName nếu có
       const displayName = name.trim();
@@ -69,27 +74,28 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-sm border rounded-xl p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">Đăng ký</h1>
+    <main className="min-h-screen flex items-center justify-center p-6 bg-[#FFFDD0]">
+      <div className="w-full max-w-sm shadow-2xl rounded-xl p-6 space-y-4 bg-white">
+        <h1 className="text-3xl font-semibold text-center mb-5">AI Digital Wardrobe</h1>
+        <h1 className="text-2xl font-semibold text-center">Đăng ký</h1>
 
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full border border-gray-300 rounded px-3 py-2"
           placeholder="Tên hiển thị (tuỳ chọn)"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <input
-          className="w-full border rounded px-3 py-2"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
+          className="w-full border border-gray-300 rounded px-3 py-2"
+          placeholder="Tên đăng nhập"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
         />
 
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full border border-gray-300 rounded px-3 py-2"
           placeholder="Mật khẩu (>= 6 ký tự)"
           type="password"
           value={pass}
@@ -98,7 +104,7 @@ export default function RegisterPage() {
         />
 
         <input
-          className="w-full border rounded px-3 py-2"
+          className="w-full border border-gray-300 rounded px-3 py-2"
           placeholder="Nhập lại mật khẩu"
           type="password"
           value={confirm}
@@ -109,14 +115,14 @@ export default function RegisterPage() {
         <button
           onClick={onRegister}
           disabled={loading}
-          className="w-full bg-black text-white rounded py-2 disabled:opacity-50"
+          className="w-full bg-[#00a400] text-white rounded py-2 disabled:opacity-50"
         >
           {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
         </button>
 
         <p className="text-sm text-gray-600">
           Đã có tài khoản?{" "}
-          <Link className="underline" href="/auth/login">
+          <Link className="underline" href="/">
             Đăng nhập
           </Link>
         </p>

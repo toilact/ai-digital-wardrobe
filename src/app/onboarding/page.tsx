@@ -58,9 +58,9 @@ export default function OnboardingPage() {
         age,
         heightCm,
         weightKg,
-        bustCm: bustCm === "" ? undefined : bustCm,
-        waistCm: waistCm === "" ? undefined : waistCm,
-        hipCm: hipCm === "" ? undefined : hipCm,
+        bustCm: bustCm === "" ? 0 : bustCm,
+        waistCm: waistCm === "" ? 0 : waistCm,
+        hipCm: hipCm === "" ? 0 : hipCm,
       });
       router.replace("/dashboard");
     } catch (e) {
@@ -75,13 +75,12 @@ export default function OnboardingPage() {
   if (!user) return null;
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md border rounded-xl p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">Cá nhân hoá lần đầu</h1>
+    <main className="min-h-screen bg-[#FFFDD0] flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white shadow-2xl rounded-xl p-6 space-y-4">
+        <h1 className="text-2xl font-semibold">Thông tin cá nhân</h1>
         <p className="text-sm text-gray-600">
           Nhập thông tin để AI gợi ý size/phối đồ chính xác hơn.
         </p>
-
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm">
             Tuổi
