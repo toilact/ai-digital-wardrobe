@@ -29,18 +29,6 @@ function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
   });
 }
 
-// Mock kết quả tách đồ theo hướng F (Parsing + phụ kiện)
-// Sau này bạn thay block này bằng gọi Python AI service thật.
-function mockAnalyzeF() {
-  return [
-    { category: "outerwear", label: "blazer", confidence: 0.91 },
-    { category: "top", label: "shirt", confidence: 0.86 },
-    { category: "bottom", label: "pants", confidence: 0.89 },
-    { category: "shoes", label: "shoes", confidence: 0.81 },
-    { category: "accessories", label: "watch", confidence: 0.74 },
-  ];
-}
-
 export async function POST(req: Request) {
   try {
     // Check env Cloudinary
@@ -49,10 +37,6 @@ export async function POST(req: Request) {
     }
 
     const admin = getAdmin();
-
-    // mode=analyze | store (default)
-    const url = new URL(req.url);
-    const mode = url.searchParams.get("mode") || "store";
 
     // 1) Verify user
     const token = getBearerToken(req);
@@ -64,8 +48,6 @@ export async function POST(req: Request) {
     // 2) Read form data
     const form = await req.formData();
     const file = form.get("file") as File | null;
-
-    // category/color vẫn nhận, nhưng mode=analyze thì chưa cần
     const category = (form.get("category") as string) || "Không rõ";
     const color = (form.get("color") as string) || "Không rõ";
 
@@ -77,30 +59,14 @@ export async function POST(req: Request) {
     const MAX = 5 * 1024 * 1024;
     if (file.size > MAX) return NextResponse.json({ ok: false, message: "File too large (max 5MB)" }, { status: 400 });
 
-    // 3) Upload to Cloudinary (để lấy URL cho AI/console)
+    // 3) Upload to Cloudinary
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const folder = `wardrobe/${uid}`;
     const { secure_url, public_id } = await uploadBufferToCloudinary(buffer, folder);
 
-    // ✅ MODE ANALYZE: không lưu DB, chỉ trả kết quả tách đồ
-    if (mode === "analyze") {
-      const items = mockAnalyzeF();
-
-      return NextResponse.json({
-        ok: true,
-        mode,
-        original: {
-          imageUrl: secure_url,
-          cloudinaryPublicId: public_id,
-        },
-        items,
-        debug: { filename: file.name, size: file.size, type: file.type },
-      });
-    }
-
-    // ✅ MODE STORE (giữ như cũ): lưu 1 item vào Firestore
+    // 4) Save metadata to Firestore
     const docRef = await admin.firestore().collection("wardrobeItems").add({
       uid,
       imageUrl: secure_url,
@@ -112,7 +78,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      mode,
       itemId: docRef.id,
       imageUrl: secure_url,
       cloudinaryPublicId: public_id,
