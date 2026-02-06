@@ -8,7 +8,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body>
+      <body className="bg-[#FFFDD0]">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

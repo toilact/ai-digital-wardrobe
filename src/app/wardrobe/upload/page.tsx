@@ -3,10 +3,12 @@
 import WardrobeUploader from "@/components/WardrobeUploader";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function WardrobeUploadPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [isUploading, setIsUploading] = useState(false);
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (!user) {
@@ -15,11 +17,12 @@ export default function WardrobeUploadPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 max-w-2xl mx-auto space-y-4">
+    <main className="min-h-screen bg-[#FFFDD0] p-6 max-w-2xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/dashboard")}
-          className="px-3 py-2 rounded border hover:bg-gray-50"
+          disabled={isUploading}
+          className={`px-3 py-2 rounded border hover:bg-black hover:text-white bg-white ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           ← Quay lại Dashboard
         </button>
@@ -28,13 +31,14 @@ export default function WardrobeUploadPage() {
 
         <button
           onClick={() => router.push("/wardrobe")}
-          className="px-3 py-2 rounded border hover:bg-gray-50"
+          disabled={isUploading}
+          className={`px-3 py-2 rounded border hover:bg-black hover:text-white bg-white ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           Xem tủ đồ →
         </button>
       </div>
 
-      <WardrobeUploader />
+      <WardrobeUploader onUploadingChange={setIsUploading} />
     </main>
   );
 }

@@ -48,7 +48,7 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <main className="min-h-screen p-6">
+    <main className="min-h-screen bg-[#FFFDD0] p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Xin chào {user.displayName || user.email?.split('@')[0]}</h1>

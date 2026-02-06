@@ -4,12 +4,18 @@ import { useAuth } from "@/lib/AuthContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function WardrobePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingPublicId, setPendingPublicId] = useState<string | undefined>(undefined);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -35,8 +41,52 @@ export default function WardrobePage() {
     return null;
   }
 
+  const openConfirm = (id: string, publicId?: string) => {
+    setPendingId(id);
+    setPendingPublicId(publicId);
+    setConfirmOpen(true);
+  };
+
+  const deleteItemConfirmed = async () => {
+    const id = pendingId;
+    const publicId = pendingPublicId;
+    if (!id || !user) return;
+
+    try {
+      setConfirmLoading(true);
+      setDeletingId(id);
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/wardrobe/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ id, publicId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        // show alert for now
+        alert(data?.message || "Xóa thất bại");
+        return;
+      }
+
+      setItems((prev) => prev.filter((it) => it.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("Xóa thất bại (lỗi mạng hoặc API).");
+    } finally {
+      setDeletingId(null);
+      setConfirmLoading(false);
+      setConfirmOpen(false);
+      setPendingId(null);
+      setPendingPublicId(undefined);
+    }
+  };
+
   return (
-    <main className="min-h-screen p-6 max-w-5xl mx-auto space-y-6">
+    <main className="min-h-screen bg-[#FFFDD0] p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <button onClick={() => router.push("/dashboard")} className="px-3 py-2 rounded border">
           ← Quay lại Dashboard
@@ -52,17 +102,36 @@ export default function WardrobePage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {items.map((it) => (
-            <div key={it.id} className="border rounded-xl overflow-hidden">
+            <div key={it.id} className="border rounded-xl overflow-hidden relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={it.imageUrl} alt="item" className="w-full h-64 object-cover" />
               <div className="p-3 text-sm">
-                <div className="font-medium">{it.category || "Không rõ"}</div>
-                <div className="text-gray-500">{it.color || "Không rõ"}</div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-medium">{it.category || "Không rõ"}</div>
+                    <div className="text-gray-500">{it.color || "Không rõ"}</div>
+                  </div>
+                  <button
+                    onClick={() => openConfirm(it.id, it.cloudinaryPublicId)}
+                    disabled={deletingId === it.id}
+                    className="ml-3 text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {deletingId === it.id ? "Đang xóa..." : "Xóa"}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmOpen}
+        message={<span>Bạn có chắc muốn xóa món này khỏi tủ đồ?</span>}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={deleteItemConfirmed}
+        loading={confirmLoading}
+      />
     </main>
   );
 }
