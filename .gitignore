@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Python
+ai-service/.venv/
+**/__pycache__/
+*.pyc
+
+# ML / artifacts
+ai-service/checkpoints/
+*.pt
+*.pth
+*.onnx
+
+# OS/Editor
+.DS_Store
