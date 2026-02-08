@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/AuthContext";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 type ParsedItem = {
@@ -18,7 +18,9 @@ export default function WardrobeUploader({
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [category, setCategory] = useState("Áo");
   const [color, setColor] = useState("Đen");
 
@@ -28,28 +30,46 @@ export default function WardrobeUploader({
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
 
-  const previewUrl = useMemo(() => {
-    if (!file) return null;
-    return URL.createObjectURL(file);
-  }, [file]);
+  const previewUrls = useMemo(() => {
+    return files.map((f) => URL.createObjectURL(f));
+  }, [files]);
 
-  // reset khi đổi file
-  const onPickFile = (f: File | null) => {
-    setFile(f);
+  // pick multiple files (from input or drop)
+  const onAddFiles = (newFiles: File[]) => {
+    setFiles((s) => {
+      const merged = [...s, ...newFiles];
+      return merged;
+    });
+    // if no active, set first newly added as active
+    setActiveIndex((cur) => (cur === null ? 0 : cur));
     setParsedItems([]);
     setSelected({});
   };
 
-  const onParse = async () => {
+  const onRemoveFile = (idx: number) => {
+    setFiles((s) => s.filter((_, i) => i !== idx));
+    setParsedItems([]);
+    setSelected({});
+    setActiveIndex((cur) => {
+      if (cur === null) return null;
+      if (idx < cur) return cur - 1;
+      if (idx === cur) return null;
+      return cur;
+    });
+  };
+
+  const onParse = async (index?: number) => {
+    const idx = typeof index === "number" ? index : activeIndex;
     if (!user) return;
-    if (!file) return alert("Chọn ảnh trước đã.");
+    if (idx === null || typeof idx !== "number") return alert("Chọn ảnh trước đã.");
+    const fileToParse = files[idx];
 
     setParsing(true);
     try {
       const idToken = await user.getIdToken();
 
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToParse);
 
       const res = await fetch("/api/wardrobe/parse", {
         method: "POST",
@@ -82,9 +102,11 @@ export default function WardrobeUploader({
     }
   };
 
-  const onUploadSelected = async () => {
+  const onUploadSelected = async (index?: number) => {
+    const idx = typeof index === "number" ? index : activeIndex;
     if (!user) return;
-    if (!file) return alert("Chọn ảnh trước đã.");
+    if (idx === null || typeof idx !== "number") return alert("Chọn ảnh trước đã.");
+    const fileToUpload = files[idx];
 
     // demo nhanh: upload route hiện parse lại từ ảnh gốc
     // nên dù bạn chọn item nào, backend vẫn tách lại.
@@ -98,9 +120,8 @@ export default function WardrobeUploader({
     onUploadingChange?.(true);
     try {
       const idToken = await user.getIdToken();
-
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToUpload);
       formData.append("category", category);
       formData.append("color", color);
 
@@ -130,7 +151,9 @@ export default function WardrobeUploader({
       }
 
       alert(`Đã ném vào tủ đồ ✅ (${data.count || 0} items)`);
-      setFile(null);
+      // remove the uploaded file from list
+      setFiles((s) => s.filter((_, i) => i !== idx));
+      setActiveIndex(null);
       setParsedItems([]);
       setSelected({});
       router.push("/wardrobe");
@@ -149,67 +172,101 @@ export default function WardrobeUploader({
     return null;
   }
 
-  return (
-    <div className="max-w-xl space-y-4">
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-      />
+  // cleanup created object URLs
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [previewUrls]);
 
-      {previewUrl && (
-        <div className="border rounded-xl p-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="preview" className="w-full rounded-lg" />
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    if (list.length) onAddFiles(list);
+    // reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (ev: React.DragEvent) => {
+    ev.preventDefault();
+    const list = ev.dataTransfer.files ? Array.from(ev.dataTransfer.files).filter((f) => f.type.startsWith("image/")) : [];
+    if (list.length) onAddFiles(list);
+  };
+
+  const handleDragOver = (ev: React.DragEvent) => {
+    ev.preventDefault();
+  };
+
+  return (
+    <div className="max-w-xl space-y-4 relative">
+      {/* overlay to block interaction when parsing/uploading */}
+      {(parsing || uploading) && (
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center">
+          <div className="text-white">{parsing ? "Đang tách..." : "Đang xử lý..."}</div>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="text-sm">
-          Loại
-          <select
-            className="mt-1 w-full border rounded px-3 py-2"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option>Áo</option>
-            <option>Quần</option>
-            <option>Váy</option>
-            <option>Giày</option>
-            <option>Phụ kiện</option>
-          </select>
-        </label>
-
-        <label className="text-sm">
-          Màu
-          <select
-            className="mt-1 w-full border rounded px-3 py-2"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-          >
-            <option>Đen</option>
-            <option>Trắng</option>
-            <option>Xanh</option>
-            <option>Đỏ</option>
-            <option>Be</option>
-            <option>Khác</option>
-          </select>
-        </label>
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className="border-dashed border-2 border-white/10 rounded-lg p-6 text-center cursor-pointer text-white/80 hover:bg-white/5"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onInputChange}
+          className="hidden"
+        />
+        Kéo thả hình vào đây hoặc nhấn để chọn nhiều file
       </div>
+
+      {files.length > 0 && (
+        <div className="space-y-2">
+          <div className="font-medium">Ảnh sắp tách ({files.length})</div>
+          <div className="flex gap-3 overflow-x-auto py-2">
+            {files.map((f, idx) => (
+              <div
+                key={idx}
+                className={`relative border border-white/10 rounded-lg overflow-hidden w-36 flex-shrink-0 ${activeIndex === idx ? "ring-2 ring-indigo-400" : ""}`}
+              >
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveFile(idx); }}
+                  className="absolute top-1 right-1 z-20 bg-white/10 text-white rounded-full p-1"
+                  aria-label="Xóa ảnh"
+                >
+                  ×
+                </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrls[idx]}
+                  alt={f.name}
+                  className="w-full h-24 object-cover"
+                  onClick={() => { setActiveIndex(idx); setParsedItems([]); setSelected({}); }}
+                />
+                <div className="p-2 text-xs truncate text-white/80" title={f.name}>{f.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* selects removed to match dark theme — category/color kept as defaults */}
 
       <div className="flex gap-2">
         <button
-          onClick={onParse}
-          disabled={!file || parsing || uploading}
-          className="px-4 py-2 rounded bg-white border disabled:opacity-50"
+          onClick={() => onParse()}
+          disabled={activeIndex === null || parsing || uploading}
+          className="px-4 py-2 rounded border text-white bg-white/5 border-white/20 hover:bg-white/10 disabled:opacity-50"
         >
           {parsing ? "Đang tách..." : "Tách đồ"}
         </button>
 
         <button
-          onClick={onUploadSelected}
-          disabled={!file || uploading || parsing || (parsedItems.length > 0 && Object.values(selected).every((v) => !v))}
-          className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
+          onClick={() => onUploadSelected()}
+          disabled={activeIndex === null || uploading || parsing || (parsedItems.length > 0 && Object.values(selected).every((v) => !v))}
+          className="px-4 py-2 rounded border text-white bg-gradient-to-r from-indigo-500/30 to-pink-500/20 border-indigo-400/20 hover:from-indigo-500/40 hover:to-pink-500/30 disabled:opacity-50"
         >
           {uploading ? "Đang ném..." : "Ném vào tủ đồ"}
         </button>
@@ -220,7 +277,7 @@ export default function WardrobeUploader({
           <div className="font-medium">Kết quả tách ({parsedItems.length})</div>
           <div className="grid grid-cols-2 gap-3">
             {parsedItems.map((it, idx) => (
-              <label key={idx} className="border rounded-xl p-2 cursor-pointer">
+              <label key={idx} className="border border-white/10 rounded-xl p-2 cursor-pointer">
                 <div className="flex items-center gap-2 mb-2">
                   <input
                     type="checkbox"
@@ -231,7 +288,7 @@ export default function WardrobeUploader({
                 </div>
 
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={it.imageDataUrl} alt={it.type} className="w-full rounded-lg bg-gray-50" />
+                <img src={it.imageDataUrl} alt={it.type} className="w-full rounded-lg bg-white/5" />
               </label>
             ))}
           </div>
