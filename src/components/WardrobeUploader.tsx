@@ -1,124 +1,145 @@
 "use client";
 
 import { useAuth } from "@/lib/AuthContext";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface UploadItem {
-  id: string;
-  file: File;
-  preview: string;
-  uploading: boolean;
-}
+type ParsedItem = {
+  type: string;
+  imageDataUrl: string;
+  image_png_base64: string;
+};
 
-export default function WardrobeUploader({ onUploadingChange }: { onUploadingChange?: (v: boolean) => void }) {
+export default function WardrobeUploader({
+  onUploadingChange,
+}: {
+  onUploadingChange?: (v: boolean) => void;
+}) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  const [items, setItems] = useState<UploadItem[]>([]);
-  const [dragActive, setDragActive] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [hasError, setHasError] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [category, setCategory] = useState("Áo");
+  const [color, setColor] = useState("Đen");
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+  const [parsing, setParsing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
+  const [selected, setSelected] = useState<Record<number, boolean>>({});
+
+  const previewUrl = useMemo(() => {
+    if (!file) return null;
+    return URL.createObjectURL(file);
+  }, [file]);
+
+  // reset khi đổi file
+  const onPickFile = (f: File | null) => {
+    setFile(f);
+    setParsedItems([]);
+    setSelected({});
   };
 
-  const addFiles = (files: FileList | null) => {
-    if (isUploading) return;
-    if (!files) return;
+  const onParse = async () => {
+    if (!user) return;
+    if (!file) return alert("Chọn ảnh trước đã.");
 
-    const newItems: UploadItem[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.type.startsWith("image/")) {
-        newItems.push({
-          id: `${Date.now()}-${i}`,
-          file,
-          preview: URL.createObjectURL(file),
-          uploading: false,
-        });
+    setParsing(true);
+    try {
+      const idToken = await user.getIdToken();
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/wardrobe/parse", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.message || "Tách đồ thất bại.");
+        console.error("PARSE FAIL:", data);
+        return;
       }
+
+      const items: ParsedItem[] = data.items || [];
+      setParsedItems(items);
+
+      // mặc định chọn hết
+      const nextSelected: Record<number, boolean> = {};
+      items.forEach((_, idx) => (nextSelected[idx] = true));
+      setSelected(nextSelected);
+
+      if (items.length === 0) alert("Không phát hiện được item nào 😢");
+    } catch (e) {
+      console.error(e);
+      alert("Tách đồ thất bại (lỗi mạng hoặc API).");
+    } finally {
+      setParsing(false);
     }
-    setItems([...items, ...newItems]);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    addFiles(e.dataTransfer.files);
-  };
+  const onUploadSelected = async () => {
+    if (!user) return;
+    if (!file) return alert("Chọn ảnh trước đã.");
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    addFiles(e.target.files);
-  };
+    // demo nhanh: upload route hiện parse lại từ ảnh gốc
+    // nên dù bạn chọn item nào, backend vẫn tách lại.
+    // (mình giữ đúng yêu cầu demo nút + flow)
+    const pickedCount = Object.values(selected).filter(Boolean).length;
+    if (parsedItems.length > 0 && pickedCount === 0) {
+      return alert("Bạn chưa chọn item nào để ném vào tủ.");
+    }
 
-  const removeItem = (id: string) => {
-    if (isUploading) return;
-    setItems(items.filter((item) => item.id !== id));
-  };
-
-  const uploadAll = async () => {
-    if (!user || items.length === 0) return;
-
-    setIsUploading(true);
+    setUploading(true);
     onUploadingChange?.(true);
-    setSuccessMessage("");
-    setHasError(false);
-    let successCount = 0;
-    let failCount = 0;
+    try {
+      const idToken = await user.getIdToken();
 
-    for (const item of items) {
-      try {
-        const formData = new FormData();
-        formData.append("file", item.file);
-        formData.append("category", "Áo"); // Default category
-        formData.append("color", "Đen"); // Default color
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
+      formData.append("color", color);
 
-        const idToken = await user.getIdToken();
+      // (tuỳ chọn) gửi list index được chọn để sau này backend dùng
+      // hiện tại backend upload chưa đọc cái này nên chưa có tác dụng
+      formData.append(
+        "selectedIndexes",
+        JSON.stringify(
+          Object.entries(selected)
+            .filter(([, v]) => v)
+            .map(([k]) => Number(k))
+        )
+      );
 
-        const res = await fetch("/api/wardrobe/upload", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: formData,
-        });
+      const res = await fetch("/api/wardrobe/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: formData,
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) {
-          console.error("Upload failed:", data?.message);
-          failCount++;
-        } else {
-          successCount++;
-        }
-      } catch (e) {
-        console.error("Upload error:", e);
-        failCount++;
+      if (!res.ok) {
+        alert(data?.message || "Upload thất bại.");
+        console.error("UPLOAD FAIL:", data);
+        return;
       }
-    }
 
-    setIsUploading(false);
-    onUploadingChange?.(false);
-
-    if (failCount > 0) {
-      setHasError(true);
-    }
-
-    if (successCount > 0 && failCount === 0) {
-      setSuccessMessage("✅ Thêm vào tủ đồ thành công");
-      setTimeout(() => {
-        router.push("/wardrobe");
-      }, 1000);
+      alert(`Đã ném vào tủ đồ ✅ (${data.count || 0} items)`);
+      setFile(null);
+      setParsedItems([]);
+      setSelected({});
+      router.push("/wardrobe");
+    } catch (e) {
+      console.error(e);
+      alert("Upload thất bại (lỗi mạng hoặc API).");
+    } finally {
+      setUploading(false);
+      onUploadingChange?.(false);
     }
   };
 
@@ -129,107 +150,95 @@ export default function WardrobeUploader({ onUploadingChange }: { onUploadingCha
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      {/* Upload Area */}
-      <div
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        className={`relative rounded-2xl border-2 border-dashed transition-all p-8 text-center ${isUploading ? "pointer-events-none opacity-50" : "cursor-pointer"
-          } ${dragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
-          }`}
-      >
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleFileInput}
-          disabled={isUploading}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-        <div className="space-y-2">
-          <div className="text-4xl">📸</div>
-          <div className="font-semibold text-gray-700">Kéo ảnh tại đây hoặc click để chọn</div>
-          <div className="text-sm text-gray-500">Hỗ trợ upload nhiều ảnh</div>
-        </div>
-      </div>
+    <div className="max-w-xl space-y-4">
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+      />
 
-      {/* Image Grid */}
-      {items.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">
-              {items.length} ảnh được chọn
-            </h2>
-            <button
-              onClick={() => setItems([])}
-              disabled={isUploading}
-              className="text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Xóa tất cả
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-square border border-gray-200"
-              >
-                {/* Image */}
-                <img
-                  src={item.preview}
-                  alt="preview"
-                  className="w-full h-full object-cover"
-                />
-
-                {/* Remove Button */}
-                <button
-                  onClick={() => removeItem(item.id)}
-                  disabled={isUploading}
-                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Upload Button */}
-          <button
-            onClick={uploadAll}
-            disabled={items.length === 0 || isUploading}
-            className="mt-6 w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
-          >
-            {isUploading
-              ? "Đang upload ảnh..."
-              : `Đưa vào tủ đồ (${items.length} ảnh)`}
-          </button>
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="mt-4 p-4 bg-green-100 border border-green-300 rounded-lg text-center text-green-700 font-semibold">
-              {successMessage}
-            </div>
-          )}
-
-          {/* Error Message */}
-          {hasError && (
-            <div className="mt-4 p-4 bg-red-100 border border-red-300 rounded-lg text-center text-red-700 font-semibold">
-              ❌ Có lỗi khi tải một số ảnh
-            </div>
-          )}
+      {previewUrl && (
+        <div className="border rounded-xl p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewUrl} alt="preview" className="w-full rounded-lg" />
         </div>
       )}
 
-      {/* Empty State */}
-      {items.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <div className="text-5xl mb-4">👗</div>
-          <p>Chưa có ảnh nào được chọn</p>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-sm">
+          Loại
+          <select
+            className="mt-1 w-full border rounded px-3 py-2"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option>Áo</option>
+            <option>Quần</option>
+            <option>Váy</option>
+            <option>Giày</option>
+            <option>Phụ kiện</option>
+          </select>
+        </label>
+
+        <label className="text-sm">
+          Màu
+          <select
+            className="mt-1 w-full border rounded px-3 py-2"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          >
+            <option>Đen</option>
+            <option>Trắng</option>
+            <option>Xanh</option>
+            <option>Đỏ</option>
+            <option>Be</option>
+            <option>Khác</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={onParse}
+          disabled={!file || parsing || uploading}
+          className="px-4 py-2 rounded bg-white border disabled:opacity-50"
+        >
+          {parsing ? "Đang tách..." : "Tách đồ"}
+        </button>
+
+        <button
+          onClick={onUploadSelected}
+          disabled={!file || uploading || parsing || (parsedItems.length > 0 && Object.values(selected).every((v) => !v))}
+          className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
+        >
+          {uploading ? "Đang ném..." : "Ném vào tủ đồ"}
+        </button>
+      </div>
+
+      {parsedItems.length > 0 && (
+        <div className="space-y-2">
+          <div className="font-medium">Kết quả tách ({parsedItems.length})</div>
+          <div className="grid grid-cols-2 gap-3">
+            {parsedItems.map((it, idx) => (
+              <label key={idx} className="border rounded-xl p-2 cursor-pointer">
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={!!selected[idx]}
+                    onChange={(e) => setSelected((s) => ({ ...s, [idx]: e.target.checked }))}
+                  />
+                  <div className="text-xs opacity-70">{it.type}</div>
+                </div>
+
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={it.imageDataUrl} alt={it.type} className="w-full rounded-lg bg-gray-50" />
+              </label>
+            ))}
+          </div>
+
+          <div className="text-xs opacity-60">
+            * Chí Thành đẹp trai
+          </div>
         </div>
       )}
     </div>
