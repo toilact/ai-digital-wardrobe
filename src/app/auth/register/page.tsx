@@ -10,6 +10,8 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import LogoutButton from "@/components/LogoutButton";
+import { useAuth } from "@/lib/AuthContext";
 
 function firebaseMsg(err: unknown) {
   const e = err as AuthError;
@@ -32,6 +34,7 @@ function firebaseMsg(err: unknown) {
 }
 
 export default function RegisterPage() {
+  const { user } = useAuth();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -95,61 +98,80 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-[#FFFDD0]">
-      <div className="w-full max-w-sm shadow-2xl rounded-xl p-6 space-y-4 bg-white">
-        <h1 className="text-3xl font-semibold text-center mb-1">
-          AI Digital Wardrobe
-        </h1>
-        <h2 className="text-2xl font-semibold text-center">Đăng ký</h2>
+    <>
+      <header className="hero text-center md:context-centered">
+        <div className="hero-left">
+          <h1>
+            <span className="grad">AI Digital Wardrobe</span>
+          </h1>
+        </div>
 
-        <input
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="Tên hiển thị (tuỳ chọn)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        {/* <div className="hero-right">
+          {user ? (
+            <>
+              <div className="chip"> <span className="dot" /> Xin chào {user.displayName || user.email?.split("@")[0]}</div>
+              <LogoutButton />
+            </>
+          ) : (
+            <Link href="/" className="chip">Đăng nhập</Link>
+          )}
+        </div> */}
+      </header>
 
-        <input
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="Tên đăng nhập"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoComplete="username"
-        />
+      <main className=" flex items-center justify-center p-6">
+        <div className="w-full max-w-sm shadow-2xl rounded-xl p-6 space-y-4 bg-gray-900">
 
-        <input
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="Mật khẩu (>= 6 ký tự)"
-          type="password"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          autoComplete="new-password"
-        />
+          <h2 className="text-2xl font-semibold text-center ">Đăng ký</h2>
 
-        <input
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          placeholder="Nhập lại mật khẩu"
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          autoComplete="new-password"
-        />
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Tên hiển thị (tuỳ chọn)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-        <button
-          onClick={onRegister}
-          disabled={loading}
-          className="w-full bg-[#00a400] text-white rounded py-2 disabled:opacity-50"
-        >
-          {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-        </button>
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Tên đăng nhập"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
 
-        <p className="text-sm text-gray-600 text-center">
-          Đã có tài khoản?{" "}
-          <Link className="underline" href="/auth/login">
-            Đăng nhập
-          </Link>
-        </p>
-      </div>
-    </main>
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Mật khẩu (>= 6 ký tự)"
+            type="password"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            autoComplete="new-password"
+          />
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Nhập lại mật khẩu"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+          />
+
+          <button
+            onClick={onRegister}
+            disabled={loading}
+            className="w-full bg-[#00a400] text-white rounded py-2 disabled:opacity-50"
+          >
+            {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
+          </button>
+
+          <p className="text-sm text-gray-600 text-center">
+            Đã có tài khoản?{" "}
+            <Link className="underline" href="/">
+              Đăng nhập
+            </Link>
+          </p>
+        </div>
+      </main>
+    </>
   );
 }

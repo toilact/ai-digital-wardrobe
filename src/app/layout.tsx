@@ -8,8 +8,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="bg-[#FFFDD0]">
-        <AuthProvider>{children}</AuthProvider>
+      <body>
+        <AuthProvider>
+          <div className="dashboard-container">
+            <div className="wrap">{children}</div>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

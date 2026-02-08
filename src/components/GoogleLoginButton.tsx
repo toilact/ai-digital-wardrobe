@@ -15,9 +15,9 @@ export default function GoogleLoginButton() {
   };
 
   return (
-    <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 border border-gray-300 py-1 px-3 hover:bg-gray-50 transition-all mb-6">
+    <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 border border-gray-300  bg-gray-700 py-1 px-3 hover:bg-gray-800 transition-all mb-2">
       <FcGoogle className="text-2xl" />
-      <span className="text-gray-600 font-medium">Tiếp tục với Google</span>
+      <span className="text-white font-medium">Tiếp tục với Google</span>
     </button>
   );
 }

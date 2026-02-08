@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ConfirmModal from "@/components/ConfirmModal";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function WardrobePage() {
   const { user, loading } = useAuth();
@@ -86,7 +87,16 @@ export default function WardrobePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FFFDD0] p-6 max-w-5xl mx-auto space-y-6">
+    <main className="min-h-screen p-6 space-y-6">
+      <header className="hero">
+        <div className="hero-left">
+          <h1>
+            <span className="grad">AI Digital Wardrobe</span>
+          </h1>
+        </div>
+
+      </header>
+
       <div className="flex items-center justify-between">
         <button onClick={() => router.push("/dashboard")} className="px-3 py-2 rounded border">
           ← Quay lại Dashboard

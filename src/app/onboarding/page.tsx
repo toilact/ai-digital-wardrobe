@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getUserProfile, upsertUserProfile } from "@/lib/profile";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function OnboardingPage() {
   const { user, loading } = useAuth();
@@ -75,7 +76,20 @@ export default function OnboardingPage() {
   if (!user) return null;
 
   return (
-    <main className="min-h-screen bg-[#FFFDD0] flex items-center justify-center p-6">
+    <main className="min-h-screen flex items-center justify-center p-6">
+      <header className="hero">
+        <div className="hero-left">
+          <h1>
+            <span className="grad">AI Digital Wardrobe</span>
+          </h1>
+        </div>
+
+        <div className="hero-right">
+          <div className="chip"> <span className="dot" /> Xin chào {user.displayName || user.email?.split("@")[0]}</div>
+          <LogoutButton />
+        </div>
+      </header>
+
       <div className="w-full max-w-md bg-white shadow-2xl rounded-xl p-6 space-y-4">
         <h1 className="text-2xl font-semibold">Thông tin cá nhân</h1>
         <p className="text-sm text-gray-600">

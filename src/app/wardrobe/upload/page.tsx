@@ -4,6 +4,7 @@ import WardrobeUploader from "@/components/WardrobeUploader";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function WardrobeUploadPage() {
   const { user, loading } = useAuth();
@@ -17,7 +18,17 @@ export default function WardrobeUploadPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FFFDD0] p-6 max-w-2xl mx-auto space-y-4">
+    <main className="min-h-screen p-6 space-y-4">
+      <header className="hero">
+        <div className="hero-left">
+          <h1>
+            <span className="grad">AI Digital Wardrobe</span>
+          </h1>
+        </div>
+
+
+      </header>
+
       <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/dashboard")}
