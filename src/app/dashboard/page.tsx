@@ -216,6 +216,15 @@ export default function Dashboard() {
               <span className="hint">lookbook vibe</span>
             </div>
           </div>
+        {/* ✅ ĐỔI Ở ĐÂY: /chat -> /outfit-suggest */}
+        <Link
+          href="/outfit-suggest"
+          className="rounded-xl border p-4 hover:bg-gray-50 transition"
+        >
+          <h2 className="text-lg font-semibold">🤖 Gợi ý outfit</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Chatbot gợi ý theo thời tiết/địa điểm/đi cùng ai
+          </p>
         </Link>
       </section>
       {/* </div> */}
