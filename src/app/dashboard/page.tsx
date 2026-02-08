@@ -7,18 +7,18 @@ import { useEffect, useState } from "react";
 import { getUserProfile } from "@/lib/profile";
 import Link from "next/link";
 
-
-
 export default function Dashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   const [checkingProfile, setCheckingProfile] = useState(true);
 
+  // 1) Chưa login -> về trang /
   useEffect(() => {
     if (!loading && !user) router.replace("/");
   }, [loading, user, router]);
 
+  // 2) Đã login -> kiểm tra profile
   useEffect(() => {
     const run = async () => {
       if (!user) return;
@@ -34,6 +34,7 @@ export default function Dashboard() {
         setCheckingProfile(false);
       } catch (e) {
         console.error(e);
+        // nếu lỗi Firestore thì vẫn cho qua để demo
         setCheckingProfile(false);
       }
     };
@@ -46,7 +47,6 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* <div className="wrap "> */}
       <header className="hero">
         <div className="hero-left">
           <h1>
@@ -58,7 +58,9 @@ export default function Dashboard() {
 
         <div className="hero-right">
           <div className="user-info">
-            <div className="user-name">Xin chào {user.displayName || user.email?.split("@")[0]}</div>
+            <div className="user-name">
+              Xin chào {user.displayName || user.email?.split("@")[0]}
+            </div>
             <div className="user-email">@{user.email?.split("@")[0]}</div>
           </div>
           <LogoutButton />
@@ -84,10 +86,12 @@ export default function Dashboard() {
               Tách đồ (AI)
             </span>
           </div>
+
           <div className="content">
             <h3 className="title">Upload vào tủ đồ</h3>
             <p className="desc">
-              Chụp/Chọn ảnh quần áo, AI tự tách từng item: áo, quần, váy, giày… xuất PNG nền trong suốt để dùng lại.
+              Chụp/Chọn ảnh quần áo, AI tự tách từng item: áo, quần, váy, giày…
+              xuất PNG nền trong suốt để dùng lại.
             </p>
 
             <div className="meta">
@@ -114,8 +118,8 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        {/* CARD 2: Gợi ý outfit */}
-        <Link href="/chat" className="card">
+        {/* CARD 2: Gợi ý outfit (✅ link đúng /outfit-suggest) */}
+        <Link href="/outfit-suggest" className="card">
           <div className="media">
             <img
               src="https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1400&q=80"
@@ -123,16 +127,26 @@ export default function Dashboard() {
             />
             <span className="badge" title="AI suggestions">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 7h16v13H4V7z" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" strokeWidth="1.6" />
+                <path
+                  d="M4 7h16v13H4V7z"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+                <path
+                  d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
               </svg>
               Gợi ý
             </span>
           </div>
+
           <div className="content">
             <h3 className="title">Gợi ý outfit</h3>
             <p className="desc">
-              Chatbot gợi ý theo thời tiết, địa điểm, hoặc đi cùng ai. Tìm outfit hoàn hảo cho bất kỳ dịp nào.
+              Chatbot gợi ý theo thời tiết, địa điểm, hoặc đi cùng ai. Tìm outfit
+              hoàn hảo cho bất kỳ dịp nào.
             </p>
 
             <div className="meta">
@@ -182,10 +196,12 @@ export default function Dashboard() {
               Xem tủ đồ
             </span>
           </div>
+
           <div className="content">
             <h3 className="title">Xem tủ đồ</h3>
             <p className="desc">
-              Danh sách đồ đã lưu hiển thị đẹp như lookbook: filter theo loại/màu, kéo mượt, load nhanh.
+              Danh sách đồ đã lưu hiển thị đẹp như lookbook: filter theo loại/màu,
+              kéo mượt, load nhanh.
             </p>
 
             <div className="meta">
@@ -216,18 +232,8 @@ export default function Dashboard() {
               <span className="hint">lookbook vibe</span>
             </div>
           </div>
-        {/* ✅ ĐỔI Ở ĐÂY: /chat -> /outfit-suggest */}
-        <Link
-          href="/outfit-suggest"
-          className="rounded-xl border p-4 hover:bg-gray-50 transition"
-        >
-          <h2 className="text-lg font-semibold">🤖 Gợi ý outfit</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Chatbot gợi ý theo thời tiết/địa điểm/đi cùng ai
-          </p>
         </Link>
       </section>
-      {/* </div> */}
     </div>
   );
 }
