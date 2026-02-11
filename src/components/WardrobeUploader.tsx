@@ -12,8 +12,10 @@ type ParsedItem = {
 
 export default function WardrobeUploader({
   onUploadingChange,
+  onUploadSuccess,
 }: {
   onUploadingChange?: (v: boolean) => void;
+  onUploadSuccess?: () => void;
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -59,58 +61,70 @@ export default function WardrobeUploader({
   };
 
   const onParse = async (index?: number) => {
-    const idx = typeof index === "number" ? index : activeIndex;
     if (!user) return;
-    if (idx === null || typeof idx !== "number") return alert("Chọn ảnh trước đã.");
-    const fileToParse = files[idx];
+
+    // parse single image when index provided, otherwise parse all uploaded files
+    const indices: number[] = typeof index === "number" ? [index] : files.map((_, i) => i);
+    if (indices.length === 0) return alert("Không có ảnh để tách.");
 
     setParsing(true);
+    onUploadingChange?.(true);
+
     try {
       const idToken = await user.getIdToken();
+      let allItems: ParsedItem[] = [];
 
-      const formData = new FormData();
-      formData.append("file", fileToParse);
+      for (const idx of indices) {
+        const fileToParse = files[idx];
+        const formData = new FormData();
+        formData.append("file", fileToParse);
 
-      const res = await fetch("/api/wardrobe/parse", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${idToken}` },
-        body: formData,
-      });
+        try {
+          const res = await fetch("/api/wardrobe/parse", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${idToken}` },
+            body: formData,
+          });
 
-      const data = await res.json();
+          const data = await res.json();
+          if (!res.ok) {
+            console.error("PARSE FAIL for file index", idx, data);
+            continue;
+          }
 
-      if (!res.ok) {
-        alert(data?.message || "Tách đồ thất bại.");
-        console.error("PARSE FAIL:", data);
-        return;
+          const items: ParsedItem[] = data.items || [];
+          allItems = allItems.concat(items);
+        } catch (e) {
+          console.error("Parse request failed for index", idx, e);
+          continue;
+        }
       }
 
-      const items: ParsedItem[] = data.items || [];
-      setParsedItems(items);
+      setParsedItems(allItems);
 
       // mặc định chọn hết
       const nextSelected: Record<number, boolean> = {};
-      items.forEach((_, idx) => (nextSelected[idx] = true));
+      allItems.forEach((_, idx) => (nextSelected[idx] = true));
       setSelected(nextSelected);
 
-      if (items.length === 0) alert("Không phát hiện được item nào 😢");
+      if (allItems.length === 0) alert("Không phát hiện được item nào 😢");
     } catch (e) {
       console.error(e);
       alert("Tách đồ thất bại (lỗi mạng hoặc API).");
     } finally {
       setParsing(false);
+      onUploadingChange?.(false);
     }
   };
 
   const onUploadSelected = async () => {
     if (!user) return;
-    if (activeIndex === null) return alert("Chọn ảnh trước đã.");
-  
+
     // Bắt buộc phải tách trước
     if (parsedItems.length === 0) {
-      return alert("Bạn cần bấm 'Tách đồ' trước đã.");
+      return alert("Bạn cần tách đồ trước khi upload.");
     }
-  
+
     // Lấy đúng các item đã tick
     const picked = parsedItems
       .map((it, idx) => ({ it, idx }))
@@ -122,15 +136,15 @@ export default function WardrobeUploader({
           ? it.image_png_base64.split(",")[1]
           : it.image_png_base64,
       }));
-  
+
     if (picked.length === 0) return alert("Bạn chưa chọn item nào để ném vào tủ.");
-  
+
     setUploading(true);
     onUploadingChange?.(true);
-  
+
     try {
       const idToken = await user.getIdToken();
-  
+
       // ✅ Gửi thẳng những item đã chọn lên /confirm để lưu
       const res = await fetch("/api/wardrobe/confirm", {
         method: "POST",
@@ -140,23 +154,23 @@ export default function WardrobeUploader({
         },
         body: JSON.stringify({ items: picked }),
       });
-  
+
       const data = await res.json();
-  
+
       if (!res.ok) {
         alert(data?.message || "Confirm thất bại.");
         console.error("CONFIRM FAIL:", data);
         return;
       }
-  
-      alert(`Đã ném vào tủ đồ ✅ (${data.count || 0} items)`);
-  
-      // clear state + remove file vừa xử lý
-      setFiles((s) => s.filter((_, i) => i !== activeIndex));
+
+      // clear all files/state since we parsed/uploaded across all images
+      setFiles([]);
       setActiveIndex(null);
       setParsedItems([]);
       setSelected({});
-      router.push("/wardrobe");
+
+      // notify parent that upload succeeded (parent will show success toast and navigate)
+      onUploadSuccess?.();
     } catch (e) {
       console.error(e);
       alert("Confirm thất bại (lỗi mạng hoặc API).");
@@ -165,7 +179,7 @@ export default function WardrobeUploader({
       onUploadingChange?.(false);
     }
   };
-  
+
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (!user) {
@@ -258,7 +272,7 @@ export default function WardrobeUploader({
       <div className="flex gap-2">
         <button
           onClick={() => onParse()}
-          disabled={activeIndex === null || parsing || uploading}
+          disabled={files.length === 0 || parsing || uploading}
           className="px-4 py-2 rounded border text-white bg-white/5 border-white/20 hover:bg-white/10 disabled:opacity-50"
         >
           {parsing ? "Đang tách..." : "Tách đồ"}
@@ -266,10 +280,10 @@ export default function WardrobeUploader({
 
         <button
           onClick={() => onUploadSelected()}
-          disabled={activeIndex === null || uploading || parsing || (parsedItems.length > 0 && Object.values(selected).every((v) => !v))}
+          disabled={parsedItems.length === 0 || uploading || parsing || Object.values(selected).every((v) => !v)}
           className="px-4 py-2 rounded border text-white bg-gradient-to-r from-indigo-500/30 to-pink-500/20 border-indigo-400/20 hover:from-indigo-500/40 hover:to-pink-500/30 disabled:opacity-50"
         >
-          {uploading ? "Đang ném..." : "Ném vào tủ đồ"}
+          {uploading ? "Đang đưa vào tủ đồ..." : "Đưa vào tủ đồ"}
         </button>
       </div>
 
@@ -295,7 +309,7 @@ export default function WardrobeUploader({
           </div>
 
           <div className="text-xs opacity-60">
-            * Chí Thành đẹp trai
+            * con bò Chí Thành đẹp trai
           </div>
         </div>
       )}

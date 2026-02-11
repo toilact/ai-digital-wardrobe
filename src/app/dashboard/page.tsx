@@ -78,24 +78,27 @@ export default function Dashboard() {
         </div>
 
         <div className="hero-right">
-          {/* ✅ nút tròn profile */}
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="w-11 h-11 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 overflow-hidden flex items-center justify-center"
-            aria-label="Open profile"
-            title="Xem profile"
-          >
-            {user.photoURL ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-semibold text-white/90">{initials}</span>
-            )}
-          </button>
+          <div className="flex">
+            <div className="user-info mr-3">
+              <div className="user-name">Xin chào {user.displayName || uname}</div>
+              <div className="user-email">@{uname}</div>
+            </div>
+            {/* ✅ nút tròn profile */}
+            <button
+              onClick={() => setProfileOpen(true)}
+              className="w-11 h-11 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 overflow-hidden flex items-center justify-center"
+              aria-label="Open profile"
+              title="Xem profile"
+            >
+              {user.photoURL ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-sm font-semibold text-white/90">{initials}</span>
+              )}
+            </button>
 
-          <div className="user-info">
-            <div className="user-name">Xin chào {user.displayName || uname}</div>
-            <div className="user-email">@{uname}</div>
+
           </div>
 
           <LogoutButton />
@@ -107,7 +110,7 @@ export default function Dashboard() {
         <Link href="/wardrobe/upload" className="card">
           <div className="media">
             <img
-              src="https://images.unsplash.com/photo-1520975958225-20f61f86a1c0?auto=format&fit=crop&w=1400&q=80"
+              src="./scan_clothes_image.png"
               alt="Upload vào tủ đồ"
             />
             <span className="badge" title="AI parse">
@@ -157,7 +160,7 @@ export default function Dashboard() {
         <Link href="/outfit-suggest" className="card">
           <div className="media">
             <img
-              src="https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=1400&q=80"
+              src="./AI_suggestions.png"
               alt="Gợi ý outfit"
             />
             <span className="badge" title="AI suggestions">
@@ -203,7 +206,7 @@ export default function Dashboard() {
         <Link href="/wardrobe" className="card">
           <div className="media">
             <img
-              src="https://images.unsplash.com/photo-1520975682031-a0b3b7a4c86c?auto=format&fit=crop&w=1400&q=80"
+              src="./wardrobe_image.png"
               alt="Xem tủ đồ"
             />
             <span className="badge" title="Wardrobe gallery">
@@ -221,7 +224,7 @@ export default function Dashboard() {
           <div className="content">
             <h3 className="title">Xem tủ đồ</h3>
             <p className="desc">
-              Danh sách đồ đã lưu hiển thị đẹp như lookbook: filter theo loại/màu,
+              Danh sách đồ đã lưu hiển thị đẹp như lookbook: filter theo loại,
               kéo mượt, load nhanh.
             </p>
 

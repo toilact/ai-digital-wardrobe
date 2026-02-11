@@ -166,9 +166,7 @@ export default function WardrobePage() {
           </h1>
         </div>
 
-        <div className="hero-right">
-          <LogoutButton />
-        </div>
+
       </header>
 
       <div className="flex items-center justify-between gap-3">
