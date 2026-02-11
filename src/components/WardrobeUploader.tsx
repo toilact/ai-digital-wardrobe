@@ -102,69 +102,70 @@ export default function WardrobeUploader({
     }
   };
 
-  const onUploadSelected = async (index?: number) => {
-    const idx = typeof index === "number" ? index : activeIndex;
+  const onUploadSelected = async () => {
     if (!user) return;
-    if (idx === null || typeof idx !== "number") return alert("Chọn ảnh trước đã.");
-    const fileToUpload = files[idx];
-
-    // demo nhanh: upload route hiện parse lại từ ảnh gốc
-    // nên dù bạn chọn item nào, backend vẫn tách lại.
-    // (mình giữ đúng yêu cầu demo nút + flow)
-    const pickedCount = Object.values(selected).filter(Boolean).length;
-    if (parsedItems.length > 0 && pickedCount === 0) {
-      return alert("Bạn chưa chọn item nào để ném vào tủ.");
+    if (activeIndex === null) return alert("Chọn ảnh trước đã.");
+  
+    // Bắt buộc phải tách trước
+    if (parsedItems.length === 0) {
+      return alert("Bạn cần bấm 'Tách đồ' trước đã.");
     }
-
+  
+    // Lấy đúng các item đã tick
+    const picked = parsedItems
+      .map((it, idx) => ({ it, idx }))
+      .filter(({ idx }) => !!selected[idx])
+      .map(({ it }) => ({
+        type: it.type || category,
+        // phòng trường hợp base64 có prefix "data:image/png;base64,..."
+        image_png_base64: it.image_png_base64?.includes(",")
+          ? it.image_png_base64.split(",")[1]
+          : it.image_png_base64,
+      }));
+  
+    if (picked.length === 0) return alert("Bạn chưa chọn item nào để ném vào tủ.");
+  
     setUploading(true);
     onUploadingChange?.(true);
+  
     try {
       const idToken = await user.getIdToken();
-      const formData = new FormData();
-      formData.append("file", fileToUpload);
-      formData.append("category", category);
-      formData.append("color", color);
-
-      // (tuỳ chọn) gửi list index được chọn để sau này backend dùng
-      // hiện tại backend upload chưa đọc cái này nên chưa có tác dụng
-      formData.append(
-        "selectedIndexes",
-        JSON.stringify(
-          Object.entries(selected)
-            .filter(([, v]) => v)
-            .map(([k]) => Number(k))
-        )
-      );
-
-      const res = await fetch("/api/wardrobe/upload", {
+  
+      // ✅ Gửi thẳng những item đã chọn lên /confirm để lưu
+      const res = await fetch("/api/wardrobe/confirm", {
         method: "POST",
-        headers: { Authorization: `Bearer ${idToken}` },
-        body: formData,
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items: picked }),
       });
-
+  
       const data = await res.json();
-
+  
       if (!res.ok) {
-        alert(data?.message || "Upload thất bại.");
-        console.error("UPLOAD FAIL:", data);
+        alert(data?.message || "Confirm thất bại.");
+        console.error("CONFIRM FAIL:", data);
         return;
       }
-
+  
       alert(`Đã ném vào tủ đồ ✅ (${data.count || 0} items)`);
-      // remove the uploaded file from list
-      setFiles((s) => s.filter((_, i) => i !== idx));
+  
+      // clear state + remove file vừa xử lý
+      setFiles((s) => s.filter((_, i) => i !== activeIndex));
       setActiveIndex(null);
       setParsedItems([]);
       setSelected({});
       router.push("/wardrobe");
     } catch (e) {
       console.error(e);
-      alert("Upload thất bại (lỗi mạng hoặc API).");
+      alert("Confirm thất bại (lỗi mạng hoặc API).");
     } finally {
       setUploading(false);
       onUploadingChange?.(false);
     }
   };
+  
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (!user) {

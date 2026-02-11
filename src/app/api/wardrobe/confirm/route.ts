@@ -31,8 +31,32 @@ function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
 
 type ConfirmItem = {
   type: string; // nhãn người dùng đã chọn/sửa
-  image_png_base64: string;
+  image_png_base64: string; // base64 png (có thể có prefix data:image/png;base64,...)
 };
+
+/** ---- Category normalize: chỉ 5 loại ---- */
+type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày";
+
+function stripVN(s?: string) {
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .trim();
+}
+
+function normalizeCategory(typeRaw?: string): CatKey {
+  const s = stripVN(typeRaw);
+
+  if (s.includes("giay") || s.includes("shoe") || s.includes("sneaker")) return "Giày";
+  if (s.includes("dam") || s.includes("dress") || s.includes("gown")) return "Đầm";
+  if (s.includes("vay") || s.includes("skirt")) return "Váy";
+  if (s.includes("quan") || s.includes("pants") || s.includes("trouser") || s.includes("jean")) return "Quần";
+  if (s.includes("ao") || s.includes("shirt") || s.includes("tee") || s.includes("top") || s.includes("hoodie")) return "Áo";
+
+  return "Áo";
+}
 
 export async function POST(req: Request) {
   try {
@@ -59,16 +83,26 @@ export async function POST(req: Request) {
     const saved: any[] = [];
 
     for (const it of items) {
-      const type = it.type || "unknown";
-      const buf = Buffer.from(it.image_png_base64, "base64");
+      const typeRaw = it.type || "unknown";
+      const category = normalizeCategory(typeRaw);
 
-      const folder = `wardrobe/${uid}/${type}`;
+      const b64 = it.image_png_base64?.includes(",")
+        ? it.image_png_base64.split(",")[1]
+        : it.image_png_base64;
+
+      if (!b64) continue;
+
+      const buf = Buffer.from(b64, "base64");
+
+      // folder theo category chuẩn để nhìn Cloudinary gọn
+      const folder = `wardrobe/${uid}/${category}`;
       const { secure_url, public_id } = await uploadBufferToCloudinary(buf, folder);
 
       const docRef = db.collection("wardrobeItems").doc();
       const doc = {
         uid,
-        category: type,
+        category, // ✅ luôn là 1 trong 5 loại
+        rawType: typeRaw, // ✅ optional: debug
         color: "Không rõ",
         imageUrl: secure_url,
         cloudinaryPublicId: public_id,
