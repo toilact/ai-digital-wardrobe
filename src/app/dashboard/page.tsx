@@ -2,16 +2,33 @@
 
 import { useAuth } from "@/lib/AuthContext";
 import LogoutButton from "@/components/LogoutButton";
+import ProfileDrawer from "@/components/ProfileDrawer";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getUserProfile } from "@/lib/profile";
+import { getUserProfile, type UserProfile } from "@/lib/profile";
 import Link from "next/link";
+
+function emailPrefix(email?: string | null) {
+  return (email || "").split("@")[0] || "";
+}
+
+function initialsFrom(name?: string | null, email?: string | null) {
+  const base = (name || "").trim() || emailPrefix(email) || "U";
+  const parts = base.split(/\s+/).filter(Boolean);
+  const a = (parts[0]?.[0] || "U").toUpperCase();
+  const b = (parts[1]?.[0] || "").toUpperCase();
+  return (a + b) || "U";
+}
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  // ✅ drawer profile
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // 1) Chưa login -> về trang /
   useEffect(() => {
@@ -24,13 +41,14 @@ export default function Dashboard() {
       if (!user) return;
 
       try {
-        const profile = await getUserProfile(user.uid);
+        const p = await getUserProfile(user.uid);
 
-        if (!profile) {
+        if (!p) {
           router.replace("/onboarding");
           return;
         }
 
+        setProfile(p);
         setCheckingProfile(false);
       } catch (e) {
         console.error(e);
@@ -45,6 +63,9 @@ export default function Dashboard() {
   if (loading || checkingProfile) return <div className="p-6">Loading...</div>;
   if (!user) return null;
 
+  const uname = emailPrefix(user.email);
+  const initials = initialsFrom(user.displayName, user.email);
+
   return (
     <div className="dashboard-container">
       <header className="hero">
@@ -57,12 +78,26 @@ export default function Dashboard() {
         </div>
 
         <div className="hero-right">
+          {/* ✅ nút tròn profile */}
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-11 h-11 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 overflow-hidden flex items-center justify-center"
+            aria-label="Open profile"
+            title="Xem profile"
+          >
+            {user.photoURL ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm font-semibold text-white/90">{initials}</span>
+            )}
+          </button>
+
           <div className="user-info">
-            <div className="user-name">
-              Xin chào {user.displayName || user.email?.split("@")[0]}
-            </div>
-            <div className="user-email">@{user.email?.split("@")[0]}</div>
+            <div className="user-name">Xin chào {user.displayName || uname}</div>
+            <div className="user-email">@{uname}</div>
           </div>
+
           <LogoutButton />
         </div>
       </header>
@@ -118,7 +153,7 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        {/* CARD 2: Gợi ý outfit (✅ link đúng /outfit-suggest) */}
+        {/* CARD 2: Gợi ý outfit */}
         <Link href="/outfit-suggest" className="card">
           <div className="media">
             <img
@@ -127,11 +162,7 @@ export default function Dashboard() {
             />
             <span className="badge" title="AI suggestions">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M4 7h16v13H4V7z"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                />
+                <path d="M4 7h16v13H4V7z" stroke="currentColor" strokeWidth="1.6" />
                 <path
                   d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"
                   stroke="currentColor"
@@ -159,18 +190,8 @@ export default function Dashboard() {
               <button className="btn primary">
                 Nhận gợi ý
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M12 5v14"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M5 12h14"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
+                  <path d="M12 5v14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
               </button>
               <span className="hint">gọn • sạch • nhanh</span>
@@ -214,12 +235,7 @@ export default function Dashboard() {
               <button className="btn">
                 Mở tủ
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M7 17l10-10"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
+                  <path d="M7 17l10-10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   <path
                     d="M9 7h8v8"
                     stroke="currentColor"
@@ -234,6 +250,14 @@ export default function Dashboard() {
           </div>
         </Link>
       </section>
+
+      {/* ✅ Drawer profile */}
+      <ProfileDrawer
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        user={{ email: user.email, displayName: user.displayName, photoURL: user.photoURL }}
+        profile={profile}
+      />
     </div>
   );
 }
