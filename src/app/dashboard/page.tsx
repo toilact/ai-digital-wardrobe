@@ -52,8 +52,8 @@ export default function Dashboard() {
         setCheckingProfile(false);
       } catch (e) {
         console.error(e);
-        // nếu lỗi Firestore thì vẫn cho qua để demo
-        setCheckingProfile(false);
+        router.replace("/onboarding");
+        return;
       }
     };
 

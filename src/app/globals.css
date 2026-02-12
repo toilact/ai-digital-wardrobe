@@ -76,7 +76,7 @@
 .wrap {
     max-width: 1120px;
     margin: 0 auto;
-    padding-left: 20;
+    padding-left: 20px;
     padding-right: 20px;
     padding-bottom: 90px;
     padding-top: 50px;
@@ -368,23 +368,128 @@ header.hero {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
     .dashboard-container::before,
     .dashboard-container::after {
-        animation: none;
+      animation: none;
     }
-
+  
     .card,
     .media img,
     .btn {
-        transition: none;
+      transition: none;
     }
-
+  
     .card:hover {
-        transform: none;
+      transform: none;
     }
-
+  
     .card:hover .media img {
-        transform: none;
+      transform: none;
     }
-}
+  
+    /* tắt scanline nếu user không thích motion */
+    .cy-hud::before,
+    .cy-hud::after,
+    .cy-hud-panel::before,
+    .cy-hud-panel::after {
+      animation: none !important;
+    }
+  }
+
+  /* ===== DEMO CYBER SCANLINE (apply normally) ===== */
+
+/* Panel lớn (bọc toàn bộ onboarding card) */
+.cy-hud-panel {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .cy-hud-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  
+    /* scanlines rất nhẹ */
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,.10) 0px,
+      rgba(255,255,255,.10) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+    background-size: 100% 8px;
+  
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+  
+    animation: cy-scan 12s linear infinite;
+  }
+  
+  /* Card nhỏ (AGE/HEIGHT/WEIGHT) */
+  .cy-hud {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .cy-hud::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,.14) 0px,
+      rgba(255,255,255,.14) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+    background-size: 100% 7px;
+  
+    opacity: 0.10;
+    mix-blend-mode: overlay;
+  
+    animation: cy-scan 8s linear infinite;
+  }
+  
+  /* Glint (tia sáng quét chéo) – cực nhẹ nhưng “ăn điểm demo” */
+  .cy-hud::before {
+    content: "";
+    position: absolute;
+    top: -60%;
+    left: -50%;
+    width: 200%;
+    height: 120%;
+    pointer-events: none;
+  
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(56,189,248,.14),
+      transparent
+    );
+    transform: rotate(12deg);
+    opacity: 0.35;
+  
+    animation: cy-glint 6.5s ease-in-out infinite;
+  }
+  
+  @keyframes cy-scan {
+    from { background-position: 0 0; }
+    to   { background-position: 0 220px; }
+  }
+  
+  @keyframes cy-glint {
+    0%, 65% { transform: translateX(-18%) rotate(12deg); opacity: .18; }
+    100%    { transform: translateX(14%) rotate(12deg); opacity: .35; }
+  }
+  
+  /* ===== Hide number input spinners (Safari/Chrome) ===== */
+  .cy-num::-webkit-outer-spin-button,
+  .cy-num::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .cy-num { -moz-appearance: textfield; }
+  

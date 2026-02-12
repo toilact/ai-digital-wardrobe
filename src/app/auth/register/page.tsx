@@ -88,7 +88,7 @@ export default function RegisterPage() {
         createdAt: serverTimestamp(),
       });
 
-      router.replace("/dashboard");
+      router.replace("/onboarding");``
     } catch (err) {
       alert(firebaseMsg(err));
       console.error(err);
