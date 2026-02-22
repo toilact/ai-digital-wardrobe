@@ -88,3 +88,26 @@ ${JSON.stringify(input, null, 2)}
 
   return ModelOutSchema.parse(JSON.parse(raw));
 }
+
+export async function geminiOutfit(prompt: string): Promise<string> {
+  const ai = getGeminiClient();
+
+  const model =
+    process.env.GEMINI_MODEL?.trim() ||
+    "gemini-3-flash-preview";
+
+  const res = await ai.models.generateContent({
+    model,
+    contents: prompt,
+  });
+
+  const raw =
+    (typeof (res as any)?.text === "string" ? (res as any).text : "") ||
+    (typeof (res as any)?.response?.text === "function"
+      ? await (res as any).response.text()
+      : "") ||
+    "";
+
+  if (!raw.trim()) throw new Error("Gemini returned empty response text");
+  return raw.trim();
+}

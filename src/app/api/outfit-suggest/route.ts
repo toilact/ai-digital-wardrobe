@@ -1,77 +1,74 @@
 import { NextResponse } from "next/server";
-import { getWeatherNow } from "@/lib/weather";
-import { OutfitResponseSchema } from "@/lib/outfitSchema";
+import { getAdmin } from "@/lib/firebaseAdmin";
 
-// TODO: thay bằng firebase-admin verify token của project
-async function verifyAndGetUid(_authHeader: string | null): Promise<string> {
-  if (!_authHeader) throw new Error("Missing Authorization header");
-  return "demo-uid";
-}
+export const runtime = "nodejs";
 
-// TODO: thay bằng Firestore query thật theo schema DB
-async function getWardrobeItems(_uid: string) {
-  return [];
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1];
 }
 
 export async function POST(req: Request) {
   try {
-    const auth = req.headers.get("authorization");
-    const uid = await verifyAndGetUid(auth);
+    const admin = getAdmin();
+    const token = getBearerToken(req);
+    if (!token) return NextResponse.json({ ok: false, message: "Missing token" }, { status: 401 });
+
+    const { uid } = await admin.auth().verifyIdToken(token);
 
     const body = await req.json();
-    const occasion = String(body.occasion ?? "").trim();
-    const style = String(body.style ?? "").trim();
+    const message: string = String(body?.message ?? "");
+    const history = Array.isArray(body?.history) ? body.history : [];
 
-    // fallback để demo: HCM
-    const lat = Number(body.lat ?? 10.8231);
-    const lon = Number(body.lon ?? 106.6297);
+    if (!message.trim()) {
+      return NextResponse.json({ ok: false, message: "Empty message" }, { status: 400 });
+    }
 
-    if (!occasion) {
+    // Lấy profile (nếu có) để prompt ngon hơn
+    const userDoc = await admin.firestore().collection("users").doc(uid).get();
+    const profile = userDoc.exists ? userDoc.data() : null;
+
+    // Prompt kiểu stylist (ngắn gọn, dễ demo)
+    const convo = history
+      .slice(-10)
+      .map((m: any) => `${m.role === "user" ? "User" : "Assistant"}: ${String(m.content || "")}`)
+      .join("\n");
+
+    const prompt = `
+Bạn là stylist AI của "AI Digital Wardrobe".
+Nhiệm vụ: gợi ý outfit thực tế, dễ mặc, rõ ràng.
+Luôn trả lời:
+1) Outfit đề xuất (áo + quần/váy + giày + phụ kiện)
+2) Vì sao hợp (thời tiết/dịp/vibe)
+3) 1 biến thể (màu khác hoặc formal hơn)
+4) Tip nhanh (tóc/đồ đi kèm)
+
+User profile (nếu có): ${profile ? JSON.stringify(profile) : "null"}
+
+Conversation:
+${convo}
+
+User: ${message}
+Assistant:
+`.trim();
+
+    // ✅ Gọi module geminiOutfit.ts (tự bắt named/default export)
+    const mod: any = await import("@/lib/llm/geminiOutfit");
+    const fn = mod.geminiOutfit ?? mod.default;
+    if (typeof fn !== "function") {
       return NextResponse.json(
-        { error: "missing_occasion", message: "Thiếu 'occasion' (đi đâu?)" },
-        { status: 400 }
+        { ok: false, message: "geminiOutfit export not found. Check lib/llm/geminiOutfit.ts" },
+        { status: 500 }
       );
     }
 
-    const [weather, wardrobeItems] = await Promise.all([
-      getWeatherNow(lat, lon),
-      getWardrobeItems(uid),
-    ]);
+    // giả định fn nhận (prompt: string) và trả string
+    const reply = await fn(prompt);
 
-    const input = { occasion, style: style || undefined, weather, wardrobeItems };
-
-    const provider = process.env.LLM_PROVIDER ?? "gemini";
-
-    // ⚠️ modelOut có thể thiếu field -> ta normalize + luôn gắn weather từ server
-    let modelOut: any;
-
-    if (provider === "gemini") {
-      const { generateOutfitGemini } = await import("@/lib/llm/geminiOutfit");
-      modelOut = await generateOutfitGemini(input);
-    } else {
-      const { generateOutfitOpenAI } = await import("@/lib/llm/openaiOutfit");
-      modelOut = await generateOutfitOpenAI(input);
-    }
-
-    // ✅ Normalize + đảm bảo không bao giờ thiếu field (để UI không crash)
-    const normalized = OutfitResponseSchema.parse({
-      needMoreInfo: Boolean(modelOut?.needMoreInfo),
-      question: modelOut?.question ?? "",
-      weather, // ✅ luôn lấy từ server
-      options: Array.isArray(modelOut?.options) ? modelOut.options : [],
-      tips: Array.isArray(modelOut?.tips) ? modelOut.tips : [],
-      missingItems: Array.isArray(modelOut?.missingItems) ? modelOut.missingItems : [],
-    });
-
-    return NextResponse.json(normalized);
+    return NextResponse.json({ ok: true, reply });
   } catch (e: any) {
-    // nếu parse zod fail thì trả details để debug
-    const message = e?.message ?? "Unknown error";
-    const details = e?.issues ?? e?.errors ?? null;
-
-    return NextResponse.json(
-      { error: "server_error", message, details },
-      { status: 500 }
-    );
+    console.error(e);
+    return NextResponse.json({ ok: false, message: e?.message || "Server error" }, { status: 500 });
   }
 }

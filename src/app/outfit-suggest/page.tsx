@@ -1,16 +1,24 @@
+"use client";
+
 import WardrobeStylistChat from "@/components/WardrobeStylistChat";
+import { useAuth } from "@/lib/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function OutfitSuggestPage() {
-  return (
-    <main className="min-h-screen bg-[#FFFDD0] p-6">
-      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6">
-        <h1 className="text-3xl font-semibold mb-2">🤖 Gợi ý outfit</h1>
-        <p className="text-gray-600 mb-6">
-          Chọn mục đích đi đâu + phong cách, hệ thống sẽ dựa theo thời tiết để gợi ý outfit phù hợp.
-        </p>
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-        <WardrobeStylistChat />
-      </div>
-    </main>
+  useEffect(() => {
+    if (!loading && !user) router.replace("/");
+  }, [loading, user, router]);
+
+  if (loading) return <div className="p-6 text-white/70">Loading...</div>;
+  if (!user) return null;
+
+  return (
+    <div className="dashboard-container h-[100svh] overflow-hidden">
+      <WardrobeStylistChat mode="page" />
+    </div>
   );
 }
