@@ -26,6 +26,12 @@ function fmtTs(ts: any) {
   }
 }
 
+function genderLabel(g: any) {
+  if (g === "male") return "Nam";
+  if (g === "female") return "Nữ";
+  return "—";
+}
+
 function Row({ label, value }: { label: string; value?: any }) {
   const display = value === undefined || value === null || value === "" ? "—" : String(value);
   return (
@@ -85,9 +91,7 @@ export default function ProfileDrawer({
             </div>
 
             <div className="leading-tight">
-              <div className="text-white font-semibold">
-                {user?.displayName || uname || "Tài khoản"}
-              </div>
+              <div className="text-white font-semibold">{user?.displayName || uname || "Tài khoản"}</div>
               <div className="text-xs text-white/60">{user?.email || "—"}</div>
             </div>
           </div>
@@ -112,6 +116,10 @@ export default function ProfileDrawer({
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm font-semibold text-white/90 mb-2">Thông tin cá nhân</div>
+
+            {/* ✅ thêm giới tính (Nam/Nữ) */}
+            <Row label="Giới tính" value={genderLabel((profile as any)?.gender)} />
+
             <Row label="Tuổi" value={profile?.age} />
             <Row label="Chiều cao (cm)" value={profile?.heightCm} />
             <Row label="Cân nặng (kg)" value={profile?.weightKg} />

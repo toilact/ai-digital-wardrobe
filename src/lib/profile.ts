@@ -1,16 +1,23 @@
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+export type Gender = "male" | "female";
+
 export type UserProfile = {
+  gender: Gender; // ✅ thêm giới tính (Nam/Nữ)
   age: number;
   heightCm: number;
   weightKg: number;
-  bustCm?: number;   // vòng 1
-  waistCm?: number;  // vòng 2
-  hipCm?: number;    // vòng 3
+  bustCm?: number; // vòng 1
+  waistCm?: number; // vòng 2
+  hipCm?: number; // vòng 3
   updatedAt?: any;
   createdAt?: any;
 };
+
+function isValidGender(x: any): x is Gender {
+  return x === "male" || x === "female";
+}
 
 export async function getUserProfile(uid: string) {
   const ref = doc(db, "users", uid);
@@ -19,8 +26,8 @@ export async function getUserProfile(uid: string) {
 
   const data = snap.data() as any;
 
-  // Coi là "đã có profile" khi đủ các field bắt buộc
   const ok =
+    isValidGender(data.gender) &&
     typeof data.age === "number" &&
     typeof data.heightCm === "number" &&
     typeof data.weightKg === "number" &&
@@ -30,7 +37,6 @@ export async function getUserProfile(uid: string) {
 
   return ok ? (data as UserProfile) : null;
 }
-
 
 export async function upsertUserProfile(uid: string, profile: UserProfile) {
   const ref = doc(db, "users", uid);

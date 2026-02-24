@@ -10,6 +10,8 @@ function emailPrefix(email?: string | null) {
   return (email || "").split("@")[0] || "";
 }
 
+type Gender = "male" | "female";
+
 function MetricCard({
   code,
   title,
@@ -30,7 +32,6 @@ function MetricCard({
   return (
     <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
       <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
-        {/* tiny glow */}
         <div className="pointer-events-none absolute -inset-24 opacity-40 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.35),transparent_60%)]" />
 
         <div className="relative flex items-start justify-between gap-3">
@@ -69,7 +70,6 @@ function MetricCard({
           </span>
         </div>
 
-        {/* HUD corners */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-2xl opacity-70
@@ -88,6 +88,78 @@ function MetricCard({
   );
 }
 
+function GenderToggle({
+  value,
+  onChange,
+}: {
+  value: Gender;
+  onChange: (v: Gender) => void;
+}) {
+  return (
+    <div className="max-w-md">
+      <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
+        <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
+          <div className="pointer-events-none absolute -inset-24 opacity-30 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.30),transparent_60%)]" />
+
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2">
+                <span className="text-[11px] tracking-[0.22em] text-white/55">GENDER</span>
+                <span className="text-[11px] text-white/70 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
+                  REQUIRED
+                </span>
+              </div>
+              <div className="mt-2 text-white/90 font-semibold">Giới tính</div>
+            </div>
+
+            <div className="text-[11px] text-white/50 px-2 py-1 rounded-full border border-white/10 bg-white/5">
+              select
+            </div>
+          </div>
+
+          <div className="relative mt-4">
+            <div className="inline-flex w-full rounded-xl border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => onChange("male")}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  value === "male"
+                    ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
+                    : "text-white/60 hover:text-white/80"
+                }`}
+              >
+                Nam
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChange("female")}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  value === "female"
+                    ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
+                    : "text-white/60 hover:text-white/80"
+                }`}
+              >
+                Nữ
+              </button>
+            </div>
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-2xl opacity-70
+            [background:
+            linear-gradient(to_right,rgba(34,211,238,.55),transparent_35%)_top_left/28px_1px_no-repeat,
+            linear-gradient(to_bottom,rgba(34,211,238,.55),transparent_35%)_top_left/1px_28px_no-repeat,
+            linear-gradient(to_left,rgba(168,85,247,.55),transparent_35%)_top_right/28px_1px_no-repeat,
+            linear-gradient(to_bottom,rgba(168,85,247,.55),transparent_35%)_top_right/1px_28px_no-repeat]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OnboardingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -96,6 +168,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
+  const [gender, setGender] = useState<Gender>("male"); // ✅ chỉ 2 giới tính
   const [age, setAge] = useState<number>(18);
   const [heightCm, setHeightCm] = useState<number>(165);
   const [weightKg, setWeightKg] = useState<number>(55);
@@ -133,6 +206,7 @@ export default function OnboardingPage() {
   }, [age, heightCm, weightKg]);
 
   const validate = () => {
+    if (gender !== "male" && gender !== "female") return "Giới tính không hợp lệ.";
     if (age < 10 || age > 100) return "Tuổi không hợp lệ.";
     if (heightCm < 100 || heightCm > 230) return "Chiều cao không hợp lệ.";
     if (weightKg < 25 || weightKg > 200) return "Cân nặng không hợp lệ.";
@@ -149,6 +223,7 @@ export default function OnboardingPage() {
     setSaving(true);
     try {
       await upsertUserProfile(user.uid, {
+        gender,
         age,
         heightCm,
         weightKg,
@@ -170,14 +245,12 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen relative text-white overflow-hidden">
-      {/* Background (cyber giống dashboard) */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#0b1020] via-[#0a0f18] to-[#12061a]" />
       <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,.25),transparent_55%)]" />
       <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_85%_30%,rgba(168,85,247,.22),transparent_60%)]" />
       <div className="absolute inset-0 -z-10 opacity-50 bg-[radial-gradient(circle_at_60%_85%,rgba(236,72,153,.16),transparent_60%)]" />
       <div className="absolute inset-0 -z-10 opacity-[0.10] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
 
-      {/* Top */}
       <header className="mx-auto w-full max-w-6xl px-6 pt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -185,9 +258,7 @@ export default function OnboardingPage() {
               <span className="bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
                 AI Digital Wardrobe
               </span>
-              <div className="mt-1 text-white/80 text-lg md:text-xl font-medium">
-                Profile Init Console
-              </div>
+              <div className="mt-1 text-white/80 text-lg md:text-xl font-medium">Profile Init Console</div>
             </h1>
 
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/55">
@@ -222,10 +293,8 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      {/* Body */}
       <main className="mx-auto w-full max-w-6xl px-6 pt-8 pb-10">
         <div className="cy-hud-panel rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,.45)] overflow-hidden">
-          {/* Title strip */}
           <div className="px-7 py-6 border-b border-white/10">
             <div className="inline-flex items-center gap-2 text-xs tracking-[0.18em] text-white/60">
               SYSTEM / PROFILE
@@ -233,16 +302,17 @@ export default function OnboardingPage() {
                 CORE REQUIRED
               </span>
             </div>
-            <div className="mt-3 text-2xl md:text-3xl font-semibold text-white">
-              Nhập tất cả thông tin của bạn vào đây
-            </div>
-            <p className="mt-2 text-white/65">
-              Chí Thành đẹp trai số 1 VN.
-            </p>
+            <div className="mt-3 text-2xl md:text-3xl font-semibold text-white">Nhập tất cả thông tin của bạn vào đây</div>
+            <p className="mt-2 text-white/65">Chí Thành đẹp trai số 1 VN.</p>
           </div>
 
-          {/* Cards */}
           <div className="px-7 pt-6">
+            {/* ✅ Gọn như code cũ: chỉ thêm ô giới tính nhỏ ở trên */}
+            <div className="mb-4">
+              <GenderToggle value={gender} onChange={setGender} />
+            </div>
+
+            {/* ✅ Grid y chang code cũ */}
             <div className="grid gap-4 md:grid-cols-3">
               <MetricCard
                 code="AGE"
@@ -273,7 +343,6 @@ export default function OnboardingPage() {
               />
             </div>
 
-            {/* Optional toggle */}
             <button
               type="button"
               onClick={() => setAdvancedOpen((s) => !s)}
@@ -286,35 +355,13 @@ export default function OnboardingPage() {
 
             {advancedOpen ? (
               <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <MetricCard
-                  code="BUST"
-                  title="Vòng 1"
-                  range="30–200"
-                  unit="cm"
-                  value={bustCm}
-                  onChange={setBustCm}
-                />
-                <MetricCard
-                  code="WAIST"
-                  title="Vòng 2"
-                  range="30–200"
-                  unit="cm"
-                  value={waistCm}
-                  onChange={setWaistCm}
-                />
-                <MetricCard
-                  code="HIP"
-                  title="Vòng 3"
-                  range="30–200"
-                  unit="cm"
-                  value={hipCm}
-                  onChange={setHipCm}
-                />
+                <MetricCard code="BUST" title="Vòng 1" range="30–200" unit="cm" value={bustCm} onChange={setBustCm} />
+                <MetricCard code="WAIST" title="Vòng 2" range="30–200" unit="cm" value={waistCm} onChange={setWaistCm} />
+                <MetricCard code="HIP" title="Vòng 3" range="30–200" unit="cm" value={hipCm} onChange={setHipCm} />
               </div>
             ) : null}
           </div>
 
-          {/* Sticky action bar */}
           <div className="sticky bottom-0 mt-6 border-t border-white/10 bg-[linear-gradient(to_top,rgba(9,12,20,.75),rgba(9,12,20,.25))] backdrop-blur-xl">
             <div className="px-7 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
               <div className="text-xs text-white/55 leading-relaxed">

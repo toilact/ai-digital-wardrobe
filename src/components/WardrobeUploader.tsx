@@ -309,7 +309,7 @@ export default function WardrobeUploader({
           </div>
 
           <div className="text-xs opacity-60">
-            * con bò Chí Thành đẹp trai
+            * anh Thành Chí Thành đẹp trai
           </div>
         </div>
       )}
