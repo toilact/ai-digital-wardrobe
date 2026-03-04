@@ -36,13 +36,11 @@ export default function WardrobeUploader({
     return files.map((f) => URL.createObjectURL(f));
   }, [files]);
 
-  // pick multiple files (from input or drop)
   const onAddFiles = (newFiles: File[]) => {
     setFiles((s) => {
       const merged = [...s, ...newFiles];
       return merged;
     });
-    // if no active, set first newly added as active
     setActiveIndex((cur) => (cur === null ? 0 : cur));
     setParsedItems([]);
     setSelected({});
@@ -64,7 +62,6 @@ export default function WardrobeUploader({
     if (!user) return;
 
     // parse single image when index provided, otherwise parse all uploaded files
-    const indices: number[] = typeof index === "number" ? [index] : files.map((_, i) => i);
     if (indices.length === 0) return alert("Không có ảnh để tách.");
 
     setParsing(true);
@@ -103,7 +100,6 @@ export default function WardrobeUploader({
       setParsedItems(allItems);
 
       // mặc định chọn hết
-      const nextSelected: Record<number, boolean> = {};
       allItems.forEach((_, idx) => (nextSelected[idx] = true));
       setSelected(nextSelected);
 
@@ -212,7 +208,7 @@ export default function WardrobeUploader({
   };
 
   return (
-    <div className="max-w-xl space-y-4 relative">
+    <div className=" space-y-4 relative">
       {/* overlay to block interaction when parsing/uploading */}
       {(parsing || uploading) && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center">
@@ -248,10 +244,10 @@ export default function WardrobeUploader({
               >
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemoveFile(idx); }}
-                  className="absolute top-1 right-1 z-20 bg-white/10 text-white rounded-full p-1"
+                  className="absolute top-1 right-1 z-20 bg-gray-500 hover:bg-gray-400 text-white text-xs rounded-full px-2 pb-1"
                   aria-label="Xóa ảnh"
                 >
-                  ×
+                  x
                 </button>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -269,7 +265,7 @@ export default function WardrobeUploader({
 
       {/* selects removed to match dark theme — category/color kept as defaults */}
 
-      <div className="flex gap-2">
+      <div className="flex gap-3 justify-center">
         <button
           onClick={() => onParse()}
           disabled={files.length === 0 || parsing || uploading}

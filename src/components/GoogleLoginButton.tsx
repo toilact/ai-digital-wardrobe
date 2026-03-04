@@ -3,7 +3,7 @@
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { FcGoogle } from "react-icons/fc"; // Cần cài: npm install react-icons
+import { FcGoogle } from "react-icons/fc";
 
 export default function GoogleLoginButton() {
   const router = useRouter();

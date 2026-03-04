@@ -26,7 +26,6 @@ export const OutfitOption = z.object({
   dont: z.array(z.string()).default([]),
 });
 
-// ✅ weather schema riêng
 export const WeatherSchema = z.object({
   tempC: z.number(),
   feelsLikeC: z.number(),
@@ -38,13 +37,10 @@ export const WeatherSchema = z.object({
 export const OutfitResponseSchema = z.object({
   needMoreInfo: z.boolean().default(false),
 
-  // ✅ cho phép null/undefined và auto thành ""
   question: z.string().nullable().optional().transform((v) => v ?? ""),
 
-  // ✅ weather sẽ được server gắn vào, nhưng vẫn giữ schema để validate
   weather: WeatherSchema,
 
-  // ✅ các mảng default [] để khỏi undefined
   options: z.array(OutfitOption).default([]),
   tips: z.array(z.string()).default([]),
   missingItems: z.array(z.string()).default([]),

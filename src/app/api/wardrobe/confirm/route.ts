@@ -94,15 +94,14 @@ export async function POST(req: Request) {
 
       const buf = Buffer.from(b64, "base64");
 
-      // folder theo category chuẩn để nhìn Cloudinary gọn
       const folder = `wardrobe/${uid}/${category}`;
       const { secure_url, public_id } = await uploadBufferToCloudinary(buf, folder);
 
       const docRef = db.collection("wardrobeItems").doc();
       const doc = {
         uid,
-        category, // ✅ luôn là 1 trong 5 loại
-        rawType: typeRaw, // ✅ optional: debug
+        category,
+        rawType: typeRaw,
         color: "Không rõ",
         imageUrl: secure_url,
         cloudinaryPublicId: public_id,

@@ -57,26 +57,21 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      // 1) Check username đã tồn tại chưa (Firestore)
       const unameRef = doc(db, "usernames", uname);
       const unameSnap = await getDoc(unameRef);
       if (unameSnap.exists()) {
         return alert("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
       }
 
-      // 2) Tạo email giả để dùng với Firebase Auth
       const fakeEmail = `${uname}@adw.local`;
 
-      // 3) Create user
       const cred = await createUserWithEmailAndPassword(auth, fakeEmail, pass);
 
-      // 4) Update displayName (optional)
       const displayName = name.trim();
       if (displayName) {
         await updateProfile(cred.user, { displayName });
       }
 
-      // 5) Lưu mapping username -> uid & profile cơ bản
       await setDoc(unameRef, {
         uid: cred.user.uid,
         createdAt: serverTimestamp(),
@@ -88,7 +83,7 @@ export default function RegisterPage() {
         createdAt: serverTimestamp(),
       });
 
-      router.replace("/onboarding");``
+      router.replace("/onboarding"); ``
     } catch (err) {
       alert(firebaseMsg(err));
       console.error(err);

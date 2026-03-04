@@ -4,13 +4,13 @@ import { db } from "@/lib/firebase";
 export type Gender = "male" | "female";
 
 export type UserProfile = {
-  gender: Gender; // ✅ thêm giới tính (Nam/Nữ)
+  gender: Gender;
   age: number;
   heightCm: number;
   weightKg: number;
-  bustCm?: number; // vòng 1
-  waistCm?: number; // vòng 2
-  hipCm?: number; // vòng 3
+  bustCm?: number;
+  waistCm?: number;
+  hipCm?: number;
   updatedAt?: any;
   createdAt?: any;
 };

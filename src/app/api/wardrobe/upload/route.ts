@@ -41,21 +41,18 @@ type AIResponse = { ok: boolean; items: AIItem[] };
 
 export async function POST(req: Request) {
   try {
-    // env check
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       return NextResponse.json({ ok: false, message: "Missing Cloudinary env vars" }, { status: 500 });
     }
 
     const admin = getAdmin();
 
-    // 1) Verify user
     const token = getBearerToken(req);
     if (!token) return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
 
     const decoded = await admin.auth().verifyIdToken(token);
     const uid = decoded.uid;
 
-    // 2) Read form data
     const form = await req.formData();
     const file = form.get("file") as File | null;
 
@@ -64,10 +61,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: "Only image files are allowed" }, { status: 400 });
     }
 
-    const MAX = 8 * 1024 * 1024; // full-body có thể nặng hơn chút
+    const MAX = 8 * 1024 * 1024;
     if (file.size > MAX) return NextResponse.json({ ok: false, message: "File too large (max 8MB)" }, { status: 400 });
 
-    // 3) Gọi ai-service để tách đồ
     const aiForm = new FormData();
     aiForm.append("file", file, file.name);
 
@@ -89,12 +85,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: "AI returned invalid response" }, { status: 502 });
     }
 
-    // Nếu AI không tách được gì
     if (aiJson.items.length === 0) {
       return NextResponse.json({ ok: true, items: [], message: "No items detected" });
     }
 
-    // 4) Upload từng item lên Cloudinary + Save Firestore
     const db = admin.firestore();
     const batch = db.batch();
 

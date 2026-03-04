@@ -32,7 +32,7 @@ export default function WardrobeUploadPage() {
 
   return (
     <div className="dashboard-container">
-      <div className="wrap">
+      <div className="wrap pt-15">
         <header className="hero">
           <div className="hero-left">
             <h1>
@@ -43,10 +43,6 @@ export default function WardrobeUploadPage() {
           </div>
 
           <div className="hero-right">
-            {/* <div className="user-info">
-              <div className="user-name">Xin chào {user.displayName || (user.email || '').split('@')[0]}</div>
-              <div className="user-email">@{(user.email || '').split('@')[0]}</div>
-            </div> */}
 
             <div className="flex items-center gap-2">
               <button

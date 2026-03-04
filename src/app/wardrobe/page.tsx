@@ -158,7 +158,7 @@ export default function WardrobePage() {
   };
 
   return (
-    <main className="min-h-screen p-6 space-y-6">
+    <main className="min-h-screen p-6 space-y-6 ">
       <header className="hero">
         <div className="hero-left">
           <h1>

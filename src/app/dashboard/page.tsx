@@ -27,15 +27,12 @@ export default function Dashboard() {
   const [checkingProfile, setCheckingProfile] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // ✅ drawer profile
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // 1) Chưa login -> về trang /
   useEffect(() => {
     if (!loading && !user) router.replace("/");
   }, [loading, user, router]);
 
-  // 2) Đã login -> kiểm tra profile
   useEffect(() => {
     const run = async () => {
       if (!user) return;
@@ -67,7 +64,7 @@ export default function Dashboard() {
   const initials = initialsFrom(user.displayName, user.email);
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container mt-15">
       <header className="hero">
         <div className="hero-left">
           <h1>
@@ -179,7 +176,7 @@ export default function Dashboard() {
           <div className="content">
             <h3 className="title">Gợi ý outfit</h3>
             <p className="desc">
-              Chatbot gợi ý theo thời tiết, địa điểm, hoặc đi cùng ai. Tìm outfit
+              Chatbot gợi ý theo, địa điểm, hoặc đi cùng ai. Tìm outfit
               hoàn hảo cho bất kỳ dịp nào.
             </p>
 

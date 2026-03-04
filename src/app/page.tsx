@@ -30,7 +30,7 @@ export default function Home() {
   };
   return (
     <>
-      <header className="hero">
+      <header className="hero mt-15">
         <div className="hero-left">
           <h1>
             <span className="grad">AI Digital Wardrobe</span>

@@ -96,7 +96,7 @@ function GenderToggle({
   onChange: (v: Gender) => void;
 }) {
   return (
-    <div className="max-w-md">
+    <div className="max-w-md mt-15">
       <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
         <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
           <div className="pointer-events-none absolute -inset-24 opacity-30 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.30),transparent_60%)]" />
@@ -122,11 +122,10 @@ function GenderToggle({
               <button
                 type="button"
                 onClick={() => onChange("male")}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  value === "male"
-                    ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
-                    : "text-white/60 hover:text-white/80"
-                }`}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === "male"
+                  ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
+                  : "text-white/60 hover:text-white/80"
+                  }`}
               >
                 Nam
               </button>
@@ -134,11 +133,10 @@ function GenderToggle({
               <button
                 type="button"
                 onClick={() => onChange("female")}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  value === "female"
-                    ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
-                    : "text-white/60 hover:text-white/80"
-                }`}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === "female"
+                  ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
+                  : "text-white/60 hover:text-white/80"
+                  }`}
               >
                 Nữ
               </button>
@@ -168,7 +166,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const [gender, setGender] = useState<Gender>("male"); // ✅ chỉ 2 giới tính
+  const [gender, setGender] = useState<Gender>("male");
   const [age, setAge] = useState<number>(18);
   const [heightCm, setHeightCm] = useState<number>(165);
   const [weightKg, setWeightKg] = useState<number>(55);
@@ -178,26 +176,40 @@ export default function OnboardingPage() {
   const [hipCm, setHipCm] = useState<number | "">("");
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/");
+    if (!loading && !user) {
+      console.log("dong 180");
+      router.replace("/");
+    }
   }, [loading, user, router]);
 
   useEffect(() => {
     const run = async () => {
       if (!user) return;
+
       try {
         const p = await getUserProfile(user.uid);
+
         if (p) {
-          router.replace("/dashboard");
-          return;
+          setGender(p.gender || "male");
+          setAge(p.age || 18);
+          setHeightCm(p.heightCm || 165);
+          setWeightKg(p.weightKg || 55);
+
+          if (p.bustCm) setBustCm(p.bustCm);
+          if (p.waistCm) setWaistCm(p.waistCm);
+          if (p.hipCm) setHipCm(p.hipCm);
+
+
         }
       } catch (e) {
-        console.error(e);
+        console.error("Lỗi lấy profile:", e);
       } finally {
         setChecking(false);
       }
     };
+
     if (!loading && user) run();
-  }, [loading, user, router]);
+  }, [loading, user]);
 
   const uname = emailPrefix(user?.email);
 
@@ -258,7 +270,9 @@ export default function OnboardingPage() {
               <span className="bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
                 AI Digital Wardrobe
               </span>
-              <div className="mt-1 text-white/80 text-lg md:text-xl font-medium">Profile Init Console</div>
+              <div className="mt-1 text-white/80 text-lg md:text-xl font-medium">
+                {checking ? "Loading..." : (age ? "Update Profile" : "Profile Init Console")}
+              </div>
             </h1>
 
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/55">
@@ -272,11 +286,10 @@ export default function OnboardingPage() {
               </span>
 
               <span
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${
-                  ready
-                    ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"
-                    : "border-amber-300/20 bg-amber-400/10 text-amber-200"
-                }`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${ready
+                  ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"
+                  : "border-amber-300/20 bg-amber-400/10 text-amber-200"
+                  }`}
               >
                 {ready ? "READY" : "CHECK"}
               </span>

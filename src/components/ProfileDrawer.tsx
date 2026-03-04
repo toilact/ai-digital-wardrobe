@@ -67,18 +67,15 @@ export default function ProfileDrawer({
 
   return (
     <div className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
-      {/* overlay */}
       <div
         onClick={onClose}
         className={`absolute inset-0 bg-black/55 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
       />
 
-      {/* panel */}
       <div
         className={`absolute right-0 top-0 h-full w-[380px] max-w-[92vw] bg-neutral-950 border-l border-white/10
         transition-transform duration-200 ${open ? "translate-x-0" : "translate-x-full"}`}
       >
-        {/* header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
@@ -105,21 +102,18 @@ export default function ProfileDrawer({
           </button>
         </div>
 
-        {/* content */}
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto h-[calc(100%-80px)]">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm font-semibold text-white/90 mb-2">Tài khoản</div>
             <Row label="Tên hiển thị" value={user?.displayName || uname} />
             <Row label="Email" value={user?.email} />
-            <Row label="Tên đăng nhập" value={uname ? `@${uname}` : "—"} />
+            <Row label="Tên đăng nhập" value={uname ? `${uname}` : "—"} />
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm font-semibold text-white/90 mb-2">Thông tin cá nhân</div>
 
-            {/* ✅ thêm giới tính (Nam/Nữ) */}
             <Row label="Giới tính" value={genderLabel((profile as any)?.gender)} />
-
             <Row label="Tuổi" value={profile?.age} />
             <Row label="Chiều cao (cm)" value={profile?.heightCm} />
             <Row label="Cân nặng (kg)" value={profile?.weightKg} />
@@ -128,11 +122,13 @@ export default function ProfileDrawer({
             <Row label="Vòng 3 (cm)" value={profile?.hipCm} />
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-sm font-semibold text-white/90 mb-2">Thời gian</div>
-            <Row label="Tạo lúc" value={fmtTs(profile?.createdAt)} />
-            <Row label="Cập nhật" value={fmtTs(profile?.updatedAt)} />
-          </div>
+
+          <a
+            href="/onboarding"
+            className="block w-full px-4 py-3 rounded-lg border border-white/10 bg-blue-600 hover:bg-blue-700 text-white text-center font-medium transition-colors"
+          >
+            Tùy chỉnh thông tin
+          </a>
         </div>
       </div>
     </div>

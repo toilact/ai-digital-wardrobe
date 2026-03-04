@@ -18,17 +18,14 @@ export async function POST(req: Request) {
   try {
     const admin = getAdmin();
 
-    // auth
     const token = getBearerToken(req);
     if (!token) return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
     await admin.auth().verifyIdToken(token);
 
-    // file
     const form = await req.formData();
     const file = form.get("file") as File | null;
     if (!file) return NextResponse.json({ ok: false, message: "Missing file" }, { status: 400 });
 
-    // call ai
     const aiForm = new FormData();
     aiForm.append("file", file, file.name);
 
@@ -47,11 +44,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: "AI returned invalid response" }, { status: 502 });
     }
 
-    // trả về dạng data url để frontend hiển thị ngay
     const items = aiJson.items.map((it) => ({
       type: it.type,
       imageDataUrl: `data:image/png;base64,${it.image_png_base64}`,
-      image_png_base64: it.image_png_base64, // giữ lại để confirm gửi lên
+      image_png_base64: it.image_png_base64,
     }));
 
     return NextResponse.json({ ok: true, items, count: items.length });
