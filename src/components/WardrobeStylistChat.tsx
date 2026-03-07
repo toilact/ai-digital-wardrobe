@@ -41,6 +41,7 @@ export default function WardrobeStylistChat({
 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<"thinking" | "analyzing_clothes" | "generating_outfit" | null>(null);
   const [showWardrobeSelector, setShowWardrobeSelector] = useState(false);
   const [wardrobeItems, setWardrobeItems] = useState<Array<any>>([]);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
@@ -62,7 +63,7 @@ export default function WardrobeStylistChat({
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, sending]);
+  }, [messages, sending, loadingStage]);
 
   useEffect(() => {
     if (mode === "drawer" && !open) return;
@@ -74,11 +75,11 @@ export default function WardrobeStylistChat({
     const content = text.trim();
     if (!content || sending) return;
 
-
     const userMsg: Msg = { id: uid(), role: "user", content, ts: Date.now() };
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setSending(true);
+    setLoadingStage("thinking");
 
     try {
       const token = await user?.getIdToken?.();
@@ -96,15 +97,58 @@ export default function WardrobeStylistChat({
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data?.ok) throw new Error(data?.message || "Request failed");
+      if (!res.ok) {
+        const text = await res.text();
+        const err = new Error(text || "Network error");
+        (err as any).status = res.status;
+        throw err;
+      }
 
-      // XỬ LÝ ẢNH TRẢ VỀ: ƯU TIÊN URL TRỰC TIẾP
+      // read the streamed chunks, updating loadingStage as stage messages arrive
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalData: any = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let obj: any;
+            try {
+              obj = JSON.parse(line);
+            } catch (parseErr) {
+              console.error("failed to parse chunk", parseErr, line);
+              continue;
+            }
+            if (obj.stage) {
+              setLoadingStage(obj.stage);
+            }
+            // detect final payload: we know it contains ok or reply
+            if (obj.hasOwnProperty("ok") || obj.reply) {
+              finalData = obj;
+            }
+          }
+        }
+        if (done) break;
+      }
+      const data = finalData || { ok: false, message: "No data" };
+      if (!data.ok) {
+        const error = new Error(data?.message || "Request failed");
+        (error as any).status = res.status;
+        throw error;
+      }
+
+      // process final response (same as before)
       if (data?.reply?.images && Array.isArray(data.reply.images)) {
         const imgs = data.reply.images
           .map((it: any) => {
-            if (it.url) return it.url; // Nhanh, nhẹ, dùng luôn URL
-            // if (it.png_base64) return `data:image/png;base64,${it.png_base64}`; // Dự phòng Base64
+            if (it.url) return it.url;
             return null;
           })
           .filter(Boolean);
@@ -127,24 +171,37 @@ export default function WardrobeStylistChat({
         setMessages((m) => [...m, botMsg]);
       }
     } catch (e: any) {
-      let message = ""
-      if (e?.code === 503) {
-        message = "AI đang bận, bạn thử lại sau nhé!";
+      let errorMessage = "";
+      let errorIcon = "😥";
+
+      // Kiểm tra mã lỗi từ response hoặc error code
+      if (e?.code === 503 || e?.status === 503) {
+        // Service Unavailable
+        errorMessage = "Hiện có nhiều người cùng sử dụng, hãy thử lại sau nhé";
+        errorIcon = "⏳";
+      } else if (e?.code === 429 || e?.status === 429 || e?.message?.includes("quota") || e?.message?.includes("hết lượt")) {
+        // Rate limit / Quota exceeded
+        errorMessage = "Hiện đã hết lượt sử dụng, vui lòng quay lại khi khác";
+        errorIcon = "🔒";
+      } else {
+        // Other errors
+        errorMessage = `Mình gặp lỗi: ${e?.message || "unknown error"}`;
+        errorIcon = "😥";
       }
+
       setMessages((m) => [
         ...m,
         {
           id: uid(),
           role: "assistant",
           ts: Date.now(),
-          content:
-            "Mình gặp lỗi khi gọi AI 😥\n" +
-            `Chi tiết: ${message || e?.message || "unknown error"}\n`
+          content: `${errorIcon}\n${errorMessage}`
         },
       ]);
       console.error(e);
     } finally {
       setSending(false);
+      setLoadingStage(null);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }
@@ -169,7 +226,7 @@ export default function WardrobeStylistChat({
       <div className="cy-scanline pointer-events-none absolute inset-0" />
 
       {/* header */}
-      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
+      <div className="flex items-center justify-left gap-3 px-5 py-4 border-b border-white/10">
         <button
           onClick={() => {
             if (onClose) return onClose();
@@ -244,7 +301,11 @@ export default function WardrobeStylistChat({
                 <span className="dotty delay-150" />
                 <span className="dotty delay-300" />
               </span>
-              <span className="ml-2">AI đang suy nghĩ…</span>
+              <span className="ml-2">
+                {loadingStage === "thinking" && "AI đang suy nghĩ…"}
+                {loadingStage === "analyzing_clothes" && "AI đang phân tích đồ của bạn…"}
+                {loadingStage === "generating_outfit" && "AI đang tạo outfit…"}
+              </span>
             </div>
           </div>
         ) : null}

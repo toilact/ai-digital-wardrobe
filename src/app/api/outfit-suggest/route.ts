@@ -11,27 +11,41 @@ interface ChatMessage {
   content: string;
 }
 
+// helper that streams newline-delimited JSON pieces to the client
+function sendStep(controller: ReadableStreamDefaultController, obj: any) {
+  const encoder = new TextEncoder();
+  controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+}
+
 export async function POST(req: Request) {
-  try {
+  // we will build a streaming response and emit stage updates as we go.
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const admin = getAdmin();
+        const adminDb = admin.firestore();
+        const body = await req.json();
 
-    const admin = getAdmin();
-    const adminDb = admin.firestore();
-    const body = await req.json();
+        const message: string = String(body?.message ?? "").trim();
+        const selectedItemIds: string[] = Array.isArray(body?.selectedItemIds) ? body.selectedItemIds : [];
+        const rawHistory = Array.isArray(body?.history) ? body.history : [];
+        const uid = String(body?.idUser ?? "").trim();
 
-    const message: string = String(body?.message ?? "").trim();
-    const selectedItemIds: string[] = Array.isArray(body?.selectedItemIds) ? body.selectedItemIds : [];
-    const rawHistory = Array.isArray(body?.history) ? body.history : [];
+        if (!message) {
+          sendStep(controller, { ok: false, message: "Empty message" });
+          controller.close();
+          return;
+        }
 
-    const uid = String(body?.idUser ?? "").trim();
+        // emit initial thinking stage (frontend already sets this but it's
+        // harmless and makes the protocol explicit)
+        sendStep(controller, { stage: "thinking" });
 
-    if (!message) return NextResponse.json({ ok: false, message: "Empty message" }, { status: 400 });
+        const userDoc = await adminDb.collection("users").doc(uid).get();
+        const userProfile = userDoc.exists ? (userDoc.data() as UserProfile) : null;
 
-    const userDoc = await adminDb.collection("users").doc(uid).get();
-    const userProfile = userDoc.exists ? (userDoc.data() as UserProfile) : null;
-
-
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_KT!);
-    const systemPrompt = `
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_KT!);
+        const systemPrompt = `
       Bạn là chuyên viên thời trang của AI-DIGITAL-WARDROBE.
       - Nếu tin nhắn yêu cầu phối đồ/outfit cho dịp/thời tiết/style/điểm đến cụ thể: TRẢ LỜI DUY NHẤT CHỮ 'EVENT'.
       - Nếu là chào hỏi/tư vấn chung: Trả lời thân thiện.
@@ -50,109 +64,110 @@ export async function POST(req: Request) {
       Thông tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
     `.trim();
 
+        let historyForAI = rawHistory
+          .map((msg: any) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: String(msg.content || "") }],
+          })) as any[];
 
-    let historyForAI = rawHistory
-      .map((msg: any) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: String(msg.content || "") }],
-      })) as any[];
+        if (historyForAI.length > 0 && historyForAI[0].role === 'model') {
+          historyForAI.shift();
+        }
 
-    if (historyForAI.length > 0 && historyForAI[0].role === 'model') {
-      historyForAI.shift();
-    }
+        const model = genAI.getGenerativeModel({
+          model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
+          systemInstruction: systemPrompt,
+        });
 
+        const chat = model.startChat({ history: historyForAI });
+        const result = await chat.sendMessage(message);
+        const aiText = result.response.text();
+        const isEvent = aiText === "EVENT";
 
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL ?? "gemini-3-flash",
-      systemInstruction: systemPrompt, // Dùng prompt ở mục 1
-    });
+        if (isEvent) {
+          let items: any[] = [];
+          if (selectedItemIds.length === 0) {
+            const snap = await adminDb.collection("wardrobeItems")
+              .where("uid", "==", uid)
+              .get();
+            items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          } else {
+            const docRefs = selectedItemIds.map(id => adminDb.collection("wardrobeItems").doc(id));
+            const docs = await adminDb.getAll(...docRefs);
+            items = docs.filter((d) => d.exists).map((d) => ({ id: d.id, ...d.data() }));
+          }
 
+          const validImages = (await Promise.all(items.map(async (it) => {
+            try {
+              const r = await fetch(it.imageUrl);
+              const buf = await r.arrayBuffer();
+              return { id: it.id, url: it.imageUrl, png_base64: Buffer.from(buf).toString("base64") };
+            } catch (e) { return null; }
+          }))).filter(img => img !== null);
 
+          sendStep(controller, { stage: "analyzing_clothes" });
 
+          const out = await generateVisualGemini({
+            userMessage: message,
+            profile: userProfile,
+            images: validImages,
+          });
 
-    const chat = model.startChat({ history: historyForAI });
-    const result = await chat.sendMessage(message);
-    const aiText = result.response.text();
+          sendStep(controller, { stage: "generating_outfit" });
 
-    const isEvent = aiText === "EVENT";
+          const restResponse = await fetch("https://api.infip.pro/v1/images/generations", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: "img4",
+              prompt: out.imagen_prompt,
+              n: 1, size: "1024x1024", response_format: "url"
+            })
+          });
 
+          const restData = await restResponse.json();
+          const imageUrl = restData.data?.[0]?.url || "";
 
+          sendStep(controller, {
+            ok: true,
+            reply: {
+              note: out.note,
+              outfit: out.outfit,
+              images: [{ url: imageUrl }],
+              stage: "outfit_generated",
+            },
+          });
+        } else {
+          sendStep(controller, {
+            ok: true,
+            reply: {
+              note: aiText,
+              intent: "CHAT",
+              stage: "chat_only",
+            },
+          });
+        }
 
-    if (isEvent) {
-
-      let items: any[] = [];
-
-
-      if (selectedItemIds.length === 0) {
-
-        const snap = await adminDb.collection("wardrobeItems")
-          .where("uid", "==", uid)
-          .get();
-
-        items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      } else {
-
-        const docRefs = selectedItemIds.map(id => adminDb.collection("wardrobeItems").doc(id));
-
-        const docs = await adminDb.getAll(...docRefs);
-
-        items = docs.filter((d) => d.exists).map((d) => ({ id: d.id, ...d.data() }));
+        controller.close();
+      } catch (e: any) {
+        console.error("API Route Error:", e);
+        let statusCode = 500;
+        let errorMessage = "Server error";
+        if (e?.message?.includes("503") || e?.code === 503) {
+          statusCode = 503;
+          errorMessage = "Service Unavailable";
+        } else if (e?.message?.includes("quota") || e?.message?.includes("429") || e?.message?.includes("rate limit")) {
+          statusCode = 429;
+          errorMessage = "Quota Exceeded";
+        }
+        sendStep(controller, { ok: false, message: errorMessage });
+        controller.close();
       }
+    },
+  });
 
-      const validImages = (await Promise.all(items.map(async (it) => {
-        try {
-          const r = await fetch(it.imageUrl);
-          const buf = await r.arrayBuffer();
-          return { id: it.id, url: it.imageUrl, png_base64: Buffer.from(buf).toString("base64") };
-        } catch (e) { return null; }
-      }))).filter(img => img !== null);
-
-
-      const out = await generateVisualGemini({
-        userMessage: message,
-        profile: userProfile,
-        images: validImages,
-      });
-
-      const restResponse = await fetch("https://api.infip.pro/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "img4",
-          prompt: out.imagen_prompt,
-          n: 1, size: "1024x1024", response_format: "url"
-        })
-      });
-
-      const restData = await restResponse.json();
-      const imageUrl = restData.data?.[0]?.url || "";
-
-      return NextResponse.json({
-        ok: true,
-        reply: {
-          note: out.note,
-          outfit: out.outfit,
-          images: [{ url: imageUrl }]
-        }
-      });
-
-    } else {
-      // --- LUỒNG CHAT BÌNH THƯỜNG ---
-      // Trả về văn bản AI đã phản hồi ở bước 4
-      return NextResponse.json({
-        ok: true,
-        reply: {
-          note: aiText,
-          intent: "CHAT"
-        }
-      });
-    }
-
-  } catch (e: any) {
-    console.error("API Route Error:", e);
-    return NextResponse.json({ ok: false, message: e?.code || "Server error" }, { status: 500 });
-  }
+  return new Response(stream, { headers: { "Content-Type": "application/json; charset=utf-8" } });
 }

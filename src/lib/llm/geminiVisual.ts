@@ -38,7 +38,7 @@ export async function generateVisualGemini(input: {
 
     const systemText = `
 ROLE:
-You are a professional fashion stylist and prompt engineer.
+You are a professional Asian fashion stylist and prompt engineer.
 
 USER PROFILE:
 The user gender is: ${userGender}.
@@ -78,19 +78,20 @@ For each image:
 2) OUTFIT SELECTION  
 - Select the most appropriate outfit for the occasion that mentioned in user's message"${input.userMessage}".
 
-3) IMAGEN PROMPT  
+3) IMAGEN PROMPT:
 Create a highly detailed English prompt describing:
-- A white ${userGender} mannequin matching the user's body proportions
-- Wearing EXACTLY the selected garments
-- Full body
-- Standing upright
-- Arms relaxed at sides
-- Neutral facial expression
-- Studio lighting
-- Pure white seamless background
-- Fashion catalog style
+- A featureless, faceless white plastic ${userGender} mannequin with a smooth surface (no human facial features, no eyes, no nose, no mouth).
+- The mannequin is made of solid opaque white plastic, matching ${userGender} body proportions .
+- Wearing EXACTLY the selected garments.
+- Full body shot from head to toe.
+- Standing upright in a rigid, neutral pose with arms relaxed at sides.
+- Professional studio lighting highlighting the plastic texture and garment fabric.
+- Background: Pure white, seamless, high-end fashion catalog style.
+- NO human skin, NO human hair, NO facial expressions.
 
 4) ASNSWER STRUCTURE
+Produce **ONLY a single JSON object (NOT an array)**. 
+Do not include any introductory text, markdown code blocks, or explanations outside the JSON.
 Produce a JSON with the following structure:
 {
   "clothesDescription": "The detailed description of the garments in task 1",
@@ -113,7 +114,7 @@ Produce the JSON now.`.trim();
 
 
     const res = await ai.models.generateContent({
-        model: process.env.GEMINI_MODEL ?? "gemini-3-flash",
+        model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
         contents: multimodalContents,
         config: {
             responseMimeType: "application/json",

@@ -14,8 +14,7 @@ export default function OutfitSuggestPage() {
     if (!loading && !user) router.replace("/");
   }, [loading, user, router]);
 
-  if (loading) return <div className="p-6 text-white/70">Loading...</div>;
-  if (!user) return null;
+
   useEffect(() => {
     const run = async () => {
       if (!user) return;
@@ -24,7 +23,8 @@ export default function OutfitSuggestPage() {
 
     if (!loading && user) run();
   }, [loading, user, router]);
-
+  if (loading) return <div className="p-6 text-white/70">Loading...</div>;
+  if (!user) return null;
   return (
     <div className="dashboard-container h-[100svh] overflow-hidden">
       <WardrobeStylistChat mode="page" idUser={user.uid} />
