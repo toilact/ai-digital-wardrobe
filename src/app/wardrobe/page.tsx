@@ -11,7 +11,6 @@ type WardrobeItem = {
   id: string;
   imageUrl: string;
   category?: string;
-  color?: string;
   cloudinaryPublicId?: string;
   createdAt?: any;
 };
@@ -214,7 +213,6 @@ export default function WardrobePage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium">{it.category || "Không rõ"}</div>
-                    <div className="text-gray-500">{it.color || "Không rõ"}</div>
                   </div>
                   <button
                     onClick={() => openConfirm(it.id, it.cloudinaryPublicId)}

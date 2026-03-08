@@ -1,3 +1,4 @@
+// src/app/api/wardrobe/confirm/route.ts
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
@@ -16,46 +17,119 @@ function getBearerToken(req: Request) {
   return m?.[1];
 }
 
-function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
-  return new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: "image", format: "png" },
-      (err, result) => {
-        if (err || !result) return reject(err);
-        resolve({ secure_url: result.secure_url!, public_id: result.public_id! });
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
       }
     );
-    stream.end(buffer);
   });
 }
 
-type ConfirmItem = {
-  type: string; // nhãn người dùng đã chọn/sửa
-  image_png_base64: string; // base64 png (có thể có prefix data:image/png;base64,...)
-};
+async function optimizeTransparentImage(buffer: Buffer): Promise<Buffer> {
+  const sharp = (await import("sharp")).default;
 
-/** ---- Category normalize: chỉ 5 loại ---- */
-type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày";
-
-function stripVN(s?: string) {
-  return (s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .trim();
+  return await sharp(buffer)
+    .resize({
+      width: 1600,
+      height: 1600,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({
+      lossless: true,
+      effort: 4,
+    })
+    .toBuffer();
 }
 
-function normalizeCategory(typeRaw?: string): CatKey {
-  const s = stripVN(typeRaw);
+function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
+  const task = new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+        format: "webp",
+        timeout: 120000,
+        overwrite: false,
+        unique_filename: true,
+      },
+      (err, result) => {
+        if (err || !result) return reject(err || new Error("Cloudinary upload failed"));
+        resolve({
+          secure_url: result.secure_url!,
+          public_id: result.public_id!,
+        });
+      }
+    );
 
-  if (s.includes("giay") || s.includes("shoe") || s.includes("sneaker")) return "Giày";
-  if (s.includes("dam") || s.includes("dress") || s.includes("gown")) return "Đầm";
-  if (s.includes("vay") || s.includes("skirt")) return "Váy";
-  if (s.includes("quan") || s.includes("pants") || s.includes("trouser") || s.includes("jean")) return "Quần";
-  if (s.includes("ao") || s.includes("shirt") || s.includes("tee") || s.includes("top") || s.includes("hoodie")) return "Áo";
+    stream.on("error", reject);
+    stream.end(buffer);
+  });
 
-  return "Áo";
+  return withTimeout(task, 130000, "Cloudinary upload timeout");
+}
+
+type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày" | "Khác";
+
+function normalizeCategory(raw: string): CatKey {
+  const s = (raw || "").trim().toLowerCase();
+
+  if (["ao", "áo", "shirt", "top", "tshirt", "tee", "hoodie", "jacket", "coat", "sweater", "blouse"].some((k) => s.includes(k))) {
+    return "Áo";
+  }
+  if (["quan", "quần", "pants", "trousers", "jeans", "shorts"].some((k) => s.includes(k))) {
+    return "Quần";
+  }
+  if (["vay", "váy", "skirt"].some((k) => s.includes(k))) {
+    return "Váy";
+  }
+  if (["dam", "đầm", "dress", "gown", "onepiece"].some((k) => s.includes(k))) {
+    return "Đầm";
+  }
+  if (["giay", "giày", "shoe", "shoes", "sneaker", "boot", "boots", "sandal"].some((k) => s.includes(k))) {
+    return "Giày";
+  }
+  return "Khác";
+}
+
+type InputItem = {
+  type?: string;
+  image_png_base64?: string;
+};
+
+type PreparedUpload = {
+  rawType: string;
+  category: CatKey;
+  imageUrl: string;
+  cloudinaryPublicId: string;
+};
+
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+
+  async function run() {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) break;
+      results[idx] = await worker(items[idx], idx);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
+  return results;
 }
 
 export async function POST(req: Request) {
@@ -65,58 +139,91 @@ export async function POST(req: Request) {
     }
 
     const admin = getAdmin();
-
     const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
+    }
 
     const decoded = await admin.auth().verifyIdToken(token);
     const uid = decoded.uid;
 
-    const body = await req.json();
-    const items = (body?.items || []) as ConfirmItem[];
-    if (!Array.isArray(items) || items.length === 0) {
+    const body = await req.json().catch(() => ({} as any));
+    const items = Array.isArray(body?.items) ? (body.items as InputItem[]) : [];
+
+    if (items.length === 0) {
       return NextResponse.json({ ok: false, message: "Missing items" }, { status: 400 });
     }
+
+    const prepared = await mapLimit(items, 1, async (it, idx) => {
+      const rawType = String(it?.type || "unknown");
+      const category = normalizeCategory(rawType);
+
+      const b64 =
+        typeof it?.image_png_base64 === "string"
+          ? (it.image_png_base64.includes(",") ? it.image_png_base64.split(",")[1] : it.image_png_base64)
+          : "";
+
+      if (!b64) throw new Error(`Missing image_png_base64 at item ${idx}`);
+
+      const originalBuffer = Buffer.from(b64, "base64");
+      const optimizedBuffer = await optimizeTransparentImage(originalBuffer);
+
+      console.log("[confirm] uploading", {
+        idx,
+        category,
+        originalKB: Math.round(originalBuffer.length / 1024),
+        optimizedKB: Math.round(optimizedBuffer.length / 1024),
+      });
+
+      const folder = `wardrobe/${uid}/${category}`;
+      const { secure_url, public_id } = await uploadBufferToCloudinary(optimizedBuffer, folder);
+
+      return {
+        rawType,
+        category,
+        imageUrl: secure_url,
+        cloudinaryPublicId: public_id,
+      } satisfies PreparedUpload;
+    });
 
     const db = admin.firestore();
     const batch = db.batch();
     const saved: any[] = [];
 
-    for (const it of items) {
-      const typeRaw = it.type || "unknown";
-      const category = normalizeCategory(typeRaw);
-
-      const b64 = it.image_png_base64?.includes(",")
-        ? it.image_png_base64.split(",")[1]
-        : it.image_png_base64;
-
-      if (!b64) continue;
-
-      const buf = Buffer.from(b64, "base64");
-
-      const folder = `wardrobe/${uid}/${category}`;
-      const { secure_url, public_id } = await uploadBufferToCloudinary(buf, folder);
-
+    for (const up of prepared) {
       const docRef = db.collection("wardrobeItems").doc();
       const doc = {
         uid,
-        category,
-        rawType: typeRaw,
-        color: "Không rõ",
-        imageUrl: secure_url,
-        cloudinaryPublicId: public_id,
+        category: up.category,
+        rawType: up.rawType,
+        imageUrl: up.imageUrl,
+        cloudinaryPublicId: up.cloudinaryPublicId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        source: "schp",
+        source: "sam+label",
       };
 
       batch.set(docRef, doc);
-      saved.push({ id: docRef.id, ...doc });
+      saved.push({
+        id: docRef.id,
+        ...doc,
+        createdAt: new Date().toISOString(),
+      });
     }
 
-    await batch.commit();
+    await withTimeout(batch.commit(), 15000, "Firestore batch commit timeout");
+
     return NextResponse.json({ ok: true, items: saved, count: saved.length });
   } catch (e: any) {
-    console.error(e);
-    return NextResponse.json({ ok: false, message: e?.message || "Confirm failed" }, { status: 500 });
+    console.error("[confirm] failed:", {
+      message: e?.message,
+      name: e?.name,
+      http_code: e?.http_code,
+      stack: e?.stack,
+    });
+
+    return NextResponse.json(
+      { ok: false, message: e?.message || "Confirm failed" },
+      { status: 500 }
+    );
   }
 }

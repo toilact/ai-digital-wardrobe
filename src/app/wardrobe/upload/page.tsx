@@ -4,22 +4,25 @@ import WardrobeUploader from "@/components/WardrobeUploader";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import LogoutButton from "@/components/LogoutButton";
 
 export default function WardrobeUploadPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+
   const [isUploading, setIsUploading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  if (loading) return <div className="p-6">Loading...</div>;
-  if (!user) {
-    router.replace("/");
-    return null;
-  }
-
+  // ✅ Redirect phải nằm trong useEffect, không được router.replace trong render
   useEffect(() => {
-    let t: NodeJS.Timeout | null = null;
+    if (!loading && !user) {
+      router.replace("/");
+    }
+  }, [loading, user, router]);
+
+  // ✅ Hooks luôn phải chạy trước mọi return
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+
     if (showSuccess) {
       t = setTimeout(() => {
         setShowSuccess(false);
@@ -27,8 +30,14 @@ export default function WardrobeUploadPage() {
         router.push("/wardrobe");
       }, 1000);
     }
-    return () => { if (t) clearTimeout(t); };
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
   }, [showSuccess, router]);
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!user) return null; // đang redirect
 
   return (
     <div className="dashboard-container">
@@ -43,12 +52,17 @@ export default function WardrobeUploadPage() {
           </div>
 
           <div className="hero-right">
+<<<<<<< HEAD
 
+=======
+>>>>>>> c0b6fa4 (tach anh done)
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/dashboard")}
                 disabled={isUploading}
-                className={`px-3 py-2 rounded border bg-white/5 text-white hover:bg-white/10 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`px-3 py-2 rounded border bg-white/5 text-white hover:bg-white/10 ${
+                  isUploading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 ← Dashboard
               </button>
@@ -56,12 +70,12 @@ export default function WardrobeUploadPage() {
               <button
                 onClick={() => router.push("/wardrobe")}
                 disabled={isUploading}
-                className={`px-3 py-2 rounded border bg-white/5 text-white hover:bg-white/10 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`px-3 py-2 rounded border bg-white/5 text-white hover:bg-white/10 ${
+                  isUploading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 Xem tủ đồ →
               </button>
-
-              {/* <LogoutButton /> */}
             </div>
           </div>
         </header>
@@ -71,10 +85,15 @@ export default function WardrobeUploadPage() {
             <div className="content">
               <div className="mb-4">
                 <h3 className="title">Upload và tách đồ</h3>
-                <p className="desc">Chọn ảnh, AI sẽ tự tách từng item và bạn có thể lưu vào tủ đồ.</p>
+                <p className="desc">
+                  Chọn ảnh, AI sẽ tự tách từng item và bạn có thể lưu vào tủ đồ.
+                </p>
               </div>
 
-              <WardrobeUploader onUploadingChange={setIsUploading} onUploadSuccess={() => setShowSuccess(true)} />
+              <WardrobeUploader
+                onUploadingChange={setIsUploading}
+                onUploadSuccess={() => setShowSuccess(true)}
+              />
             </div>
           </div>
         </section>
@@ -90,7 +109,9 @@ export default function WardrobeUploadPage() {
                   <div>Đang xử lý, xin chờ...</div>
                 </>
               ) : (
-                <div className="text-green-300 font-medium">đưa vào tủ đồ thành công</div>
+                <div className="text-green-300 font-medium">
+                  đưa vào tủ đồ thành công
+                </div>
               )}
             </div>
           </div>

@@ -7,3 +7,14 @@ opencv-python==4.10.0.84
 
 torch==2.2.2
 torchvision==0.17.2
+git+https://github.com/facebookresearch/segment-anything.git
+
+# --- better edge refinement (optional but recommended) ---
+pymatting>=1.1.12
+scipy>=1.10
+
+# --- optional: local zero-shot label fallback (CLIP) ---
+open_clip_torch>=2.26.0
+timm>=0.9
+ftfy>=6.1
+regex>=2024.0

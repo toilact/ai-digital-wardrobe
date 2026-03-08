@@ -8,7 +8,14 @@ type ParsedItem = {
   type: string;
   imageDataUrl: string;
   image_png_base64: string;
+  sourceFileIndex: number;
 };
+
+const TYPE_OPTIONS = ["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"] as const;
+
+function clamp01(v: number) {
+  return Math.max(0, Math.min(1, v));
+}
 
 export default function WardrobeUploader({
   onUploadingChange,
@@ -21,10 +28,7 @@ export default function WardrobeUploader({
   const router = useRouter();
 
   const [files, setFiles] = useState<File[]>([]);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [category, setCategory] = useState("Áo");
-  const [color, setColor] = useState("Đen");
 
   const [parsing, setParsing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,16 +36,24 @@ export default function WardrobeUploader({
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
 
-  const previewUrls = useMemo(() => {
-    return files.map((f) => URL.createObjectURL(f));
-  }, [files]);
+  // click-point per source file
+  const [points, setPoints] = useState<Record<number, { x: number; y: number }>>({});
+
+  const previewUrls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+
+  useEffect(() => {
+    if (!loading && !user) router.replace("/");
+  }, [loading, user, router]);
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [previewUrls]);
 
   const onAddFiles = (newFiles: File[]) => {
-    setFiles((s) => {
-      const merged = [...s, ...newFiles];
-      return merged;
-    });
-    setActiveIndex((cur) => (cur === null ? 0 : cur));
+    const imgs = newFiles.filter((f) => f.type.startsWith("image/"));
+    setFiles((s) => [...s, ...imgs]);
     setParsedItems([]);
     setSelected({});
   };
@@ -50,60 +62,176 @@ export default function WardrobeUploader({
     setFiles((s) => s.filter((_, i) => i !== idx));
     setParsedItems([]);
     setSelected({});
-    setActiveIndex((cur) => {
-      if (cur === null) return null;
-      if (idx < cur) return cur - 1;
-      if (idx === cur) return null;
-      return cur;
+    setPoints((p) => {
+      const next: Record<number, { x: number; y: number }> = {};
+      Object.entries(p).forEach(([k, v]) => {
+        const i = Number(k);
+        if (i < idx) next[i] = v;
+        else if (i > idx) next[i - 1] = v;
+      });
+      return next;
     });
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    if (list.length) onAddFiles(list);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (ev: React.DragEvent) => {
+    ev.preventDefault();
+    const list = ev.dataTransfer.files
+      ? Array.from(ev.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+      : [];
+    if (list.length) onAddFiles(list);
+  };
+
+  const handleDragOver = (ev: React.DragEvent) => ev.preventDefault();
+
+  const pickPointForIndex = (ev: React.MouseEvent<HTMLDivElement>, idx: number) => {
+    const rect = ev.currentTarget.getBoundingClientRect();
+    const x = clamp01((ev.clientX - rect.left) / rect.width);
+    const y = clamp01((ev.clientY - rect.top) / rect.height);
+    setPoints((p) => ({ ...p, [idx]: { x, y } }));
+  };
+
+  const clearPointForIndex = (idx: number) => {
+    setPoints((p) => {
+      const next = { ...p };
+      delete next[idx];
+      return next;
+    });
+  };
+
+  const labelOne = async (idToken: string, item: ParsedItem) => {
+    try {
+      const res = await fetch("/api/wardrobe/label-item", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image_png_base64: item.image_png_base64 }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return item;
+
+      const category = data?.label?.category;
+      return {
+        ...item,
+        type: category || item.type,
+      };
+    } catch {
+      return item;
+    }
   };
 
   const onParse = async (index?: number) => {
     if (!user) return;
 
-    // parse single image when index provided, otherwise parse all uploaded files
+    const indices = typeof index === "number" ? [index] : files.map((_, i) => i);
     if (indices.length === 0) return alert("Không có ảnh để tách.");
 
     setParsing(true);
     onUploadingChange?.(true);
 
+    const errors: Array<{ idx: number; status: number; msg: string; raw?: any }> = [];
+
     try {
       const idToken = await user.getIdToken();
-      let allItems: ParsedItem[] = [];
 
-      for (const idx of indices) {
+      const PARSE_CONCURRENCY = 3;
+      const resultsByFileIndex: Record<number, ParsedItem[]> = {};
+      let cursor = 0;
+
+      const parseOne = async (idx: number) => {
         const fileToParse = files[idx];
         const formData = new FormData();
-        formData.append("file", fileToParse);
+        formData.append("file", fileToParse, fileToParse.name);
 
-        try {
-          const res = await fetch("/api/wardrobe/parse", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${idToken}` },
-            body: formData,
-          });
-
-          const data = await res.json();
-          if (!res.ok) {
-            console.error("PARSE FAIL for file index", idx, data);
-            continue;
-          }
-
-          const items: ParsedItem[] = data.items || [];
-          allItems = allItems.concat(items);
-        } catch (e) {
-          console.error("Parse request failed for index", idx, e);
-          continue;
+        const pt = points[idx];
+        if (pt) {
+          formData.append("x", String(pt.x));
+          formData.append("y", String(pt.y));
         }
+
+        const res = await fetch("/api/wardrobe/parse", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${idToken}` },
+          body: formData,
+        });
+
+        const raw = await res.json().catch(async () => ({ message: await res.text().catch(() => "") }));
+        if (!res.ok || !raw?.ok) {
+          errors.push({
+            idx,
+            status: res.status,
+            msg: raw?.message || "Parse failed",
+            raw,
+          });
+          return;
+        }
+
+        const items = Array.isArray(raw?.items) ? raw.items : [];
+        resultsByFileIndex[idx] = items.map((it: any) => ({
+          type: it.type || "Khác",
+          imageDataUrl:
+            typeof it.imageDataUrl === "string"
+              ? it.imageDataUrl
+              : `data:image/png;base64,${it.image_png_base64}`,
+          image_png_base64: it.image_png_base64,
+          sourceFileIndex: idx,
+        }));
+      };
+
+      const workers = Array.from({ length: Math.min(PARSE_CONCURRENCY, indices.length) }, async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= indices.length) break;
+          await parseOne(indices[i]);
+        }
+      });
+
+      await Promise.all(workers);
+
+      const allItems = indices.flatMap((idx) => resultsByFileIndex[idx] || []);
+      setParsedItems(allItems);
+      setSelected(
+        Object.fromEntries(allItems.map((_, idx) => [idx, true])) as Record<number, boolean>
+      );
+
+      if (errors.length > 0) {
+        console.error("PARSE ERRORS:", errors);
       }
 
-      setParsedItems(allItems);
+      // auto label sau khi parse (không block UI, update dần)
+      void (async () => {
+        const shouldLabel = (t?: string) => !t || t === "item" || t === "Khác";
 
-      // mặc định chọn hết
-      allItems.forEach((_, idx) => (nextSelected[idx] = true));
-      setSelected(nextSelected);
+        const concurrency = 3;
+        let c = 0;
 
-      if (allItems.length === 0) alert("Không phát hiện được item nào 😢");
+        const workers = Array.from({ length: concurrency }, async () => {
+          while (true) {
+            const i = c++;
+            if (i >= allItems.length) break;
+            if (!shouldLabel(allItems[i].type)) continue;
+
+            const labeled = await labelOne(idToken, allItems[i]);
+
+            setParsedItems((prev) => {
+              if (i < 0 || i >= prev.length) return prev;
+              const next = prev.slice();
+              next[i] = labeled;
+              return next;
+            });
+          }
+        });
+
+        await Promise.all(workers);
+      })();
     } catch (e) {
       console.error(e);
       alert("Tách đồ thất bại (lỗi mạng hoặc API).");
@@ -113,35 +241,31 @@ export default function WardrobeUploader({
     }
   };
 
+  const updateItem = (idx: number, patch: Partial<ParsedItem>) => {
+    setParsedItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  };
+
   const onUploadSelected = async () => {
     if (!user) return;
+    if (parsedItems.length === 0) return alert("Bạn cần tách đồ trước khi upload.");
 
-    // Bắt buộc phải tách trước
-    if (parsedItems.length === 0) {
-      return alert("Bạn cần tách đồ trước khi upload.");
-    }
-
-    // Lấy đúng các item đã tick
     const picked = parsedItems
       .map((it, idx) => ({ it, idx }))
       .filter(({ idx }) => !!selected[idx])
       .map(({ it }) => ({
-        type: it.type || category,
-        // phòng trường hợp base64 có prefix "data:image/png;base64,..."
+        type: it.type,
         image_png_base64: it.image_png_base64?.includes(",")
           ? it.image_png_base64.split(",")[1]
           : it.image_png_base64,
       }));
 
-    if (picked.length === 0) return alert("Bạn chưa chọn item nào để ném vào tủ.");
+    if (picked.length === 0) return alert("Bạn chưa chọn item nào để thêm vào tủ.");
 
     setUploading(true);
     onUploadingChange?.(true);
 
     try {
       const idToken = await user.getIdToken();
-
-      // ✅ Gửi thẳng những item đã chọn lên /confirm để lưu
       const res = await fetch("/api/wardrobe/confirm", {
         method: "POST",
         headers: {
@@ -151,65 +275,32 @@ export default function WardrobeUploader({
         body: JSON.stringify({ items: picked }),
       });
 
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data?.message || "Confirm thất bại.");
+        alert(data?.message || "Thêm vào tủ thất bại.");
         console.error("CONFIRM FAIL:", data);
         return;
       }
 
-      // clear all files/state since we parsed/uploaded across all images
       setFiles([]);
-      setActiveIndex(null);
       setParsedItems([]);
       setSelected({});
-
-      // notify parent that upload succeeded (parent will show success toast and navigate)
+      setPoints({});
       onUploadSuccess?.();
     } catch (e) {
       console.error(e);
-      alert("Confirm thất bại (lỗi mạng hoặc API).");
+      alert("Thêm vào tủ thất bại (lỗi mạng hoặc API).");
     } finally {
       setUploading(false);
       onUploadingChange?.(false);
     }
   };
 
-
   if (loading) return <div className="p-6">Loading...</div>;
-  if (!user) {
-    router.replace("/");
-    return null;
-  }
-
-  // cleanup created object URLs
-  useEffect(() => {
-    return () => {
-      previewUrls.forEach((u) => URL.revokeObjectURL(u));
-    };
-  }, [previewUrls]);
-
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files ? Array.from(e.target.files) : [];
-    if (list.length) onAddFiles(list);
-    // reset input so same file can be selected again
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleDrop = (ev: React.DragEvent) => {
-    ev.preventDefault();
-    const list = ev.dataTransfer.files ? Array.from(ev.dataTransfer.files).filter((f) => f.type.startsWith("image/")) : [];
-    if (list.length) onAddFiles(list);
-  };
-
-  const handleDragOver = (ev: React.DragEvent) => {
-    ev.preventDefault();
-  };
+  if (!user) return null;
 
   return (
-    <div className=" space-y-4 relative">
-      {/* overlay to block interaction when parsing/uploading */}
+    <div className="max-w-5xl space-y-4 relative">
       {(parsing || uploading) && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center">
           <div className="text-white">{parsing ? "Đang tách..." : "Đang xử lý..."}</div>
@@ -235,77 +326,147 @@ export default function WardrobeUploader({
 
       {files.length > 0 && (
         <div className="space-y-2">
-          <div className="font-medium">Ảnh sắp tách ({files.length})</div>
-          <div className="flex gap-3 overflow-x-auto py-2">
-            {files.map((f, idx) => (
-              <div
-                key={idx}
-                className={`relative border border-white/10 rounded-lg overflow-hidden w-36 flex-shrink-0 ${activeIndex === idx ? "ring-2 ring-indigo-400" : ""}`}
-              >
-                <button
-                  onClick={(e) => { e.stopPropagation(); onRemoveFile(idx); }}
-                  className="absolute top-1 right-1 z-20 bg-gray-500 hover:bg-gray-400 text-white text-xs rounded-full px-2 pb-1"
-                  aria-label="Xóa ảnh"
-                >
-                  x
-                </button>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewUrls[idx]}
-                  alt={f.name}
-                  className="w-full h-24 object-cover"
-                  onClick={() => { setActiveIndex(idx); setParsedItems([]); setSelected({}); }}
-                />
-                <div className="p-2 text-xs truncate text-white/80" title={f.name}>{f.name}</div>
-              </div>
-            ))}
+          <div className="font-medium text-white/90">Ảnh sắp tách ({files.length})</div>
+          <div className="text-xs text-white/50">
+            Mỗi ảnh có clickpoint riêng. Bạn có thể chấm tất cả ảnh trước rồi bấm <b>Tách tất cả</b>.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {files.map((f, idx) => {
+              const pt = points[idx];
+
+              return (
+                <div key={`${f.name}-${idx}`} className="border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-white/70">
+                    <div className="truncate">{f.name}</div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveFile(idx);
+                      }}
+                      disabled={parsing || uploading}
+                      className="rounded-full px-2 py-1 bg-black/40 text-white"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div
+                    className="relative border-t border-white/10 cursor-crosshair bg-white/5"
+                    onClick={(e) => pickPointForIndex(e, idx)}
+                    title="Click để chọn điểm thuộc món đồ bạn muốn tách"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrls[idx]}
+                      alt={f.name}
+                      className="w-full h-56 object-contain pointer-events-none"
+                    />
+
+                    {pt && (
+                      <div
+                        className="absolute w-3 h-3 rounded-full border border-white bg-indigo-500/80"
+                        style={{
+                          left: `${pt.x * 100}%`,
+                          top: `${pt.y * 100}%`,
+                          transform: "translate(-50%,-50%)",
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 p-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearPointForIndex(idx);
+                      }}
+                      disabled={!pt || parsing || uploading}
+                      className="px-2 py-1 rounded border border-white/10 hover:bg-white/10 text-xs text-white/80 disabled:opacity-50"
+                    >
+                      Xoá điểm
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onParse(idx);
+                      }}
+                      disabled={parsing || uploading}
+                      className="ml-auto px-2 py-1 rounded border border-white/10 hover:bg-white/10 text-xs text-white/80 disabled:opacity-50"
+                    >
+                      Tách ảnh này
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-xs text-white/50">
+            * Nếu muốn tách chuẩn đúng món, hãy click đúng lên món đồ trong từng ảnh trước khi bấm Tách.
           </div>
         </div>
       )}
 
-      {/* selects removed to match dark theme — category/color kept as defaults */}
-
-      <div className="flex gap-3 justify-center">
+      <div className="flex gap-2">
         <button
-          onClick={() => onParse()}
+          onClick={() => void onParse()}
           disabled={files.length === 0 || parsing || uploading}
           className="px-4 py-2 rounded border text-white bg-white/5 border-white/20 hover:bg-white/10 disabled:opacity-50"
         >
-          {parsing ? "Đang tách..." : "Tách đồ"}
+          {parsing ? "Đang tách..." : "Tách tất cả"}
         </button>
 
         <button
-          onClick={() => onUploadSelected()}
+          onClick={onUploadSelected}
           disabled={parsedItems.length === 0 || uploading || parsing || Object.values(selected).every((v) => !v)}
-          className="px-4 py-2 rounded border text-white bg-gradient-to-r from-indigo-500/30 to-pink-500/20 border-indigo-400/20 hover:from-indigo-500/40 hover:to-pink-500/30 disabled:opacity-50"
+          className="ml-auto px-4 py-2 rounded border text-white bg-gradient-to-r from-indigo-500/30 to-pink-500/20 border-indigo-400/20 hover:from-indigo-500/40 hover:to-pink-500/30 disabled:opacity-50"
         >
-          {uploading ? "Đang đưa vào tủ đồ..." : "Đưa vào tủ đồ"}
+          {uploading ? "Đang thêm vào tủ..." : "Thêm vào tủ đồ"}
         </button>
       </div>
 
       {parsedItems.length > 0 && (
         <div className="space-y-2">
-          <div className="font-medium">Kết quả tách ({parsedItems.length})</div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="font-medium text-white/90">Kết quả tách ({parsedItems.length})</div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {parsedItems.map((it, idx) => (
-              <label key={idx} className="border border-white/10 rounded-xl p-2 cursor-pointer">
-                <div className="flex items-center gap-2 mb-2">
-                  <input
-                    type="checkbox"
-                    checked={!!selected[idx]}
-                    onChange={(e) => setSelected((s) => ({ ...s, [idx]: e.target.checked }))}
-                  />
-                  <div className="text-xs opacity-70">{it.type}</div>
+              <div key={idx} className="border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageDataUrl} alt={`parsed-${idx}`} className="w-full h-56 object-contain bg-white/5" />
+                  <label className="absolute top-2 left-2 flex items-center gap-2 rounded bg-black/50 px-2 py-1 text-xs text-white">
+                    <input
+                      type="checkbox"
+                      checked={!!selected[idx]}
+                      onChange={(e) => setSelected((s) => ({ ...s, [idx]: e.target.checked }))}
+                    />
+                    Chọn
+                  </label>
                 </div>
 
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={it.imageDataUrl} alt={it.type} className="w-full rounded-lg bg-white/5" />
-              </label>
-            ))}
-          </div>
+                <div className="p-3 space-y-2">
+                  <div className="text-xs text-white/50">Ảnh nguồn #{it.sourceFileIndex + 1}</div>
 
-          <div className="text-xs opacity-60">
-            * anh Thành Chí Thành đẹp trai
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/60 w-10">Loại</span>
+                    <select
+                      value={it.type}
+                      onChange={(e) => updateItem(idx, { type: e.target.value })}
+                      className="flex-1 rounded bg-black/30 border border-white/10 px-2 py-2 text-sm text-white"
+                    >
+                      {TYPE_OPTIONS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
