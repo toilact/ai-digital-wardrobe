@@ -52,10 +52,6 @@ export default function WardrobeUploadPage() {
           </div>
 
           <div className="hero-right">
-<<<<<<< HEAD
-
-=======
->>>>>>> c0b6fa4 (tach anh done)
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/dashboard")}
