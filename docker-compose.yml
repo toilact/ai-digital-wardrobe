@@ -1,4 +1,3 @@
-
 services:
   ai-service:
     container_name: ai-digital-wardrobe-ai

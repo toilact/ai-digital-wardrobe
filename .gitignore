@@ -45,9 +45,12 @@ ai-service/.venv/
 *.pyc
 
 # ML / artifacts
+ai-service/checkpoints/
 *.pt
 *.pth
 *.onnx
 
 # OS/Editor
 .DS_Store
+ai-service/checkpoints/
+*.pth
