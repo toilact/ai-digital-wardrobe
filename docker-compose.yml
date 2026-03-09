@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   ai-service:
@@ -31,7 +30,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - .env.production
+      - .env.local
     environment:
       - DOCKER=1
       - AI_SERVICE_URL=http://ai-service:8000
