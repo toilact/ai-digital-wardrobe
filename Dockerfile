@@ -1,35 +1,46 @@
-# Dockerfile (root) - Next.js production
-FROM node:20-alpine AS deps
+# =========================
+# base
+# =========================
+FROM node:20-alpine AS base
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+EXPOSE 3000
+
+# =========================
+# build
+# =========================
+FROM node:20-alpine AS build
+WORKDIR /src
 
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN \
-  if [ -f package-lock.json ]; then npm ci; \
+RUN if [ -f package-lock.json ]; then npm ci; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm i --frozen-lockfile; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   else npm i; fi
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-FROM node:20-alpine AS runner
+# =========================
+# publish
+# =========================
+FROM build AS publish
+RUN mkdir -p /app/publish && \
+    cp -r package.json /app/publish/ && \
+    cp -r node_modules /app/publish/ && \
+    cp -r .next /app/publish/ && \
+    if [ -d public ]; then cp -r public /app/publish/; fi
+
+# =========================
+# final
+# =========================
+FROM base AS final
 WORKDIR /app
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
-# Nếu bạn dùng standalone output (khuyên dùng), uncomment 2 dòng dưới và cấu hình next.config.js
-# COPY --from=builder /app/.next/standalone ./
-# COPY --from=builder /app/.next/static ./.next/static
+COPY --from=publish /app/publish .
 
-# Cách phổ thông (không cần standalone):
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-
-EXPOSE 3000
-CMD ["npm", "run", "start", "--", "-p", "3000"]
+CMD ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]

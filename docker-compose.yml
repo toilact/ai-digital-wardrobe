@@ -1,59 +1,45 @@
+version: "3.8"
+
 services:
   ai-service:
+    container_name: ai-digital-wardrobe-ai
     build:
       context: ./ai-service
       dockerfile: Dockerfile
+    restart: always
     ports:
       - "8000:8000"
-    volumes:
-      - ./ai-service/checkpoints:/app/checkpoints
     environment:
-      # bật auto label
       - ENABLE_AUTO_LABEL=1
       - AUTO_LABEL_BACKEND=clip
-
-      # chỉ phân loại category, không lấy màu để tăng tốc
       - AUTO_LABEL_INCLUDE_COLOR=0
-
-      # inference
       - CLIP_DEVICE=cpu
-
-      # ===== OPTION A (mặc định): OpenCLIP ViT-B-32 =====
       - CLIP_MODEL_NAME=ViT-B-32
       - CLIP_PRETRAINED=laion2b_s34b_b79k
-
-      # ===== OPTION B: Fashion-domain (Marqo FashionCLIP) =====
-      # Nếu muốn dùng option B, comment 2 dòng OPTION A ở trên
-      # rồi uncomment dòng dưới (CLIP_PRETRAINED không cần cho hf-hub)
-      # - CLIP_MODEL_NAME=hf-hub:Marqo/marqo-fashionCLIP
-
+    volumes:
+      - ./ai-service/checkpoints:/app/checkpoints
     dns:
       - 1.1.1.1
       - 8.8.8.8
-    restart: unless-stopped
 
   web:
-    env_file:
-      - .env.local
+    container_name: ai-digital-wardrobe-web
     build:
       context: .
       dockerfile: Dockerfile
+    restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - .env.production
     environment:
       - DOCKER=1
       - AI_SERVICE_URL=http://ai-service:8000
-
-      # để parse route ưu tiên luôn label từ ai-service (nhanh, ổn định)
       - LABEL_STRATEGY=service
-
-      # optional: web gọi thẳng /label (nếu bạn dùng labelItem.ts mình đưa)
       - AI_LABEL_BACKEND=clip
-
       - NODE_OPTIONS=--dns-result-order=ipv4first
+    depends_on:
+      - ai-service
     dns:
       - 1.1.1.1
       - 8.8.8.8
-    depends_on:
-      - ai-service
-    restart: unless-stopped
