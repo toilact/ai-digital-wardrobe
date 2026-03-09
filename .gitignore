@@ -45,7 +45,6 @@ ai-service/.venv/
 *.pyc
 
 # ML / artifacts
-ai-service/checkpoints/
 *.pt
 *.pth
 *.onnx
