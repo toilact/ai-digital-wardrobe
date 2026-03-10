@@ -18,6 +18,11 @@ export default function Home() {
   const onLogin = async () => {
     if (!username || !pass) return alert("Nhập tên đăng nhập và mật khẩu");
     setLoading(true);
+    if (!auth) {
+      alert("Firebase chưa được khởi tạo!");
+      setLoading(false);
+      return;
+    }
     try {
       const loginEmail = `${username.trim().toLowerCase()}@adw.local`;
       await signInWithEmailAndPassword(auth, loginEmail, pass);

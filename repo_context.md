@@ -3,41 +3,53 @@
 ---
 # Dockerfile
 ```text
-# Dockerfile (root) - Next.js production
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS base
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+EXPOSE 3000
+
+FROM node:20-alpine AS build
+WORKDIR /src
 
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN \
-  if [ -f package-lock.json ]; then npm ci; \
+RUN if [ -f package-lock.json ]; then npm ci; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm i --frozen-lockfile; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   else npm i; fi
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
 
-FROM node:20-alpine AS runner
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+
+COPY . .
+
+RUN echo "NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY" && npm run build
+
+FROM build AS publish
+RUN mkdir -p /app/publish && \
+    cp -r package.json /app/publish/ && \
+    cp -r node_modules /app/publish/ && \
+    cp -r .next /app/publish/ && \
+    if [ -d public ]; then cp -r public /app/publish/; fi
+
+FROM base AS final
 WORKDIR /app
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
-# Nếu bạn dùng standalone output (khuyên dùng), uncomment 2 dòng dưới và cấu hình next.config.js
-# COPY --from=builder /app/.next/standalone ./
-# COPY --from=builder /app/.next/static ./.next/static
-
-# Cách phổ thông (không cần standalone):
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-
-EXPOSE 3000
-CMD ["npm", "run", "start", "--", "-p", "3000"]
+COPY --from=publish /app/publish .
+ENTRYPOINT ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]
 ```
 
 
@@ -89,63 +101,60 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ```text
 services:
   ai-service:
+    container_name: ai-digital-wardrobe-ai
     build:
       context: ./ai-service
       dockerfile: Dockerfile
+    restart: always
     ports:
       - "8000:8000"
-    volumes:
-      - ./ai-service/checkpoints:/app/checkpoints
     environment:
-      # bật auto label
       - ENABLE_AUTO_LABEL=1
       - AUTO_LABEL_BACKEND=clip
-
-      # chỉ phân loại category, không lấy màu để tăng tốc
       - AUTO_LABEL_INCLUDE_COLOR=0
-
-      # inference
       - CLIP_DEVICE=cpu
-
-      # ===== OPTION A (mặc định): OpenCLIP ViT-B-32 =====
       - CLIP_MODEL_NAME=ViT-B-32
       - CLIP_PRETRAINED=laion2b_s34b_b79k
-
-      # ===== OPTION B: Fashion-domain (Marqo FashionCLIP) =====
-      # Nếu muốn dùng option B, comment 2 dòng OPTION A ở trên
-      # rồi uncomment dòng dưới (CLIP_PRETRAINED không cần cho hf-hub)
-      # - CLIP_MODEL_NAME=hf-hub:Marqo/marqo-fashionCLIP
-
+    volumes:
+      - ./ai-service/checkpoints:/app/checkpoints
     dns:
       - 1.1.1.1
       - 8.8.8.8
-    restart: unless-stopped
 
   web:
-    env_file:
-      - .env.local
+    container_name: ai-digital-wardrobe-web
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY: "AIzaSyDii3QoCPLx5e8YVRZQlypkYCJqEDlZAZc"
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "ai-digital-wardrobe-2fc5f.firebaseapp.com"
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: "ai-digital-wardrobe-2fc5f"
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "ai-digital-wardrobe-2fc5f.firebasestorage.app"
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "397359419541"
+        NEXT_PUBLIC_FIREBASE_APP_ID: "1:397359419541:web:7d8860de0852b7121ccb9c"
+    restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - .env.local
     environment:
       - DOCKER=1
       - AI_SERVICE_URL=http://ai-service:8000
-
-      # để parse route ưu tiên luôn label từ ai-service (nhanh, ổn định)
       - LABEL_STRATEGY=service
-
-      # optional: web gọi thẳng /label (nếu bạn dùng labelItem.ts mình đưa)
       - AI_LABEL_BACKEND=clip
-
       - NODE_OPTIONS=--dns-result-order=ipv4first
+      - NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDii3QoCPLx5e8YVRZQlypkYCJqEDlZAZc
+      - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=ai-digital-wardrobe-2fc5f.firebaseapp.com
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=ai-digital-wardrobe-2fc5f
+      - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=ai-digital-wardrobe-2fc5f.firebasestorage.app
+      - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=397359419541
+      - NEXT_PUBLIC_FIREBASE_APP_ID=1:397359419541:web:7d8860de0852b7121ccb9c
+    depends_on:
+      - ai-service
     dns:
       - 1.1.1.1
       - 8.8.8.8
-    depends_on:
-      - ai-service
-    restart: unless-stopped
 ```
 
 
@@ -9554,39 +9563,32 @@ export default config;
 ---
 # ai-service/Dockerfile
 ```text
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# 1) System deps (thêm git để pip install git+... không fail)
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y \
+    build-essential \
     git \
-    curl \
-    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
-  && rm -rf /var/lib/apt/lists/*
+    libxrender1 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# 2) Python deps
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# 3) Copy code
 COPY . /app
 
-# 4) Copy checkpoints vào image
-#    (bạn phải có file trong ai-service/checkpoints trước khi build)
-COPY checkpoints/ /app/checkpoints/
-
-# 5) Default env cho SAM
-ENV ENABLE_SAM=1
-ENV SAM_MODEL_TYPE=vit_b
-ENV SAM_CHECKPOINT=/app/checkpoints/sam_vit_b_01ec64.pth
-ENV SAM_MAX_SIDE=1024
+RUN mkdir -p /app/checkpoints
 
 EXPOSE 8000
+
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
@@ -10840,11 +10842,12 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
 pillow==10.4.0
-numpy==2.0.2
+numpy==1.26.4
 opencv-python==4.10.0.84
 
-torch==2.2.2
-torchvision==0.17.2
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
 git+https://github.com/facebookresearch/segment-anything.git
 
 # --- better edge refinement (optional but recommended) ---
@@ -12559,10 +12562,6 @@ export default function WardrobeUploadPage() {
           </div>
 
           <div className="hero-right">
-<<<<<<< HEAD
-
-=======
->>>>>>> c0b6fa4 (tach anh done)
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/dashboard")}
@@ -13220,20 +13219,9 @@ function safeCat(x: any): string | undefined {
 
 export async function POST(req: Request) {
   try {
-<<<<<<< HEAD
-    const admin = getAdmin();
-
-    const token = getBearerToken(req);
-    if (!token) return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
-    await admin.auth().verifyIdToken(token);
-
-=======
->>>>>>> c0b6fa4 (tach anh done)
     const form = await req.formData();
     const file = form.get("file") as File | null;
 
-<<<<<<< HEAD
-=======
     const x = form.get("x")?.toString();
     const y = form.get("y")?.toString();
 
@@ -13244,7 +13232,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: "Only image files are allowed" }, { status: 400 });
     }
 
->>>>>>> c0b6fa4 (tach anh done)
     const aiForm = new FormData();
     aiForm.append("file", file);
     aiForm.append("item_type", "item");
@@ -13267,15 +13254,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: aiJson.message || "AI service failed" }, { status: 500 });
     }
 
-<<<<<<< HEAD
-    const items = aiJson.items.map((it) => ({
-      type: it.type,
-      imageDataUrl: `data:image/png;base64,${it.image_png_base64}`,
-      image_png_base64: it.image_png_base64,
-    }));
-=======
     const items = aiJson.items || [];
->>>>>>> c0b6fa4 (tach anh done)
 
     const labeledItems = await Promise.all(
       items.map(async (it) => {
@@ -13538,30 +13517,14 @@ export async function POST(req: Request) {
     const batch = db.batch();
     const saved: any[] = [];
 
-    for (const it of items) {
-      const typeRaw = it.type || "unknown";
-      const category = normalizeCategory(typeRaw);
-
-      const b64 = it.image_png_base64?.includes(",")
-        ? it.image_png_base64.split(",")[1]
-        : it.image_png_base64;
-
-      if (!b64) continue;
-
-      const buf = Buffer.from(b64, "base64");
-
-      // folder theo category chuẩn để nhìn Cloudinary gọn
-      const folder = `wardrobe/${uid}/${category}`;
-      const { secure_url, public_id } = await uploadBufferToCloudinary(buf, folder);
-
+    for (const up of prepared) {
       const docRef = db.collection("wardrobeItems").doc();
       const doc = {
         uid,
-        category, // ✅ luôn là 1 trong 5 loại
-        rawType: typeRaw, // ✅ optional: debug
-        color: "Không rõ",
-        imageUrl: secure_url,
-        cloudinaryPublicId: public_id,
+        category: up.category,
+        rawType: up.rawType,
+        imageUrl: up.imageUrl,
+        cloudinaryPublicId: up.cloudinaryPublicId,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         source: "sam+label",
       };
@@ -13690,19 +13653,14 @@ export async function POST(req: Request) {
 
     const form = await req.formData();
     const file = form.get("file") as File | null;
-
     if (!file) return NextResponse.json({ ok: false, message: "Missing file" }, { status: 400 });
     if (!file.type?.startsWith("image/")) {
       return NextResponse.json({ ok: false, message: "Only image files are allowed" }, { status: 400 });
     }
-
     const MAX = 8 * 1024 * 1024;
     if (file.size > MAX) return NextResponse.json({ ok: false, message: "File too large (max 8MB)" }, { status: 400 });
 
-<<<<<<< HEAD
-=======
     // 1) Cutout
->>>>>>> c0b6fa4 (tach anh done)
     const aiForm = new FormData();
     aiForm.append("file", file, file.name);
 
@@ -13722,10 +13680,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, items: [], message: "No items detected" });
     }
 
-<<<<<<< HEAD
-=======
     // 2) Upload to Cloudinary + save Firestore (with label)
->>>>>>> c0b6fa4 (tach anh done)
     const db = admin.firestore();
     const batch = db.batch();
 
@@ -15278,16 +15233,8 @@ export default function WardrobeUploader({
   }, [previewUrls]);
 
   const onAddFiles = (newFiles: File[]) => {
-<<<<<<< HEAD
-    setFiles((s) => {
-      const merged = [...s, ...newFiles];
-      return merged;
-    });
-    setActiveIndex((cur) => (cur === null ? 0 : cur));
-=======
     const imgs = newFiles.filter((f) => f.type.startsWith("image/"));
     setFiles((s) => [...s, ...imgs]);
->>>>>>> c0b6fa4 (tach anh done)
     setParsedItems([]);
     setSelected({});
   };
@@ -15365,11 +15312,7 @@ export default function WardrobeUploader({
   const onParse = async (index?: number) => {
     if (!user) return;
 
-<<<<<<< HEAD
-    // parse single image when index provided, otherwise parse all uploaded files
-=======
     const indices = typeof index === "number" ? [index] : files.map((_, i) => i);
->>>>>>> c0b6fa4 (tach anh done)
     if (indices.length === 0) return alert("Không có ảnh để tách.");
 
     setParsing(true);
@@ -15448,14 +15391,8 @@ export default function WardrobeUploader({
       void (async () => {
         const shouldLabel = (t?: string) => !t || t === "item" || t === "Khác";
 
-<<<<<<< HEAD
-      // mặc định chọn hết
-      allItems.forEach((_, idx) => (nextSelected[idx] = true));
-      setSelected(nextSelected);
-=======
         const concurrency = 3;
         let c = 0;
->>>>>>> c0b6fa4 (tach anh done)
 
         const workers = Array.from({ length: concurrency }, async () => {
           while (true) {
@@ -15544,12 +15481,7 @@ export default function WardrobeUploader({
   if (!user) return null;
 
   return (
-<<<<<<< HEAD
-    <div className=" space-y-4 relative">
-      {/* overlay to block interaction when parsing/uploading */}
-=======
     <div className="max-w-5xl space-y-4 relative">
->>>>>>> c0b6fa4 (tach anh done)
       {(parsing || uploading) && (
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center">
           <div className="text-white">{parsing ? "Đang tách..." : "Đang xử lý..."}</div>
@@ -15575,32 +15507,6 @@ export default function WardrobeUploader({
 
       {files.length > 0 && (
         <div className="space-y-2">
-<<<<<<< HEAD
-          <div className="font-medium">Ảnh sắp tách ({files.length})</div>
-          <div className="flex gap-3 overflow-x-auto py-2">
-            {files.map((f, idx) => (
-              <div
-                key={idx}
-                className={`relative border border-white/10 rounded-lg overflow-hidden w-36 flex-shrink-0 ${activeIndex === idx ? "ring-2 ring-indigo-400" : ""}`}
-              >
-                <button
-                  onClick={(e) => { e.stopPropagation(); onRemoveFile(idx); }}
-                  className="absolute top-1 right-1 z-20 bg-gray-500 hover:bg-gray-400 text-white text-xs rounded-full px-2 pb-1"
-                  aria-label="Xóa ảnh"
-                >
-                  x
-                </button>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewUrls[idx]}
-                  alt={f.name}
-                  className="w-full h-24 object-cover"
-                  onClick={() => { setActiveIndex(idx); setParsedItems([]); setSelected({}); }}
-                />
-                <div className="p-2 text-xs truncate text-white/80" title={f.name}>{f.name}</div>
-              </div>
-            ))}
-=======
           <div className="font-medium text-white/90">Ảnh sắp tách ({files.length})</div>
           <div className="text-xs text-white/50">
             Mỗi ảnh có clickpoint riêng. Bạn có thể chấm tất cả ảnh trước rồi bấm <b>Tách tất cả</b>.
@@ -15680,18 +15586,11 @@ export default function WardrobeUploader({
 
           <div className="text-xs text-white/50">
             * Nếu muốn tách chuẩn đúng món, hãy click đúng lên món đồ trong từng ảnh trước khi bấm Tách.
->>>>>>> c0b6fa4 (tach anh done)
           </div>
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* selects removed to match dark theme — category/color kept as defaults */}
-
-      <div className="flex gap-3 justify-center">
-=======
       <div className="flex gap-2">
->>>>>>> c0b6fa4 (tach anh done)
         <button
           onClick={() => void onParse()}
           disabled={files.length === 0 || parsing || uploading}
@@ -15801,26 +15700,35 @@ export const useAuth = () => useContext(AuthContext);
 ---
 # src/lib/firebase.ts
 ```text
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
+import { Auth, getAuth } from "firebase/auth";
+import { Firestore, getFirestore } from "firebase/firestore";
+import { FirebaseStorage, getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const isFirebaseConfigured = Object.values(firebaseConfig).every(
+  (value) => typeof value === "string" && value.trim() !== ""
+);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+const app: FirebaseApp | null = isFirebaseConfigured
+  ? getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig)
+  : null;
 
+export const auth: Auth | null = app ? getAuth(app) : null;
+export const db: Firestore | null = app ? getFirestore(app) : null;
+export const storage: FirebaseStorage | null = app ? getStorage(app) : null;
+
+export { app, isFirebaseConfigured };
 ```
 
 
