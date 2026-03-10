@@ -98,6 +98,21 @@ export async function POST(req: Request) {
             items = docs.filter((d) => d.exists).map((d) => ({ id: d.id, ...d.data() }));
           }
 
+          if (items.length === 0) {
+            sendStep(controller, { ok: false, message: "Bạn chưa có đồ trong tủ đồ. Vui lòng thêm đồ vào tủ đồ trước khi yêu cầu gợi ý outfit." });
+            controller.close();
+            return;
+          }
+
+          const hasTop = items.some(item => item.category === "Áo");
+          const hasBottom = items.some(item => item.category === "Quần");
+
+          if (!hasTop || !hasBottom) {
+            sendStep(controller, { ok: false, message: "Bạn cần có ít nhất 1 áo và 1 quần trong tủ đồ để tạo outfit." });
+            controller.close();
+            return;
+          }
+
           const validImages = (await Promise.all(items.map(async (it) => {
             try {
               const r = await fetch(it.imageUrl);
