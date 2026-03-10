@@ -57,6 +57,9 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
+      if (!db || !auth) {
+        throw new Error("Firebase chưa được khởi tạo!");
+      }
       const unameRef = doc(db, "usernames", uname);
       const unameSnap = await getDoc(unameRef);
       if (unameSnap.exists()) {

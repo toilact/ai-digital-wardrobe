@@ -20,6 +20,7 @@ function isValidGender(x: any): x is Gender {
 }
 
 export async function getUserProfile(uid: string) {
+  if (!db) return null;
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
@@ -39,6 +40,7 @@ export async function getUserProfile(uid: string) {
 }
 
 export async function upsertUserProfile(uid: string, profile: UserProfile) {
+  if (!db) return;
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
 

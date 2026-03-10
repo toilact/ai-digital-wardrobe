@@ -25,9 +25,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY: "AIzaSyDii3QoCPLx5e8YVRZQlypkYCJqEDlZAZc"
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "ai-digital-wardrobe-2fc5f.firebaseapp.com"
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: "ai-digital-wardrobe-2fc5f"
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "ai-digital-wardrobe-2fc5f.firebasestorage.app"
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "397359419541"
+        NEXT_PUBLIC_FIREBASE_APP_ID: "1:397359419541:web:7d8860de0852b7121ccb9c"
     restart: always
     ports:
-      - "3000:3000"
+      - "80:3000"
     env_file:
       - .env.local
     environment:
@@ -36,6 +43,12 @@ services:
       - LABEL_STRATEGY=service
       - AI_LABEL_BACKEND=clip
       - NODE_OPTIONS=--dns-result-order=ipv4first
+      - NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDii3QoCPLx5e8YVRZQlypkYCJqEDlZAZc
+      - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=ai-digital-wardrobe-2fc5f.firebaseapp.com
+      - NEXT_PUBLIC_FIREBASE_PROJECT_ID=ai-digital-wardrobe-2fc5f
+      - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=ai-digital-wardrobe-2fc5f.firebasestorage.app
+      - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=397359419541
+      - NEXT_PUBLIC_FIREBASE_APP_ID=1:397359419541:web:7d8860de0852b7121ccb9c
     depends_on:
       - ai-service
     dns:

@@ -9,6 +9,10 @@ export default function GoogleLoginButton() {
   const router = useRouter();
 
   const handleLogin = async () => {
+    if (!auth) {
+      alert("Firebase chưa được khởi tạo!");
+      return;
+    }
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
     router.push("/dashboard");
