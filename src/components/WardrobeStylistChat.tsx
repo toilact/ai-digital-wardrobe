@@ -75,9 +75,25 @@ export default function WardrobeStylistChat({
     const content = text.trim();
     if (!content || sending) return;
 
-    const userMsg: Msg = { id: uid(), role: "user", content, ts: Date.now() };
+    // Get selected images from wardrobe items
+    const selectedItemIds = Object.keys(selectedIds).filter((k) => selectedIds[k]);
+    const selectedImages = selectedItemIds
+      .map((id) => {
+        const item = wardrobeItems.find((w) => w.id === id);
+        return item?.imageUrl;
+      })
+      .filter(Boolean) as string[];
+
+    const userMsg: Msg = {
+      id: uid(),
+      role: "user",
+      content,
+      ts: Date.now(),
+      images: selectedImages.length > 0 ? selectedImages : undefined
+    };
     setMessages((m) => [...m, userMsg]);
     setInput("");
+    setSelectedIds({}); // Clear selected items
     setSending(true);
     setLoadingStage("thinking");
 

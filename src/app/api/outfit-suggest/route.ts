@@ -60,8 +60,9 @@ export async function POST(req: Request) {
       + "đi biển" => "EVENT"
       + "đi chợ nên chọn phong cách nào?" => trả lời thân thiện, tư vấn cho người dùng, không phải "EVENT" 
       + "đi/tham gia  điểm đến/sự kiện nên mặc ... hay ... ? " => tư vấn thân thiện, không phải "EVENT"
+      + "Gợi ý outfit đi học (gọn gàng, dễ thương)" => "EVENT"
 
-      Thông tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
+      Thôg tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
     `.trim();
 
         let historyForAI = rawHistory
