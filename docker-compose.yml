@@ -14,11 +14,10 @@ services:
       - CLIP_DEVICE=cpu
       - CLIP_MODEL_NAME=ViT-B-32
       - CLIP_PRETRAINED=laion2b_s34b_b79k
+      - SAM_MODEL_TYPE=vit_b
+      - SAM_CHECKPOINT=/app/checkpoints/sam_vit_b_01ec64.pth
     volumes:
       - ./ai-service/checkpoints:/app/checkpoints
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
 
   web:
     container_name: ai-digital-wardrobe-web
@@ -49,8 +48,8 @@ services:
       - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=ai-digital-wardrobe-2fc5f.firebasestorage.app
       - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=397359419541
       - NEXT_PUBLIC_FIREBASE_APP_ID=1:397359419541:web:7d8860de0852b7121ccb9c
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
     depends_on:
       - ai-service
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8

@@ -28,6 +28,7 @@ export async function generateVisualGemini(input: {
 
     const userGender = input.profile?.gender || "unknown";
     const userHeight = input.profile?.heightCm || "unknown";
+    const userWeight = input.profile?.weightKg || "unknown";
     const userMessage = input.userMessage || "No occasion provided";
     const userAge = input.profile?.age ? `${input.profile.age} years old` : "unknown";
     const userbust = input.profile?.bustCm ? `${input.profile.bustCm} cm` : "unknown";
@@ -43,6 +44,7 @@ You are a professional Asian fashion stylist and prompt engineer.
 USER PROFILE:
 The user gender is: ${userGender}.
 The user height is: ${userHeight} cm.
+The user weight is: ${userWeight} kg.
 The user age is: ${userAge} years old.
 The user bust measurement is: ${userbust} cm.
 The user waist measurement is: ${userWaist} cm.

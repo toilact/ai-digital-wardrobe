@@ -1,9 +1,9 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
 
-FROM node:20-alpine AS build
+FROM node:20-slim AS build
 WORKDIR /src
 
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./

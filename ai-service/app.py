@@ -1077,10 +1077,13 @@ async def cutout(
         meta_engine: Dict[str, Any] = {}
         mask01: Optional[np.ndarray] = None
 
+        print(f"[cutout] sam_ready={_sam_ready()}, x={x}, y={y}, pos_points={len(pos_points)}, neg_points={len(neg_points)}, box={box}")
+
         used_sam_prompt = _sam_ready() and (len(pos_points) > 0 or len(neg_points) > 0 or box is not None)
 
         if used_sam_prompt:
             try:
+                print("[cutout] using SAM prompt mask")
                 mask01, meta_engine = _sam_prompt_mask(img_rgb, pos_points, neg_points, box)
             except Exception as e:
                 meta_engine = {"engine": "sam", "error": f"sam_prompt_failed: {str(e)}"}
@@ -1089,10 +1092,10 @@ async def cutout(
         # fallback: old behavior
         if mask01 is None:
             if x is not None and y is not None and _sam_ready():
+                print("[cutout] using SAM point mask")
                 mask01, meta_engine = _sam_point_mask(img_rgb, float(x), float(y))
-            elif x is not None and y is not None:
-                mask01, meta_engine = _product_point_mask(img_bgr, float(x), float(y))
             else:
+                print("[cutout] using product auto mask (GrabCut fallback)")
                 mask01, meta_engine = _product_auto_mask(img_bgr)
 
         cut_png, _alpha255, mask255, meta_build = _build_cutout(img_rgb, mask01, crop=crop)

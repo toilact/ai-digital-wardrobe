@@ -38,31 +38,39 @@ async function optimizeTransparentImage(buffer: Buffer): Promise<Buffer> {
 
   return await sharp(buffer)
     .resize({
-      width: 1600,
-      height: 1600,
+      width: 800,
+      height: 800,
       fit: "inside",
       withoutEnlargement: true,
     })
     .webp({
-      lossless: true,
+      quality: 85,
       effort: 4,
     })
     .toBuffer();
 }
 
 function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
+  const startMs = Date.now();
+  console.log(`[confirm] starting Cloudinary upload, size=${Math.round(buffer.length / 1024)}KB, folder=${folder}`);
+
   const task = new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: "image",
         format: "webp",
-        timeout: 120000,
+        timeout: 300000,
         overwrite: false,
         unique_filename: true,
       },
       (err, result) => {
-        if (err || !result) return reject(err || new Error("Cloudinary upload failed"));
+        const elapsed = Date.now() - startMs;
+        if (err || !result) {
+          console.error(`[confirm] Cloudinary upload FAILED after ${elapsed}ms:`, err);
+          return reject(err || new Error("Cloudinary upload failed"));
+        }
+        console.log(`[confirm] Cloudinary upload OK in ${elapsed}ms, url=${result.secure_url}`);
         resolve({
           secure_url: result.secure_url!,
           public_id: result.public_id!,
@@ -70,11 +78,14 @@ function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
       }
     );
 
-    stream.on("error", reject);
+    stream.on("error", (e) => {
+      console.error(`[confirm] Cloudinary stream error after ${Date.now() - startMs}ms:`, e);
+      reject(e);
+    });
     stream.end(buffer);
   });
 
-  return withTimeout(task, 130000, "Cloudinary upload timeout");
+  return withTimeout(task, 310000, "Cloudinary upload timeout");
 }
 
 type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày" | "Khác";
