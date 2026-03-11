@@ -18,7 +18,6 @@ function sendStep(controller: ReadableStreamDefaultController, obj: any) {
 }
 
 export async function POST(req: Request) {
-  // we will build a streaming response and emit stage updates as we go.
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -37,8 +36,6 @@ export async function POST(req: Request) {
           return;
         }
 
-        // emit initial thinking stage (frontend already sets this but it's
-        // harmless and makes the protocol explicit)
         sendStep(controller, { stage: "thinking" });
 
         const userDoc = await adminDb.collection("users").doc(uid).get();
@@ -93,16 +90,16 @@ export async function POST(req: Request) {
             const result = await chat.sendMessage(message);
             aiText = result.response.text();
             lastError = null;
-            break; // success, stop trying
+            break;
           } catch (err: any) {
             lastError = err;
             console.warn("Gemini API key failed, trying next:", err.message?.slice(0, 120));
-            await new Promise(r => setTimeout(r, 1000)); // wait 1s before trying next key
+            await new Promise(r => setTimeout(r, 1000));
           }
         }
 
         if (lastError) {
-          throw lastError; // all keys failed
+          throw lastError;
         }
 
         const isEvent = aiText === "EVENT";
@@ -135,7 +132,6 @@ export async function POST(req: Request) {
             return;
           }
 
-          // Limit to 20 items to prevent slow downloads and timeout
           if (items.length > 20) {
             console.log(`Too many items (${items.length}), limiting to 20 for performance.`);
             items = items.slice(0, 20);
@@ -170,7 +166,7 @@ export async function POST(req: Request) {
           sendStep(controller, { stage: "generating_outfit" });
           console.log("Generating image with Gemini Imagen for:", out.outfit);
           console.time("imagen_gen");
-          
+
           let imageUrl = "";
           try {
             const { GoogleGenAI } = await import("@google/genai");
@@ -184,7 +180,6 @@ export async function POST(req: Request) {
 
             const imgData = imagenResponse.generatedImages?.[0]?.image?.imageBytes;
             if (imgData) {
-              // Upload to Cloudinary
               const { v2: cloudinary } = await import("cloudinary");
               cloudinary.config({
                 cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
