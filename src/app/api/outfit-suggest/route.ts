@@ -44,25 +44,24 @@ export async function POST(req: Request) {
         const userDoc = await adminDb.collection("users").doc(uid).get();
         const userProfile = userDoc.exists ? (userDoc.data() as UserProfile) : null;
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_KT!);
         const systemPrompt = `
       Bạn là chuyên viên thời trang của AI-DIGITAL-WARDROBE.
       - Nếu tin nhắn yêu cầu phối đồ/outfit cho dịp/thời tiết/style/điểm đến cụ thể: TRẢ LỜI DUY NHẤT CHỮ 'EVENT'.
       - Nếu là chào hỏi/tư vấn chung: Trả lời thân thiện.
       - Nếu người dùng yêu cầu tạo/gợi ý outfit mà không cung cấp đủ thông tin về dịp/thời tiết/style/điểm đến, hãy hỏi lại để lấy thêm thông tin.
       - Luôn ưu tiên hiểu ý định của người dùng dựa trên nội dung tin nhắn, không chỉ dựa vào từ khóa đơn lẻ.
-      - Nếu người dùng càn tư vấn về thời trang thì tư vấn thân thiện.
+      - Nếu người dùng cần tư vấn về thời trang thì tư vấn thân thiện.
       Ví dụ:
       + "Tôi muốn một outfit cho buổi hẹn hò tối nay ở nhà hàng sang trọng" => "EVENT"
       + "Tôi nên mặc gì hôm nay?" => "EVENT"
       + "Tôi muốn phối đồ đi biển" => "EVENT"
       + "Xin chào, bạn có thể giúp tôi phối đồ không?" => Trả lời thân thiện, không phải "EVENT"
       + "đi biển" => "EVENT"
-      + "đi chợ nên chọn phong cách nào?" => trả lời thân thiện, tư vấn cho người dùng, không phải "EVENT" 
+      + "đi chợ nên chọn phong cách nào?" => trả lời thân thiện, tư vấn cho người dùng, không phải "EVENT"
       + "đi/tham gia  điểm đến/sự kiện nên mặc ... hay ... ? " => tư vấn thân thiện, không phải "EVENT"
       + "Gợi ý outfit đi học (gọn gàng, dễ thương)" => "EVENT"
 
-      Thôg tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
+      Thông tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
     `.trim();
 
         let historyForAI = rawHistory
@@ -75,14 +74,37 @@ export async function POST(req: Request) {
           historyForAI.shift();
         }
 
-        const model = genAI.getGenerativeModel({
-          model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
-          systemInstruction: systemPrompt,
-        });
+        const geminiKeys = [
+          process.env.GEMINI_API_KEY_KT!,
+          process.env.GEMINI_API_KEY!,
+        ].filter(Boolean);
 
-        const chat = model.startChat({ history: historyForAI });
-        const result = await chat.sendMessage(message);
-        const aiText = result.response.text();
+        let aiText = "";
+        let lastError: any = null;
+
+        for (const apiKey of geminiKeys) {
+          try {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({
+              model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
+              systemInstruction: systemPrompt,
+            });
+            const chat = model.startChat({ history: historyForAI });
+            const result = await chat.sendMessage(message);
+            aiText = result.response.text();
+            lastError = null;
+            break; // success, stop trying
+          } catch (err: any) {
+            lastError = err;
+            console.warn("Gemini API key failed, trying next:", err.message?.slice(0, 120));
+            await new Promise(r => setTimeout(r, 1000)); // wait 1s before trying next key
+          }
+        }
+
+        if (lastError) {
+          throw lastError; // all keys failed
+        }
+
         const isEvent = aiText === "EVENT";
 
         if (isEvent) {
@@ -113,46 +135,84 @@ export async function POST(req: Request) {
             return;
           }
 
-          const validImages = (await Promise.all(items.map(async (it) => {
+          // Limit to 20 items to prevent slow downloads and timeout
+          if (items.length > 20) {
+            console.log(`Too many items (${items.length}), limiting to 20 for performance.`);
+            items = items.slice(0, 20);
+          }
+
+          console.time("download_images");
+          const validImages = (await Promise.all(items.map(async (it: any) => {
             try {
               const r = await fetch(it.imageUrl);
+              if (!r.ok) return null;
               const buf = await r.arrayBuffer();
               return { id: it.id, url: it.imageUrl, png_base64: Buffer.from(buf).toString("base64") };
             } catch (e) { return null; }
-          }))).filter(img => img !== null);
+          }))).filter((img): img is { id: string; url: string; png_base64: string } => img !== null);
+          console.timeEnd("download_images");
+
+          if (validImages.length === 0) {
+            sendStep(controller, { ok: false, message: "Không thể tải được hình ảnh từ tủ đồ của bạn." });
+            controller.close();
+            return;
+          }
 
           sendStep(controller, { stage: "analyzing_clothes" });
-
+          console.time("gemini_visual");
           const out = await generateVisualGemini({
             userMessage: message,
             profile: userProfile,
             images: validImages,
           });
+          console.timeEnd("gemini_visual");
 
           sendStep(controller, { stage: "generating_outfit" });
+          console.log("Generating image with Gemini Imagen for:", out.outfit);
+          console.time("imagen_gen");
+          
+          let imageUrl = "";
+          try {
+            const { GoogleGenAI } = await import("@google/genai");
+            const imagenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-          const restResponse = await fetch("https://api.infip.pro/v1/images/generations", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              model: "img4",
+            const imagenResponse = await imagenAI.models.generateImages({
+              model: "imagen-3.0-generate-002",
               prompt: out.imagen_prompt,
-              n: 1, size: "1024x1024", response_format: "url"
-            })
-          });
+              config: { numberOfImages: 1 },
+            });
 
-          const restData = await restResponse.json();
-          const imageUrl = restData.data?.[0]?.url || "";
+            const imgData = imagenResponse.generatedImages?.[0]?.image?.imageBytes;
+            if (imgData) {
+              // Upload to Cloudinary
+              const { v2: cloudinary } = await import("cloudinary");
+              cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET,
+              });
+
+              const uploadResult: any = await new Promise((resolve, reject) => {
+                cloudinary.uploader.upload(
+                  `data:image/png;base64,${imgData}`,
+                  { folder: "outfit-suggestions", format: "webp", quality: "auto" },
+                  (err: any, result: any) => (err ? reject(err) : resolve(result))
+                );
+              });
+              imageUrl = uploadResult?.secure_url || "";
+              console.log("Imagen + Cloudinary OK, url:", imageUrl);
+            }
+          } catch (imgErr: any) {
+            console.error("Imagen Error (Fallback to text):", imgErr.message || imgErr);
+          }
+          console.timeEnd("imagen_gen");
 
           sendStep(controller, {
             ok: true,
             reply: {
               note: out.note,
               outfit: out.outfit,
-              images: [{ url: imageUrl }],
+              images: imageUrl ? [{ url: imageUrl }] : [],
               stage: "outfit_generated",
             },
           });
