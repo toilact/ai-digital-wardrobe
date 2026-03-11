@@ -18,7 +18,6 @@ function sendStep(controller: ReadableStreamDefaultController, obj: any) {
 }
 
 export async function POST(req: Request) {
-  // we will build a streaming response and emit stage updates as we go.
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -37,8 +36,6 @@ export async function POST(req: Request) {
           return;
         }
 
-        // emit initial thinking stage (frontend already sets this but it's
-        // harmless and makes the protocol explicit)
         sendStep(controller, { stage: "thinking" });
 
         const userDoc = await adminDb.collection("users").doc(uid).get();
@@ -62,7 +59,7 @@ export async function POST(req: Request) {
       + "đi/tham gia  điểm đến/sự kiện nên mặc ... hay ... ? " => tư vấn thân thiện, không phải "EVENT"
       + "Gợi ý outfit đi học (gọn gàng, dễ thương)" => "EVENT"
 
-      Thôg tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
+      Thông tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
     `.trim();
 
         let historyForAI = rawHistory
@@ -128,24 +125,41 @@ export async function POST(req: Request) {
             profile: userProfile,
             images: validImages,
           });
+          console.log("Gemini Visual Output:", out);
 
           sendStep(controller, { stage: "generating_outfit" });
 
-          const restResponse = await fetch("https://api.infip.pro/v1/images/generations", {
+          // --- PHẦN GỌI STABILITY AI ĐÃ ĐƯỢC CẬP NHẬT ---
+          const form = new FormData();
+          form.append("prompt", out.imagen_prompt);
+          form.append("output_format", "webp"); // Dùng webp để chuỗi base64 nhẹ hơn
+
+          const restResponse = await fetch("https://api.stability.ai/v2beta/stable-image/generate/ultra", {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
-              "Content-Type": "application/json"
+              "Authorization": `Bearer ${process.env.STABILITY_API_KEY}`,
+              "Accept": "image/*", // Bắt buộc để nhận ảnh dạng binary
             },
-            body: JSON.stringify({
-              model: "img4",
-              prompt: out.imagen_prompt,
-              n: 1, size: "1024x1024", response_format: "url"
-            })
+            body: form,
           });
 
-          const restData = await restResponse.json();
-          const imageUrl = restData.data?.[0]?.url || "";
+          console.log("Status Stability:", restResponse.status);
+
+          if (!restResponse.ok) {
+            // Khi lỗi, Stability trả về JSON chứa mã lỗi chi tiết
+            const errorText = await restResponse.text();
+            console.error("Lỗi từ Stability AI:", errorText);
+            throw new Error(`Stability API Error: ${restResponse.status} - ${errorText.substring(0, 100)}`);
+          }
+
+          // Lấy dữ liệu ảnh dạng Buffer
+          const imageBuffer = await restResponse.arrayBuffer();
+
+          // Chuyển đổi sang Base64
+          const base64Image = Buffer.from(imageBuffer).toString("base64");
+
+          // Tạo Data URL để Frontend hiển thị được ngay lập tức
+          const imageUrl = `data:image/webp;base64,${base64Image}`;
 
           sendStep(controller, {
             ok: true,
