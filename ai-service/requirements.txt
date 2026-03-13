@@ -8,13 +8,15 @@ opencv-python==4.10.0.84
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.2.2+cpu
 torchvision==0.17.2+cpu
-git+https://github.com/facebookresearch/segment-anything.git
 
-# --- better edge refinement (optional but recommended) ---
+# MobileSAM 
+git+https://github.com/ChaoningZhang/MobileSAM.git
+
+# edge refinement
 pymatting>=1.1.12
 scipy>=1.10
 
-# --- optional: local zero-shot label fallback (CLIP) ---
+# optional local zero-shot label
 open_clip_torch>=2.26.0
 timm>=0.9
 ftfy>=6.1

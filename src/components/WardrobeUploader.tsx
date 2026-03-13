@@ -142,7 +142,8 @@ export default function WardrobeUploader({
     try {
       const idToken = await user.getIdToken();
 
-      const PARSE_CONCURRENCY = 3;
+      // VPS nhỏ: chạy tuần tự để tránh dồn RAM khi MobileSAM + OpenCV + PNG cùng lúc
+      const PARSE_CONCURRENCY = 1;
       const resultsByFileIndex: Record<number, ParsedItem[]> = {};
       let cursor = 0;
 
@@ -206,11 +207,11 @@ export default function WardrobeUploader({
         console.error("PARSE ERRORS:", errors);
       }
 
-      // auto label sau khi parse (không block UI, update dần)
+      // Auto-label chạy tuần tự để giảm tải VPS
       void (async () => {
         const shouldLabel = (t?: string) => !t || t === "item" || t === "Khác";
 
-        const concurrency = 3;
+        const concurrency = 1;
         let c = 0;
 
         const workers = Array.from({ length: concurrency }, async () => {

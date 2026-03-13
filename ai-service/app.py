@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Tuple, List
 import json
 import torch
 from pydantic import BaseModel
+import asyncio
 
 import cv2
 import numpy as np
@@ -256,7 +257,7 @@ def _sam_prompt_mask(
         mask01 = mask_small
 
     meta = {
-        "engine": "sam_prompt_v2_normfix",
+        "engine": "mobile_sam_prompt_v1",
         "sam_score": float(scores[best]),
         "sam_max_side": int(max_side),
         "num_pos": int(len(pos_points)),
@@ -704,11 +705,23 @@ def _product_auto_mask(img_rgb_full: np.ndarray) -> Tuple[np.ndarray, Dict[str, 
 # Optional SAM point mask (needs checkpoint)
 # -----------------------------
 SAM_ENABLED = os.getenv("ENABLE_SAM", "1").lower() not in ("0", "false", "no")
-SAM_MODEL_TYPE = os.getenv("SAM_MODEL_TYPE", "vit_h")
-SAM_CHECKPOINT = os.getenv("SAM_CHECKPOINT", "/app/checkpoints/sam_vit_h_4b8939.pth")
-SAM_MAX_SIDE = int(os.getenv("SAM_MAX_SIDE", "1024"))
+SAM_MODEL_TYPE = os.getenv("SAM_MODEL_TYPE", "vit_t")
+SAM_CHECKPOINT = os.getenv("SAM_CHECKPOINT", "/app/checkpoints/mobile_sam.pt")
+SAM_MAX_SIDE = int(os.getenv("SAM_MAX_SIDE", "768"))
+
+PRELOAD_CLIP = os.getenv("PRELOAD_CLIP", "0").lower() not in ("0", "false", "no")
+CUTOUT_MAX_CONCURRENCY = max(1, int(os.getenv("CUTOUT_MAX_CONCURRENCY", "1")))
+TORCH_NUM_THREADS = max(1, int(os.getenv("TORCH_NUM_THREADS", "1")))
 
 _sam_predictor = None
+_cutout_semaphore = asyncio.Semaphore(CUTOUT_MAX_CONCURRENCY)
+
+if not torch.cuda.is_available():
+    try:
+        torch.set_num_threads(TORCH_NUM_THREADS)
+        torch.set_num_interop_threads(1)
+    except Exception:
+        pass
 
 def _sam_ready() -> bool:
     if not SAM_ENABLED:
@@ -717,7 +730,7 @@ def _sam_ready() -> bool:
         return False
     try:
         import torch  # noqa
-        from segment_anything import sam_model_registry, SamPredictor  # noqa
+        from mobile_sam import sam_model_registry, SamPredictor  # noqa
         return True
     except Exception:
         return False
@@ -728,19 +741,18 @@ def _get_sam_predictor():
         return _sam_predictor
 
     import torch
-    from segment_anything import sam_model_registry, SamPredictor
+    from mobile_sam import sam_model_registry, SamPredictor
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cuda":
-        # Speed on Ampere+: TF32
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
 
-    sam = sam_model_registry[SAM_MODEL_TYPE](checkpoint=SAM_CHECKPOINT)
-    sam.to(device=device)
-    sam.eval()
+    mobile_sam = sam_model_registry[SAM_MODEL_TYPE](checkpoint=SAM_CHECKPOINT)
+    mobile_sam.to(device=device)
+    mobile_sam.eval()
 
-    predictor = SamPredictor(sam)
+    predictor = SamPredictor(mobile_sam)
     predictor._device = device
     _sam_predictor = predictor
     return _sam_predictor
@@ -789,7 +801,7 @@ def _sam_point_mask(img_rgb_full: np.ndarray, x_norm: float, y_norm: float) -> T
         mask01 = cv2.resize(mask01, (w0, h0), interpolation=cv2.INTER_NEAREST)
 
     meta = {
-        "engine": "sam_point_v2_fast",
+        "engine": "mobile_sam_point_v1",
         "sam_score": float(scores[best]),
         "point_x": float(x_norm),
         "point_y": float(y_norm),
@@ -1036,16 +1048,14 @@ async def cutout(
     x: Optional[float] = Form(None),
     y: Optional[float] = Form(None),
 
-    # NEW: actually USED now
-    pos_points_json: Optional[str] = Form(None),  # JSON: [[x,y],[x,y],...]
-    neg_points_json: Optional[str] = Form(None),  # JSON: [[x,y],...]
-    box_json: Optional[str] = Form(None),         # JSON: [x0,y0,x1,y1]
+    pos_points_json: Optional[str] = Form(None),
+    neg_points_json: Optional[str] = Form(None),
+    box_json: Optional[str] = Form(None),
 
     crop: bool = Form(True),
     output: str = Form("base64"),  # "base64" | "file"
     return_mask: bool = Form(False),
 
-    # NEW: Auto label control
     auto_label: bool = Form(True),
     label_backend: str = Form("clip"),  # clip | none
 ):
@@ -1064,70 +1074,68 @@ async def cutout(
 
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
-        # --- parse prompts ---
         pos_points = _parse_points_json(pos_points_json)
         neg_points = _parse_points_json(neg_points_json)
         box = _parse_box_json(box_json)
 
-        # If user provides x,y (single-click), treat as a positive point (merge with pos_points_json)
         if x is not None and y is not None:
             pos_points = list(pos_points) + [(float(x), float(y))]
 
-        # --- engine cascade ---
-        meta_engine: Dict[str, Any] = {}
-        mask01: Optional[np.ndarray] = None
+        async with _cutout_semaphore:
+            meta_engine: Dict[str, Any] = {}
+            mask01: Optional[np.ndarray] = None
 
-        print(f"[cutout] sam_ready={_sam_ready()}, x={x}, y={y}, pos_points={len(pos_points)}, neg_points={len(neg_points)}, box={box}")
+            print(
+                f"[cutout] sam_ready={_sam_ready()}, x={x}, y={y}, "
+                f"pos_points={len(pos_points)}, neg_points={len(neg_points)}, box={box}"
+            )
 
-        used_sam_prompt = _sam_ready() and (len(pos_points) > 0 or len(neg_points) > 0 or box is not None)
+            used_sam_prompt = _sam_ready() and (
+                len(pos_points) > 0 or len(neg_points) > 0 or box is not None
+            )
 
-        if used_sam_prompt:
-            try:
-                print("[cutout] using SAM prompt mask")
-                mask01, meta_engine = _sam_prompt_mask(img_rgb, pos_points, neg_points, box)
-            except Exception as e:
-                meta_engine = {"engine": "sam", "error": f"sam_prompt_failed: {str(e)}"}
-                mask01 = None
+            if used_sam_prompt:
+                try:
+                    print("[cutout] using MobileSAM prompt mask")
+                    mask01, meta_engine = _sam_prompt_mask(img_rgb, pos_points, neg_points, box)
+                except Exception as e:
+                    meta_engine = {"engine": "mobile_sam", "error": f"mobile_sam_prompt_failed: {str(e)}"}
+                    mask01 = None
 
-        # fallback: old behavior
-        if mask01 is None:
-            if x is not None and y is not None and _sam_ready():
-                print("[cutout] using SAM point mask")
-                mask01, meta_engine = _sam_point_mask(img_rgb, float(x), float(y))
-            else:
-                print("[cutout] using product auto mask (GrabCut fallback)")
-                mask01, meta_engine = _product_auto_mask(img_bgr)
+            if mask01 is None:
+                if x is not None and y is not None and _sam_ready():
+                    print("[cutout] using MobileSAM point mask")
+                    mask01, meta_engine = _sam_point_mask(img_rgb, float(x), float(y))
+                else:
+                    print("[cutout] using product auto mask (GrabCut fallback)")
+                    mask01, meta_engine = _product_auto_mask(img_rgb)
 
-        cut_png, _alpha255, mask255, meta_build = _build_cutout(img_rgb, mask01, crop=crop)
-        meta: Dict[str, Any] = {**meta_engine, **meta_build}
+            cut_png, _alpha255, mask255, meta_build = _build_cutout(img_rgb, mask01, crop=crop)
+            meta: Dict[str, Any] = {**meta_engine, **meta_build}
 
-        # --- AutoLabel (category + optional dominant color) ---
-        item_type_out = item_type
-        if output != "file" and auto_label and ENABLE_AUTO_LABEL and label_backend != "none":
-            try:
-                # NOTE: cut_png là bytes PNG RGBA trả từ _build_cutout(...)
-                pil_rgba = Image.open(io.BytesIO(cut_png)).convert("RGBA")
+            item_type_out = item_type
+            if output != "file" and auto_label and ENABLE_AUTO_LABEL and label_backend != "none":
+                try:
+                    pil_rgba = Image.open(io.BytesIO(cut_png)).convert("RGBA")
 
-                auto = {}
+                    auto = {}
 
-                # Optional: dominant color (tắt để nhanh hơn)
-                if AUTO_LABEL_INCLUDE_COLOR:
-                    auto.update(_dominant_color_vi(pil_rgba))
+                    if AUTO_LABEL_INCLUDE_COLOR:
+                        auto.update(_dominant_color_vi(pil_rgba))
 
-                # Category via CLIP
-                if label_backend in ("clip", "auto"):
-                    auto.update(_clip_predict_category(pil_rgba))
+                    if label_backend in ("clip", "auto"):
+                        auto_pred = _clip_predict_category(pil_rgba)
+                        if auto_pred:
+                            auto.update(auto_pred)
 
-                if auto:
-                    meta["autoLabel"] = auto
+                    if auto:
+                        meta["autoLabel"] = auto
 
-                # If caller didn't force a specific type, allow overriding default "item"
-                if item_type.strip().lower() in ("item", "auto", "", "unknown") and isinstance(auto.get("category"), str):
-                    item_type_out = auto.get("category", item_type_out)
+                    if item_type.strip().lower() in ("item", "auto", "", "unknown") and isinstance(auto.get("category"), str):
+                        item_type_out = auto.get("category", item_type_out)
 
-            except Exception as e:
-                # Don't fail cutout if labeling fails
-                meta["autoLabelError"] = str(e) #//
+                except Exception as e:
+                    meta["autoLabelError"] = str(e)
 
         if output == "file":
             return Response(content=cut_png, media_type="image/png")
@@ -1218,22 +1226,26 @@ async def label_endpoint(req: LabelRequest):
 
 @app.on_event("startup")
 def _warmup():
-    if ENABLE_AUTO_LABEL and open_clip is not None:
+    if PRELOAD_CLIP and ENABLE_AUTO_LABEL and open_clip is not None:
         try:
             _ensure_clip_loaded()
         except Exception:
             pass
 
 @app.get("/health")
-
 def health():
     pymatting_ok = _safe_import_pymatting() is not None
     return {
         "ok": True,
-        "engine_default": "product_grabcut_v2",
+        "engine_default": "mobile_sam+grabcut_fallback",
+        "sam_impl": "mobile_sam",
+        "sam_model_type": SAM_MODEL_TYPE,
+        "sam_checkpoint": bool(os.path.exists(SAM_CHECKPOINT)),
+        "sam_ready": _sam_ready(),
+        "sam_max_side": int(SAM_MAX_SIDE),
+        "cutout_max_concurrency": int(CUTOUT_MAX_CONCURRENCY),
+        "preload_clip": bool(PRELOAD_CLIP),
         "pymatting": pymatting_ok,
         "decontaminate": bool(DECONTAMINATE),
         "product_max_side": int(PRODUCT_MAX_SIDE),
-        "sam_ready": _sam_ready(),
-        "sam_checkpoint": bool(os.path.exists(SAM_CHECKPOINT)),
     }
