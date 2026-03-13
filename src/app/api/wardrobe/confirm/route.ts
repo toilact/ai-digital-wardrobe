@@ -198,6 +198,22 @@ export async function POST(req: Request) {
     });
 
     const db = admin.firestore();
+
+    // Limit Check
+    const userDocRef = db.collection("users").doc(uid);
+    const userDoc = await userDocRef.get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+    const isVIP = !!userData?.isVIP;
+    const currentQuantity = typeof userData?.itemQuantity === "number" ? userData.itemQuantity : 0;
+    const limit = isVIP ? 30 : 15;
+
+    if (currentQuantity + items.length > limit) {
+      return NextResponse.json(
+        { ok: false, message: `Vượt quá giới hạn lưu trữ. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} tối đa được lưu ${limit} món đồ.` },
+        { status: 400 }
+      );
+    }
+
     const batch = db.batch();
     const saved: any[] = [];
 
@@ -220,6 +236,11 @@ export async function POST(req: Request) {
         createdAt: new Date().toISOString(),
       });
     }
+
+    // Increment itemQuantity
+    batch.update(userDocRef, {
+      itemQuantity: admin.firestore.FieldValue.increment(saved.length)
+    });
 
     await withTimeout(batch.commit(), 15000, "Firestore batch commit timeout");
 

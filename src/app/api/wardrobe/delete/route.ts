@@ -48,6 +48,12 @@ export async function DELETE(req: Request) {
 
         await docRef.delete();
 
+        // Decrement itemQuantity
+        const userDocRef = admin.firestore().collection("users").doc(uid);
+        await userDocRef.update({
+            itemQuantity: admin.firestore.FieldValue.increment(-1)
+        });
+
         return NextResponse.json({ ok: true });
     } catch (e: any) {
         console.error(e);

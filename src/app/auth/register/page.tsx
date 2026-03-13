@@ -10,7 +10,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import LogoutButton from "@/components/LogoutButton";
+import Header from "@/components/Header";
 import { useAuth } from "@/lib/AuthContext";
 
 function firebaseMsg(err: unknown) {
@@ -84,6 +84,10 @@ export default function RegisterPage() {
         username: uname,
         displayName: displayName || null,
         createdAt: serverTimestamp(),
+        isVIP: false,
+        itemQuantity: 0,
+        outfitGenerationsToday: 0,
+        outfitGenerationDate: "",
       });
 
       router.replace("/onboarding"); ``
@@ -96,7 +100,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <>
+    <><main>
+      <Header />
       <header className="hero text-center md:context-centered">
         <div className="hero-left">
           <h1>
@@ -104,16 +109,7 @@ export default function RegisterPage() {
           </h1>
         </div>
 
-        {/* <div className="hero-right">
-          {user ? (
-            <>
-              <div className="chip"> <span className="dot" /> Xin chào {user.displayName || user.email?.split("@")[0]}</div>
-              <LogoutButton />
-            </>
-          ) : (
-            <Link href="/" className="chip">Đăng nhập</Link>
-          )}
-        </div> */}
+
       </header>
 
       <main className=" flex items-center justify-center p-6">
@@ -164,12 +160,13 @@ export default function RegisterPage() {
 
           <p className="text-sm text-gray-600 text-center">
             Đã có tài khoản?{" "}
-            <Link className="underline" href="/">
+            <Link className="underline" href="/auth/login">
               Đăng nhập
             </Link>
           </p>
         </div>
       </main>
+    </main>
     </>
   );
 }

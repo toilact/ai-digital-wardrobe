@@ -13,6 +13,10 @@ export type UserProfile = {
   hipCm?: number;
   updatedAt?: any;
   createdAt?: any;
+  isVIP?: boolean;
+  itemQuantity?: number;
+  outfitGenerationsToday?: number;
+  outfitGenerationDate?: string;
 };
 
 function isValidGender(x: any): x is Gender {

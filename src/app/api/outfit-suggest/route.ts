@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       - Nếu người dùng cần tư vấn về thời trang thì tư vấn thân thiện.
       Ví dụ:
       + "Tôi muốn một outfit cho buổi hẹn hò tối nay ở nhà hàng sang trọng" => "EVENT"
-      + "Tôi nên mặc gì hôm nay?" => "EVENT"
+      + "Tôi nên mặc gì hôm nay?" => "hỏi thêm về sự kiện/thời tiết/điểm đến cụ thể"
       + "Tôi muốn phối đồ đi biển" => "EVENT"
       + "Xin chào, bạn có thể giúp tôi phối đồ không?" => Trả lời thân thiện, không phải "EVENT"
       + "đi biển" => "EVENT"
@@ -105,6 +105,30 @@ export async function POST(req: Request) {
         const isEvent = aiText === "EVENT";
 
         if (isEvent) {
+          // --- VIP & QUOTA CHECK ---
+          const isVIP = !!userProfile?.isVIP;
+          const limit = isVIP ? 5 : 1;
+          const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+          
+          let currentGenerations = userProfile?.outfitGenerationsToday || 0;
+          let lastGenerationDate = userProfile?.outfitGenerationDate || "";
+
+          // Reset quota if a new day
+          if (lastGenerationDate !== today) {
+            currentGenerations = 0;
+            lastGenerationDate = today;
+          }
+
+          if (currentGenerations >= limit) {
+             sendStep(controller, { 
+               ok: false, 
+               message: `Bạn đã sử dụng hết lượt gợi ý trang phục hôm nay. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} có tối đa ${limit} lượt/ngày.` 
+             });
+             controller.close();
+             return;
+          }
+          // --------------------------------
+
           let items: any[] = [];
           if (selectedItemIds.length === 0) {
             const snap = await adminDb.collection("wardrobeItems")
@@ -201,6 +225,13 @@ export async function POST(req: Request) {
             console.error("Imagen Error (Fallback to text):", imgErr.message || imgErr);
           }
           console.timeEnd("imagen_gen");
+
+          // --- UPDATE USER QUOTA ---
+          await adminDb.collection("users").doc(uid).update({
+            outfitGenerationsToday: currentGenerations + 1,
+            outfitGenerationDate: lastGenerationDate
+          });
+          // --------------------------------
 
           sendStep(controller, {
             ok: true,

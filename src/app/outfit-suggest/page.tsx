@@ -4,7 +4,7 @@ import WardrobeStylistChat from "@/components/WardrobeStylistChat";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getUserProfile, UserProfile } from "@/lib/profile";
+import Header from "@/components/Header";
 
 export default function OutfitSuggestPage() {
   const { user, loading } = useAuth();
@@ -26,8 +26,13 @@ export default function OutfitSuggestPage() {
   if (loading) return <div className="p-6 text-white/70">Loading...</div>;
   if (!user) return null;
   return (
-    <div className="dashboard-container h-[100svh] overflow-hidden">
-      <WardrobeStylistChat mode="page" idUser={user.uid} />
-    </div>
+    <main>
+      <Header />
+      <div className="wrap">
+        <div className="dashboard-container h-[100svh] overflow-hidden">
+          <WardrobeStylistChat mode="page" idUser={user.uid} />
+        </div>
+      </div>
+    </main>
   );
 }

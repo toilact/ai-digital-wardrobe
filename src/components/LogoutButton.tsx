@@ -6,13 +6,14 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
-export default function LogoutButton() {
+export default function LogoutButton({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
 
   const handleLogout = async () => {
     if (!auth) return;
     try {
       await signOut(auth);
+      if (onClose) onClose();
       router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
@@ -22,34 +23,34 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
+      className="w-full justify-center"
       style={{
-        display: "inline-flex",
+        display: "flex",
         alignItems: "center",
         gap: "10px",
-        padding: "11px 16px",
+        padding: "14px 16px",
         borderRadius: "14px",
-        border: "1px solid rgba(255, 255, 255, .12)",
-        background: "rgba(255, 255, 255, .05)",
-        color: "rgba(255, 255, 255, .92)",
+        border: "1px solid rgba(239, 68, 68, 0.3)", // red-500/30
+        background: "rgba(239, 68, 68, 0.15)", // red-500/15
+        color: "rgba(248, 113, 113, 1)", // red-400
         textDecoration: "none",
         transition: "transform .14s ease, background .14s ease, border-color .14s ease",
-        fontWeight: 550,
-        fontSize: "13px",
+        fontWeight: 600,
+        fontSize: "14px",
         cursor: "pointer",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-1px)";
-        e.currentTarget.style.background = "rgba(255, 255, 255, .08)";
-        e.currentTarget.style.borderColor = "rgba(255, 255, 255, .22)";
+        e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.4)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "none";
-        e.currentTarget.style.background = "rgba(255, 255, 255, .05)";
-        e.currentTarget.style.borderColor = "rgba(255, 255, 255, .12)";
+        e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.3)";
       }}
     >
       Đăng xuất
-
     </button>
   );
 }

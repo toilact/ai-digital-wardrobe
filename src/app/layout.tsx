@@ -9,14 +9,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
+
       <body className="flex flex-col min-h-screen">
+
         <AuthProvider>
+
           <div className="dashboard-container flex-1">
-            <div className="wrap">{children}</div>
+            <div>{children}</div>
           </div>
-          <Footer />
+
         </AuthProvider>
+        <Footer />
+
       </body>
+
     </html>
   );
 }

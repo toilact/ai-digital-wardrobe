@@ -414,7 +414,7 @@ export default function WardrobeUploader({
         <button
           onClick={() => void onParse()}
           disabled={files.length === 0 || parsing || uploading}
-          className="px-4 py-2 rounded border text-white bg-white/5 border-white/20 hover:bg-white/10 disabled:opacity-50"
+          className="px-4 py-2 rounded-xl border font-semibold border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition disabled:opacity-50"
         >
           {parsing ? "Đang tách..." : "Tách tất cả"}
         </button>
@@ -422,7 +422,7 @@ export default function WardrobeUploader({
         <button
           onClick={onUploadSelected}
           disabled={parsedItems.length === 0 || uploading || parsing || Object.values(selected).every((v) => !v)}
-          className="ml-auto px-4 py-2 rounded border text-white bg-gradient-to-r from-indigo-500/30 to-pink-500/20 border-indigo-400/20 hover:from-indigo-500/40 hover:to-pink-500/30 disabled:opacity-50"
+          className="ml-auto px-4 py-2 rounded-xl font-semibold border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white hover:border-cyan-300/40 transition disabled:opacity-50 shadow-[0_0_15px_rgba(56,189,248,0.15)]"
         >
           {uploading ? "Đang thêm vào tủ..." : "Thêm vào tủ đồ"}
         </button>

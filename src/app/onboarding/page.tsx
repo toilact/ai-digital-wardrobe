@@ -301,7 +301,6 @@ export default function OnboardingPage() {
               <div className="text-white/90 font-semibold">Xin chào {user.displayName || uname}</div>
               <div className="text-white/50 text-sm">@{uname}</div>
             </div>
-            <LogoutButton />
           </div>
         </div>
       </header>
@@ -316,17 +315,15 @@ export default function OnboardingPage() {
               </span>
             </div>
             <div className="mt-3 text-2xl md:text-3xl font-semibold text-white">Nhập tất cả thông tin của bạn vào đây</div>
-            <p className="mt-2 text-white/65">Chí Thành đẹp trai số 1 VN.</p>
+
           </div>
 
-          <div className="px-7 pt-6">
-            {/* ✅ Gọn như code cũ: chỉ thêm ô giới tính nhỏ ở trên */}
+          <div className="px-7">
             <div className="mb-4">
               <GenderToggle value={gender} onChange={setGender} />
             </div>
 
-            {/* ✅ Grid y chang code cũ */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
               <MetricCard
                 code="AGE"
                 title="Tuổi"

@@ -45,6 +45,8 @@ export default function WardrobeStylistChat({
   const [showWardrobeSelector, setShowWardrobeSelector] = useState(false);
   const [wardrobeItems, setWardrobeItems] = useState<Array<any>>([]);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [showAllSelectedItemsModal, setShowAllSelectedItemsModal] = useState(false);
+  const [modalImages, setModalImages] = useState<string[] | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -289,20 +291,41 @@ export default function WardrobeStylistChat({
             >
               {m.content}
               {m.images && m.images.length ? (
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {m.images.map((src, i) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={i}
-                      src={src}
-                      alt={`outfit-${i}`}
-                      className="w-full h-40 object-contain rounded bg-white/5"
-                      onError={(e) => {
-                        console.error("Lỗi tải ảnh từ URL:", src);
-                        e.currentTarget.style.display = 'none'; // Ẩn ảnh nếu lỗi
-                      }}
-                    />
-                  ))}
+                <div className="mt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  {(() => {
+                    const maxDisplay = 3;
+                    const displayedImgs = m.images.slice(0, maxDisplay);
+                    const remainingCount = m.images.length - maxDisplay;
+
+                    return (
+                      <>
+                        {displayedImgs.map((src, i) => (
+                          <div key={i} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10">
+                            <img
+                              key={i}
+                              src={src}
+                              alt={`outfit-${i}`}
+                              className="w-12 h-12 object-contain rounded"
+                              onError={(e) => {
+                                console.error("Lỗi tải ảnh từ URL:", src);
+                                e.currentTarget.style.display = 'none'; // Ẩn ảnh nếu lỗi
+                              }}
+                            />
+                          </div>
+                        ))}
+
+                        {remainingCount > 0 && (
+                          <button
+                            onClick={() => setModalImages(m.images!)}
+                            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition"
+                            title={`Xem thêm ${remainingCount} ảnh`}
+                          >
+                            +{remainingCount}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               ) : null}
             </div>
@@ -344,21 +367,48 @@ export default function WardrobeStylistChat({
         </div>
       </div>
 
-      {/* Selected items row */}
+      {/* Selected items row (Max 3 thumbnails + N more button) */}
       <div className="px-5 pb-3">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {Object.keys(selectedIds)
-            .filter((k) => selectedIds[k])
-            .map((id) => {
-              const it = wardrobeItems.find((w) => w.id === id);
-              return (
-                <div key={id} className="flex items-center gap-2 bg-white/5 p-1 rounded">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it?.imageUrl} alt={it?.category || "item"} className="w-12 h-12 object-contain rounded" />
-                  <button onClick={() => toggleSelect(id)} className="text-xs px-2 py-1 rounded bg-red-600/70">x</button>
-                </div>
-              );
-            })}
+          {(() => {
+            const selectedArr = Object.keys(selectedIds).filter((k) => selectedIds[k]);
+            if (selectedArr.length === 0) return null;
+
+            const maxDisplay = 3;
+            const displayedIds = selectedArr.slice(0, maxDisplay);
+            const remainingCount = selectedArr.length - maxDisplay;
+
+            return (
+              <>
+                {displayedIds.map((id) => {
+                  const it = wardrobeItems.find((w) => w.id === id);
+                  return (
+                    <div key={id} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10 group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={it?.imageUrl} alt={it?.category || "item"} className="w-12 h-12 object-contain rounded" />
+                      <button
+                        onClick={() => toggleSelect(id)}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] opacity-100 transition-opacity shadow-sm"
+                        title="Bỏ chọn"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {remainingCount > 0 && (
+                  <button
+                    onClick={() => setShowAllSelectedItemsModal(true)}
+                    className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition"
+                    title={`Xem thêm ${remainingCount} món đồ đã chọn`}
+                  >
+                    +{remainingCount}
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -429,12 +479,97 @@ export default function WardrobeStylistChat({
     setSelectedIds((s) => ({ ...s, [id]: !s[id] }));
   }
 
+  // Multi-selector expanded modal
+  const allSelectedModal = showAllSelectedItemsModal ? (
+    <div className="fixed inset-0 z-[100]">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAllSelectedItemsModal(false)} />
+      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-5 bg-[#121212] border border-white/10 rounded-2xl shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-white font-semibold text-lg">Đồ đã chọn ({Object.keys(selectedIds).filter(k => selectedIds[k]).length})</div>
+          <button onClick={() => setShowAllSelectedItemsModal(false)} className="text-white/50 hover:text-white transition">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-auto pb-3 no-scrollbar">
+          {Object.keys(selectedIds)
+            .filter((k) => selectedIds[k])
+            .map((id) => {
+              const it = wardrobeItems.find((w) => w.id === id);
+              if (!it) return null;
+              return (
+                <div key={id} className="relative bg-white/5 rounded-xl border border-white/10 p-2 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageUrl} alt={it.category || "item"} className="w-full h-20 object-contain" />
+                  <button
+                    onClick={() => toggleSelect(id)}
+                    className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 border-2 border-[#121212] text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    title="Bỏ chọn"
+                  >
+                    ×
+                  </button>
+                  <div className="mt-1 text-center text-[10px] text-white/70 truncate">{it.category || "Item"}</div>
+                </div>
+              );
+            })}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+          <button
+            onClick={() => setShowAllSelectedItemsModal(false)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium hover:opacity-90 transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const messageImagesModal = modalImages && modalImages.length > 0 ? (
+    <div className="fixed inset-0 z-[100]">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModalImages(null)} />
+      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-5 bg-[#121212] border border-white/10 rounded-2xl shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-white font-semibold text-lg">Ảnh trong tin nhắn ({modalImages.length})</div>
+          <button onClick={() => setModalImages(null)} className="text-white/50 hover:text-white transition">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[50vh] overflow-auto pb-3 no-scrollbar">
+          {modalImages.map((src, i) => (
+            <div key={i} className="relative bg-white/5 rounded-xl border border-white/10 p-2">
+              <img src={src} alt="item" className="w-full h-32 object-contain" />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+          <button
+            onClick={() => setModalImages(null)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium hover:opacity-90 transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (mode === "drawer") {
     if (!open) return null;
     return (
       <div className="fixed inset-0 z-[80]">
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
         <div className="absolute right-0 top-0 h-full w-full max-w-[560px] p-4 md:p-6">{shell}</div>
+
+        {allSelectedModal}
+        {messageImagesModal}
 
         {showWardrobeSelector ? (
           <div className="fixed inset-0 z-90">
@@ -445,20 +580,37 @@ export default function WardrobeStylistChat({
                 <div className="text-sm text-white/60">Chọn nhiều mục</div>
               </div>
               <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
-                {wardrobeItems.map((it) => (
-                  <div key={it.id} className="p-2 bg-white/5 rounded">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
-                    <div className="mt-2 flex items-center justify-between">
-                      <label className="text-xs text-white/80">{it.category || "item"}</label>
-                      <input type="checkbox" checked={!!selectedIds[it.id]} onChange={() => toggleSelect(it.id)} />
+                {wardrobeItems.map((it) => {
+                  const isSelected = !!selectedIds[it.id];
+                  return (
+                    <div 
+                      key={it.id} 
+                      onClick={() => toggleSelect(it.id)}
+                      className={`p-2 rounded cursor-pointer border transition-all duration-200 ${
+                        isSelected 
+                          ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-md">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-center">
+                        <label className="text-xs font-medium text-white/90 pointer-events-none">{it.category || "item"}</label>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowWardrobeSelector(false)} className="px-3 py-2 rounded border border-white/10">Huỷ</button>
-                <button onClick={() => setShowWardrobeSelector(false)} className="px-3 py-2 rounded bg-cyan-500">Xong</button>
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">Huỷ</button>
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-90 transition shadow-[0_0_15px_rgba(56,189,248,0.2)]">Xong</button>
               </div>
             </div>
           </div>
@@ -470,6 +622,8 @@ export default function WardrobeStylistChat({
   // page mode: full screen, không padding gây scroll w-full
   return (
     <div className="w-full h-[100svh] overflow-hidden p-4 md:p-6">{shell}
+      {allSelectedModal}
+      {messageImagesModal}
       {showWardrobeSelector ? (
         <div className="fixed inset-0 z-90">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />
@@ -478,22 +632,39 @@ export default function WardrobeStylistChat({
               <div className="text-white font-semibold">Chọn đồ từ tủ</div>
               <div className="text-sm text-white/60">Chọn nhiều mục</div>
             </div>
-            <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
-              {wardrobeItems.map((it) => (
-                <div key={it.id} className="p-2 bg-white/5 rounded">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
-                  <div className="mt-2 flex items-center justify-between">
-                    <label className="text-xs text-white/80">{it.category || "item"}</label>
-                    <input type="checkbox" checked={!!selectedIds[it.id]} onChange={() => toggleSelect(it.id)} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowWardrobeSelector(false)} className="px-3 py-2 rounded border border-white/10">Huỷ</button>
-              <button onClick={() => setShowWardrobeSelector(false)} className="px-3 py-2 rounded bg-cyan-500">Xong</button>
-            </div>
+              <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
+                {wardrobeItems.map((it) => {
+                  const isSelected = !!selectedIds[it.id];
+                  return (
+                    <div 
+                      key={it.id} 
+                      onClick={() => toggleSelect(it.id)}
+                      className={`p-2 rounded cursor-pointer border transition-all duration-200 ${
+                        isSelected 
+                          ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-md">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-center">
+                        <label className="text-xs font-medium text-white/90 pointer-events-none">{it.category || "item"}</label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">Huỷ</button>
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-90 transition shadow-[0_0_15px_rgba(56,189,248,0.2)]">Xong</button>
+              </div>
           </div>
         </div>
       ) : null}

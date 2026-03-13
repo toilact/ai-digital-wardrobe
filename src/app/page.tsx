@@ -1,114 +1,93 @@
-"use client";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import GoogleLoginButton from "@/components/GoogleLoginButton";
-import { useAuth } from "@/lib/AuthContext";
-import LogoutButton from "@/components/LogoutButton";
+import Header from "@/components/Header";
+
 
 export default function Home() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [pass, setPass] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const onLogin = async () => {
-    if (!username || !pass) return alert("Nhập tên đăng nhập và mật khẩu");
-    setLoading(true);
-    if (!auth) {
-      alert("Firebase chưa được khởi tạo!");
-      setLoading(false);
-      return;
-    }
-    try {
-      const loginEmail = `${username.trim().toLowerCase()}@adw.local`;
-      await signInWithEmailAndPassword(auth, loginEmail, pass);
-      router.push("/dashboard");
-    } catch (e: any) {
-      alert(e?.message ?? "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
   return (
-    <>
-      <header className="hero mt-15">
-        <div className="hero-left">
-          <h1>
-            <span className="grad">AI Digital Wardrobe</span>
-            <br />Tủ đồ thông minh của bạn
+    <main>
+      <Header />
+      <div className="wrap">
+        {/* Hero Section */}
+        <section className="text-center py-20">
+          <h1 className="text-5xl font-bold grad-text mb-4">
+            Chào mừng đến với AI Digital Wardrobe
           </h1>
-        </div>
+          <p className="text-xl text-gray-300 mb-8">
+            Tủ đồ thông minh giúp bạn quản lý và gợi ý trang phục một cách dễ dàng
+          </p>
+          <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-8 max-w-4xl mx-auto shadow-xl">
+            <h2 className="text-3xl font-semibold text-white/90 mb-6">Công dụng của AI Digital Wardrobe</h2>
+            <p className="text-gray-300 text-lg leading-relaxed">
+              AI Digital Wardrobe là ứng dụng giúp bạn số hóa tủ đồ cá nhân, sử dụng trí tuệ nhân tạo để gợi ý trang phục phù hợp với sự kiện và phong cách mà bạn đưa ra. Ứng dụng tích hợp công nghệ AI tiên tiến để phân tích hình ảnh và đưa ra các đề xuất cá nhân hóa.
+            </p>
+          </div>
+        </section>
 
-
-      </header>
-
-      <main className="mt-12 flex items-center justify-center ">
-
-        <div className="w-full max-w-[400px] bg-gray-900 rounded-xl  p-6 shadow-2xl flex flex-col items-center">
-
-
-          <h2 className="text-3xl font-light text-white mb-2 tracking-tight">
-            Đăng nhập
-          </h2>
-
-          {/* Form nhập liệu */}
-          <div className="w-full space-y-4">
-            <div className="relative m-2">
-              <input
-                type="text"
-                placeholder="Tên đăng nhập"
-                value={username}
-                className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400"
-                onChange={(e) => setUsername(e.target.value)}
-              />
+        {/* Hướng dẫn sử dụng */}
+        <section className="py-20 mt-15">
+          <h2 className="text-4xl font-bold text-white text-center mb-12">Hướng dẫn sử dụng</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Bước 1 */}
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-2xl font-bold">1</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Đăng ký tài khoản</h3>
+              <p className="text-gray-300">
+                Tạo tài khoản của bạn để bắt đầu sử dụng AI Digital Wardrobe. Bạn có thể đăng ký bằng email hoặc tài khoản Google.
+              </p>
+              {/* Placeholder cho ảnh */}
+              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                <span className="text-gray-400">Ảnh minh họa bước 1</span>
+              </div>
             </div>
 
-            <div className="relative m-2">
-              <input
-                type="password"
-                placeholder="Mật khẩu"
-                value={pass}
-                onChange={(e) => setPass(e.target.value)}
-                className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400"
-              />
+            {/* Bước 2 */}
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-2xl font-bold">2</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Upload tủ đồ</h3>
+              <p className="text-gray-300">
+                Tải lên hình ảnh các món đồ trong tủ đồ của bạn. AI sẽ tự động phân loại và gán nhãn cho từng món đồ.
+              </p>
+              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                <span className="text-gray-400">Ảnh minh họa bước 2</span>
+              </div>
             </div>
 
-            {/* Nút Login xanh dương */}
-            <div className="m-2">
-              <button
-                onClick={onLogin}
-                disabled={loading}
-                className="w-full bg-[#4a90e2] text-white p-3 font-semibold hover:bg-blue-600 transition-colors">
-                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-              </button>
+            {/* Bước 3 */}
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-2xl font-bold">3</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Nhận gợi ý trang phục</h3>
+              <p className="text-gray-300">
+                Dựa trên thời tiết và sở thích của bạn, AI sẽ gợi ý các bộ trang phục phù hợp từ tủ đồ của bạn.
+              </p>
+              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                <span className="text-gray-400">Ảnh minh họa bước 3</span>
+              </div>
             </div>
-
           </div>
+        </section>
 
-          {/* Dòng kẻ ngang hoặc chữ OR */}
-          <div className="w-full flex items-center my-6">
-            <div className="flex-1 h-[1px] bg-gray-200"></div>
-            <span className="px-3 text-xs text-gray-400 uppercase">Hoặc</span>
-            <div className="flex-1 h-[1px] bg-gray-200"></div>
+        {/* Call to Action */}
+        <section className="text-center py-20">
+          <h2 className="text-3xl font-bold text-white mb-6">Bắt đầu ngay hôm nay!</h2>
+          <p className="text-gray-300 mb-8">
+            Đăng ký tài khoản miễn phí và trải nghiệm sức mạnh của AI trong việc quản lý tủ đồ.
+          </p>
+          <div className="space-x-4">
+            <a href="/auth/register" className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+              Đăng ký ngay
+            </a>
+            <a href="/auth/login" className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-8 py-3 rounded-lg font-semibold transition-colors backdrop-blur-sm">
+              Đăng nhập
+            </a>
           </div>
-
-          {/* Nút Đăng nhập bằng Google */}
-
-          <div className="pt-2 border-t">
-            <GoogleLoginButton />
-          </div>
-
-          {/* Link chuyển hướng */}
-          <div className="flex gap-4 text-sm text-white">
-            <Link href="/auth/register" className="hover:underline">Đăng ký</Link>
-          </div>
-        </div>
-      </main>
-    </>
+        </section>
+      </div>
+    </main>
   );
 }
 

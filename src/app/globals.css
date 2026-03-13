@@ -97,7 +97,7 @@ header.hero {
     line-height: 1.05;
 }
 
-.hero-left h1 .grad {
+.grad-text {
     background: linear-gradient(90deg, rgba(99, 102, 241, 1), rgba(236, 72, 153, 1), rgba(34, 197, 94, 1));
     -webkit-background-clip: text;
     background-clip: text;
@@ -167,12 +167,7 @@ header.hero {
     box-shadow: 0 0 0 6px rgba(34, 197, 94, .15);
 }
 
-.grid {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-}
+
 
 .card {
     position: relative;
@@ -358,9 +353,7 @@ header.hero {
         flex-direction: row;
     }
 
-    .grid {
-        grid-template-columns: 1fr;
-    }
+
 
     .media {
         height: 200px;

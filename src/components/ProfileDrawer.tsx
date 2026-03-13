@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { UserProfile } from "@/lib/profile";
+import LogoutButton from "./LogoutButton";
 
 function emailPrefix(email?: string | null) {
   return (email || "").split("@")[0] || "";
@@ -129,6 +130,10 @@ export default function ProfileDrawer({
           >
             Tùy chỉnh thông tin
           </a>
+
+          <div className="pt-4 border-t border-white/10">
+            <LogoutButton onClose={onClose} />
+          </div>
         </div>
       </div>
     </div>

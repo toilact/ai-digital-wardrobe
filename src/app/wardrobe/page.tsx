@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ConfirmModal from "@/components/ConfirmModal";
-import LogoutButton from "@/components/LogoutButton";
+import Header from "@/components/Header";
 
 type WardrobeItem = {
   id: string;
@@ -157,84 +157,78 @@ export default function WardrobePage() {
   };
 
   return (
-    <main className="min-h-screen p-6 space-y-6 ">
-      <header className="hero">
-        <div className="hero-left">
-          <h1>
-            <span className="grad">AI Digital Wardrobe</span>
-          </h1>
-        </div>
-
-
-      </header>
-
-      <div className="flex items-center justify-between gap-3">
-        <button onClick={() => router.push("/dashboard")} className="px-3 py-2 rounded border">
-          ← Quay lại Dashboard
-        </button>
-
-        <h1 className="text-xl font-semibold">Tủ đồ của bạn</h1>
-
-        <Link href="/wardrobe/upload" className="px-3 py-2 rounded bg-black text-white">
-          + Thêm đồ
-        </Link>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto py-1">
-        {CATEGORIES.map((c) => {
-          const count = grouped[c.key]?.length ?? 0;
-          const active = activeCat === c.key;
-          return (
-            <button
-              key={c.key}
-              onClick={() => setActiveCat(c.key)}
-              className={`px-3 py-2 rounded-full border text-sm whitespace-nowrap transition
-                ${active ? "bg-black text-white border-black" : "bg-white text-black border-gray-200 hover:bg-gray-50"}`}
-            >
-              {c.label} <span className={`${active ? "opacity-80" : "opacity-60"}`}>({count})</span>
+    <main className="min-h-screen space-y-6 ">
+      <Header />
+      <div className="wrap ">
+        <header className="mb-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <button onClick={() => router.push("/dashboard")} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">
+              ← Dashboard
             </button>
-          );
-        })}
-      </div>
-
-      {/* List */}
-      {activeList.length === 0 ? (
-        <div className="border rounded-xl p-6 text-gray-600">
-          Chưa có món nào trong mục <b>{activeLabel}</b>.
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
+              Tủ đồ của bạn
+            </h1>
+            <Link href="/wardrobe/upload" className="px-4 py-2 rounded-xl font-semibold border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white hover:border-cyan-300/40 transition shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+              + Thêm đồ
+            </Link>
+          </div>
+        </header>
+        {/* Tabs */}
+        <div className="flex gap-2 overflow-x-auto py-1">
+          {CATEGORIES.map((c) => {
+            const count = grouped[c.key]?.length ?? 0;
+            const active = activeCat === c.key;
+            return (
+              <button
+                key={c.key}
+                onClick={() => setActiveCat(c.key)}
+                className={`px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition
+                ${active ? "bg-gradient-to-r from-sky-400/80 to-indigo-500/80 text-white border-transparent shadow-[0_0_15px_rgba(56,189,248,0.2)]" : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80"}`}
+              >
+                {c.label} <span className={`${active ? "opacity-90" : "opacity-50"}`}>({count})</span>
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-          {activeList.map((it) => (
-            <div key={it.id} className="border rounded-xl overflow-hidden relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={it.imageUrl} alt="item" className="w-full h-64 object-cover" />
-              <div className="p-3 text-sm">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-medium">{it.category || "Không rõ"}</div>
+
+        {/* List */}
+        {activeList.length === 0 ? (
+          <div className="border border-white/10 bg-white/5 rounded-xl p-8 text-center text-white/60">
+            Chưa có món nào trong mục <b className="text-white/80">{activeLabel}</b>.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {activeList.map((it) => (
+              <div key={it.id} className="border border-white/10 bg-white/5 rounded-xl overflow-hidden relative shadow-lg hover:border-white/20 transition group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={it.imageUrl} alt="item" className="w-full h-64 object-contain p-2" />
+                <div className="p-4 bg-black/40 backdrop-blur-md text-sm border-t border-white/10">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-semibold text-white/90">{it.category || "Không rõ"}</div>
+                    </div>
+                    <button
+                      onClick={() => openConfirm(it.id, it.cloudinaryPublicId)}
+                      disabled={deletingId === it.id}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition"
+                    >
+                      {deletingId === it.id ? "Đang xóa..." : "Xóa"}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => openConfirm(it.id, it.cloudinaryPublicId)}
-                    disabled={deletingId === it.id}
-                    className="ml-3 text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
-                  >
-                    {deletingId === it.id ? "Đang xóa..." : "Xóa"}
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      <ConfirmModal
-        open={confirmOpen}
-        message={<span>Bạn có chắc muốn xóa món này khỏi tủ đồ?</span>}
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={deleteItemConfirmed}
-        loading={confirmLoading}
-      />
+        <ConfirmModal
+          open={confirmOpen}
+          message={<span>Bạn có chắc muốn xóa món này khỏi tủ đồ?</span>}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={deleteItemConfirmed}
+          loading={confirmLoading}
+        />
+      </div>
     </main>
   );
 }
