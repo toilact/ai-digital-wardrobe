@@ -17,7 +17,7 @@ services:
       - TORCH_NUM_THREADS=1
 
       - ENABLE_AUTO_LABEL=1
-      - PRELOAD_CLIP=0
+      - PRELOAD_CLIP=1
       - AUTO_LABEL_BACKEND=clip
       - AUTO_LABEL_INCLUDE_COLOR=0
       - CLIP_DEVICE=cpu
