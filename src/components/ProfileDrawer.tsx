@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import type { UserProfile } from "@/lib/profile";
+import type { UserAccount, UserProfile } from "@/lib/profile";
 import LogoutButton from "./LogoutButton";
 
 function emailPrefix(email?: string | null) {
@@ -16,24 +16,13 @@ function initialsFrom(name?: string | null, email?: string | null) {
   return (a + b) || "U";
 }
 
-function fmtTs(ts: any) {
-  try {
-    if (!ts) return "—";
-    if (typeof ts?.toDate === "function") return ts.toDate().toLocaleString("vi-VN");
-    if (typeof ts?.seconds === "number") return new Date(ts.seconds * 1000).toLocaleString("vi-VN");
-    return "—";
-  } catch {
-    return "—";
-  }
-}
-
-function genderLabel(g: any) {
+function genderLabel(g: UserProfile["gender"] | undefined) {
   if (g === "male") return "Nam";
   if (g === "female") return "Nữ";
   return "—";
 }
 
-function Row({ label, value }: { label: string; value?: any }) {
+function Row({ label, value }: { label: string; value?: unknown }) {
   const display = value === undefined || value === null || value === "" ? "—" : String(value);
   return (
     <div className="flex items-start justify-between gap-4 py-2 border-b border-white/10 last:border-b-0">
@@ -47,11 +36,18 @@ export default function ProfileDrawer({
   open,
   onClose,
   user,
+  account,
   profile,
 }: {
   open: boolean;
   onClose: () => void;
-  user: { email?: string | null; displayName?: string | null; photoURL?: string | null } | null;
+  user: {
+    email?: string | null;
+    displayName?: string | null;
+    photoURL?: string | null;
+    username?: string | null;
+  } | null;
+  account?: UserAccount | null;
   profile: UserProfile | null;
 }) {
   useEffect(() => {
@@ -63,8 +59,15 @@ export default function ProfileDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const uname = emailPrefix(user?.email || "");
-  const initials = initialsFrom(user?.displayName, user?.email);
+  const resolvedEmail = account?.email || profile?.email || user?.email || "";
+  const uname =
+    account?.username ||
+    profile?.username ||
+    user?.username ||
+    emailPrefix(resolvedEmail);
+  const resolvedDisplayName =
+    account?.displayName || profile?.displayName || user?.displayName || uname;
+  const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
 
   return (
     <div className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
@@ -89,8 +92,8 @@ export default function ProfileDrawer({
             </div>
 
             <div className="leading-tight">
-              <div className="text-white font-semibold">{user?.displayName || uname || "Tài khoản"}</div>
-              <div className="text-xs text-white/60">{user?.email || "—"}</div>
+              <div className="text-white font-semibold">{resolvedDisplayName || "Tài khoản"}</div>
+              <div className="text-xs text-white/60">{resolvedEmail || "—"}</div>
             </div>
           </div>
 
@@ -106,15 +109,15 @@ export default function ProfileDrawer({
         <div className="p-5 space-y-4 overflow-y-auto h-[calc(100%-80px)]">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm font-semibold text-white/90 mb-2">Tài khoản</div>
-            <Row label="Tên hiển thị" value={user?.displayName || uname} />
-            <Row label="Email" value={user?.email} />
+            <Row label="Tên hiển thị" value={resolvedDisplayName} />
+            <Row label="Email" value={resolvedEmail} />
             <Row label="Tên đăng nhập" value={uname ? `${uname}` : "—"} />
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">
             <div className="text-sm font-semibold text-white/90 mb-2">Thông tin cá nhân</div>
 
-            <Row label="Giới tính" value={genderLabel((profile as any)?.gender)} />
+            <Row label="Giới tính" value={genderLabel(profile?.gender)} />
             <Row label="Tuổi" value={profile?.age} />
             <Row label="Chiều cao (cm)" value={profile?.heightCm} />
             <Row label="Cân nặng (kg)" value={profile?.weightKg} />

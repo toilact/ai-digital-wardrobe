@@ -3,7 +3,12 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import ProfileDrawer from "./ProfileDrawer";
 import { useState, useEffect } from "react";
-import { getUserProfile, type UserProfile } from "@/lib/profile";
+import {
+    getUserAccount,
+    getUserProfile,
+    type UserAccount,
+    type UserProfile,
+} from "@/lib/profile";
 
 function emailPrefix(email?: string | null) {
     return (email || "").split("@")[0] || "";
@@ -21,14 +26,24 @@ export default function Header() {
     const { user } = useAuth();
     const [profileOpen, setProfileOpen] = useState(false);
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [account, setAccount] = useState<UserAccount | null>(null);
 
-    const uname = emailPrefix(user?.email);
-    const initials = initialsFrom(user?.displayName, user?.email);
+    const resolvedEmail = account?.email || user?.email;
+    const resolvedDisplayName = account?.displayName || user?.displayName;
+    const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
 
     useEffect(() => {
-        if (user) {
-            getUserProfile(user.uid).then(setProfile).catch(() => { });
-        }
+        if (!user) return;
+
+        Promise.all([
+            getUserProfile(user.uid),
+            getUserAccount(user.uid),
+        ])
+            .then(([nextProfile, nextAccount]) => {
+                setProfile(nextProfile);
+                setAccount(nextAccount);
+            })
+            .catch(() => { });
     }, [user]);
 
     return (
@@ -77,10 +92,10 @@ export default function Header() {
                     <div className="text-white z-10 flex items-center justify-end gap-3">
                         {user ? (
                             <>
-                                {profile && (
+                                {(account || profile) && (
 
-                                    <div className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${profile.isVIP ? 'bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-white/10 text-white/80 border-white/20'}`}>
-                                        {profile.isVIP ? (
+                                    <div className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${(account?.isVIP ?? profile?.isVIP) ? 'bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-white/10 text-white/80 border-white/20'}`}>
+                                        {(account?.isVIP ?? profile?.isVIP) ? (
                                             <>
                                                 <span className="text-base leading-none">♛</span> VIP
                                             </>
@@ -117,8 +132,14 @@ export default function Header() {
             <ProfileDrawer
                 open={profileOpen}
                 onClose={() => setProfileOpen(false)}
-                user={user}
-                profile={profile}
+                user={{
+                    email: resolvedEmail,
+                    displayName: resolvedDisplayName,
+                    photoURL: user?.photoURL,
+                    username: account?.username,
+                }}
+                account={user ? account : null}
+                profile={user ? profile : null}
             />
         </>
     );

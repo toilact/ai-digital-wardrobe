@@ -11,7 +11,6 @@ import {
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import Header from "@/components/Header";
-import { useAuth } from "@/lib/AuthContext";
 
 function firebaseMsg(err: unknown) {
   const e = err as AuthError;
@@ -33,42 +32,58 @@ function firebaseMsg(err: unknown) {
   }
 }
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export default function RegisterPage() {
-  const { user } = useAuth();
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onRegister = async () => {
     const uname = username.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
     if (!uname) return alert("Nhập tên đăng nhập.");
-    if (!/^[a-z0-9_-]{3,32}$/.test(uname))
+    if (!/^[a-z0-9_-]{3,32}$/.test(uname)) {
       return alert(
         "Tên đăng nhập chỉ gồm chữ thường, số, gạch dưới hoặc gạch ngang (3-32 ký tự)."
       );
+    }
+
+    if (!normalizedEmail) return alert("Nhập email.");
+    if (!isValidEmail(normalizedEmail)) return alert("Email không hợp lệ.");
+
     if (!pass) return alert("Nhập mật khẩu.");
     if (pass.length < 6) return alert("Mật khẩu phải từ 6 ký tự trở lên.");
     if (pass !== confirm) return alert("Mật khẩu nhập lại không khớp.");
 
     setLoading(true);
+
     try {
       if (!db || !auth) {
         throw new Error("Firebase chưa được khởi tạo!");
       }
+
       const unameRef = doc(db, "usernames", uname);
       const unameSnap = await getDoc(unameRef);
+
       if (unameSnap.exists()) {
-        return alert("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
+        alert("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
+        return;
       }
 
-      const fakeEmail = `${uname}@adw.local`;
-
-      const cred = await createUserWithEmailAndPassword(auth, fakeEmail, pass);
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        pass
+      );
 
       const displayName = name.trim();
       if (displayName) {
@@ -77,12 +92,14 @@ export default function RegisterPage() {
 
       await setDoc(unameRef, {
         uid: cred.user.uid,
+        email: normalizedEmail,
         createdAt: serverTimestamp(),
       });
 
       await setDoc(doc(db, "users", cred.user.uid), {
         username: uname,
         displayName: displayName || null,
+        email: normalizedEmail,
         createdAt: serverTimestamp(),
         isVIP: false,
         itemQuantity: 0,
@@ -90,7 +107,7 @@ export default function RegisterPage() {
         outfitGenerationDate: "",
       });
 
-      router.replace("/onboarding"); ``
+      router.replace("/onboarding");
     } catch (err) {
       alert(firebaseMsg(err));
       console.error(err);
@@ -100,22 +117,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <><main>
+    <main>
       <Header />
+
       <header className="hero text-center md:context-centered">
         <div className="hero-left">
           <h1>
             <span className="grad">AI Digital Wardrobe</span>
           </h1>
         </div>
-
-
       </header>
 
-      <main className=" flex items-center justify-center p-6">
+      <main className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm shadow-2xl rounded-xl p-6 space-y-4 bg-gray-900">
-
-          <h2 className="text-2xl font-semibold text-center ">Đăng ký</h2>
+          <h2 className="text-2xl font-semibold text-center">Đăng ký</h2>
 
           <input
             className="w-full border border-gray-300 rounded px-3 py-2"
@@ -130,6 +145,15 @@ export default function RegisterPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
+          />
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
           />
 
           <input
@@ -158,7 +182,7 @@ export default function RegisterPage() {
             {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
           </button>
 
-          <p className="text-sm text-gray-600 text-center">
+          <p className="text-sm text-gray-300 text-center">
             Đã có tài khoản?{" "}
             <Link className="underline" href="/auth/login">
               Đăng nhập
@@ -167,6 +191,5 @@ export default function RegisterPage() {
         </div>
       </main>
     </main>
-    </>
   );
 }

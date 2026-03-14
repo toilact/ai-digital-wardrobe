@@ -3,8 +3,12 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { getUserProfile, upsertUserProfile } from "@/lib/profile";
-import LogoutButton from "@/components/LogoutButton";
+import {
+  getUserAccount,
+  getUserProfile,
+  type UserAccount,
+  upsertUserProfile,
+} from "@/lib/profile";
 
 function emailPrefix(email?: string | null) {
   return (email || "").split("@")[0] || "";
@@ -165,6 +169,7 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(true);
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [account, setAccount] = useState<UserAccount | null>(null);
 
   const [gender, setGender] = useState<Gender>("male");
   const [age, setAge] = useState<number>(18);
@@ -187,7 +192,12 @@ export default function OnboardingPage() {
       if (!user) return;
 
       try {
-        const p = await getUserProfile(user.uid);
+        const [accountDoc, p] = await Promise.all([
+          getUserAccount(user.uid),
+          getUserProfile(user.uid),
+        ]);
+
+        setAccount(accountDoc);
 
         if (p) {
           setGender(p.gender || "male");
@@ -211,7 +221,7 @@ export default function OnboardingPage() {
     if (!loading && user) run();
   }, [loading, user]);
 
-  const uname = emailPrefix(user?.email);
+  const uname = account?.username || emailPrefix(account?.email || user?.email);
 
   const ready = useMemo(() => {
     return age >= 10 && age <= 100 && heightCm >= 100 && heightCm <= 230 && weightKg >= 25 && weightKg <= 200;
@@ -298,7 +308,9 @@ export default function OnboardingPage() {
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex flex-col items-end">
-              <div className="text-white/90 font-semibold">Xin chào {user.displayName || uname}</div>
+              <div className="text-white/90 font-semibold">
+                Xin chào {account?.displayName || user.displayName || uname}
+              </div>
               <div className="text-white/50 text-sm">@{uname}</div>
             </div>
           </div>

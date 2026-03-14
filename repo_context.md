@@ -1,3 +1,187 @@
+
+
+---
+# Dockerfile
+```text
+FROM node:20-slim AS base
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+EXPOSE 3000
+
+FROM node:20-slim AS build
+WORKDIR /src
+
+COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+RUN if [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm i --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  else npm i; fi
+
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+
+COPY . .
+
+RUN [ -n "$NEXT_PUBLIC_FIREBASE_API_KEY" ] || unset NEXT_PUBLIC_FIREBASE_API_KEY; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" ] || unset NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_PROJECT_ID" ] || unset NEXT_PUBLIC_FIREBASE_PROJECT_ID; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET" ] || unset NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID" ] || unset NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID; \
+    [ -n "$NEXT_PUBLIC_FIREBASE_APP_ID" ] || unset NEXT_PUBLIC_FIREBASE_APP_ID; \
+    npm run build
+
+FROM build AS publish
+RUN mkdir -p /app/publish && \
+    cp -r package.json /app/publish/ && \
+    cp -r node_modules /app/publish/ && \
+    cp -r .next /app/publish/ && \
+    if [ -d public ]; then cp -r public /app/publish/; fi
+
+FROM base AS final
+WORKDIR /app
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
+COPY --from=publish /app/publish .
+ENTRYPOINT ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]
+
+```
+
+
+---
+# README.md
+```text
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+```
+
+
+---
+# docker-compose.yml
+```text
+services:
+  ai-service:
+    container_name: ai-digital-wardrobe-ai
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ENABLE_SAM=1
+      - SAM_MODEL_TYPE=vit_t
+      - SAM_CHECKPOINT=/app/checkpoints/mobile_sam.pt
+      - SAM_MAX_SIDE=768
+      - SAM_USE_FP16=0
+      - CUTOUT_MAX_CONCURRENCY=1
+      - TORCH_NUM_THREADS=1
+
+      - ENABLE_AUTO_LABEL=1
+      - PRELOAD_CLIP=1
+      - AUTO_LABEL_BACKEND=clip
+      - AUTO_LABEL_INCLUDE_COLOR=0
+      - CLIP_DEVICE=cpu
+      - CLIP_MODEL_NAME=ViT-B-32
+      - CLIP_PRETRAINED=laion2b_s34b_b79k
+
+      - PRODUCT_MAX_SIDE=1280
+      - MAX_UPLOAD_MB=8
+      - PNG_COMPRESS_LEVEL=3
+    volumes:
+      - ./ai-service/checkpoints:/app/checkpoints
+
+  web:
+    container_name: ai-digital-wardrobe-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "80:3000"
+    env_file:
+      - .env.local
+    environment:
+      - DOCKER=1
+      - AI_SERVICE_URL=http://ai-service:8000
+      - LABEL_STRATEGY=service
+      - AI_LABEL_BACKEND=clip
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+    depends_on:
+      - ai-service
+
+```
+
+
+---
+# next-env.d.ts
+```text
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+import "./.next/dev/types/routes.d.ts";
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+
+```
+
+
+---
+# next.config.ts
+```text
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  output: "standalone",
+};
+
+export default nextConfig;
+```
+
+
+---
+# package-lock.json
+```text
 {
   "name": "ai-digital-wardrobe",
   "version": "0.1.0",
@@ -9285,3 +9469,8379 @@
     }
   }
 }
+
+```
+
+
+---
+# package.json
+```text
+{
+  "name": "ai-digital-wardrobe",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@google/genai": "^1.40.0",
+    "@google/generative-ai": "^0.24.1",
+    "cloudinary": "^2.9.0",
+    "firebase": "^12.8.0",
+    "firebase-admin": "^13.6.0",
+    "next": "16.1.6",
+    "nodemailer": "^8.0.2",
+    "openai": "^6.18.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-icons": "^5.5.0",
+    "zod": "^4.3.6",
+    "zod-to-json-schema": "^3.25.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "^7.0.11",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.24",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5"
+  }
+}
+
+```
+
+
+---
+# tailwind.config.ts
+```text
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+    content: [
+        "./src/**/*.{js,ts,jsx,tsx,mdx}",
+        "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    ],
+    theme: {
+        extend: {},
+    },
+    plugins: [],
+};
+export default config;
+```
+
+
+---
+# tsconfig.json
+```text
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
+
+```
+
+
+---
+# ai-service/Dockerfile
+```text
+FROM python:3.10-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1 \
+    MALLOC_ARENA_MAX=2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    libglib2.0-0 \
+    libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /app/requirements.txt
+
+COPY . /app
+
+RUN mkdir -p /app/checkpoints
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--limit-concurrency", "2", "--timeout-keep-alive", "5"]
+```
+
+
+---
+# ai-service/app.py
+```text
+# ai-service/app.py
+import base64
+import io
+import os
+from typing import Any, Dict, Optional, Tuple, List
+import json
+import torch
+from pydantic import BaseModel
+import asyncio
+
+import cv2
+import numpy as np
+from PIL import Image
+
+from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
+
+app = FastAPI()
+
+# CORS cho Next.js gọi
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # dev ok
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =============================
+# ADD: Multi-point SAM + AutoLabel (CLIP + color)
+# =============================
+
+# Optional local CLIP (open_clip_torch) for fallback labeling
+try:
+    import open_clip  # type: ignore
+except Exception:
+    open_clip = None
+
+# ----- AutoLabel config -----
+AUTO_LABEL_INCLUDE_COLOR = os.getenv("AUTO_LABEL_INCLUDE_COLOR", "1").lower() not in ("0", "false", "no")
+ENABLE_AUTO_LABEL = os.getenv("ENABLE_AUTO_LABEL", "1") == "1"
+AUTO_LABEL_BACKEND_DEFAULT = os.getenv("AUTO_LABEL_BACKEND", "clip")  # clip | none
+CLIP_MODEL_NAME = os.getenv("CLIP_MODEL_NAME", "ViT-B-32")
+CLIP_PRETRAINED = os.getenv("CLIP_PRETRAINED", "laion2b_s34b_b79k")
+CLIP_DEVICE = os.getenv("CLIP_DEVICE", "cuda" if torch.cuda.is_available() else "cpu")
+CLIP_TEMPERATURE = float(os.getenv("CLIP_TEMPERATURE", "100.0"))
+
+FASHION_CATEGORIES_VI = ["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"]
+
+# Prompt-set per class để CLIP zero-shot ổn định hơn
+_CLIP_PROMPTS = {
+    "Áo": [
+        "a photo of a shirt", "a photo of a t-shirt", "a photo of a blouse",
+        "a photo of a hoodie", "a photo of a sweater", "a photo of a jacket",
+        "áo thun", "áo sơ mi", "áo khoác"
+    ],
+    "Quần": [
+        "a photo of pants", "a photo of trousers", "a photo of jeans",
+        "a photo of shorts", "quần jean", "quần short", "quần dài"
+    ],
+    "Váy": [
+        "a photo of a skirt", "a photo of a mini skirt", "a photo of a long skirt",
+        "chân váy", "váy"
+    ],
+    "Đầm": [
+        "a photo of a dress", "a photo of a gown", "a photo of a one-piece dress",
+        "đầm", "váy liền", "đầm maxi"
+    ],
+    "Giày": [
+        "a photo of shoes", "a photo of sneakers", "a photo of boots",
+        "a photo of sandals", "giày", "giày sneaker", "boots"
+    ],
+    "Khác": [
+        "a photo of a fashion accessory", "a photo of a bag", "a photo of a hat",
+        "a photo of an accessory", "phụ kiện", "túi", "nón"
+    ],
+}
+
+_clip_model = None
+_clip_preprocess = None
+_clip_text_features = None
+_clip_ready = False
+
+def _safe_json_loads(s: str):
+    try:
+        return json.loads(s)
+    except Exception:
+        return None
+
+def _parse_points_json(s: str | None) -> List[Tuple[float, float]]:
+    if not s:
+        return []
+    data = _safe_json_loads(s)
+    if data is None:
+        return []
+    # allow {"points": [[x,y],...]}
+    if isinstance(data, dict) and "points" in data:
+        data = data["points"]
+    if not isinstance(data, list):
+        return []
+    out: List[Tuple[float, float]] = []
+    for p in data:
+        if isinstance(p, (list, tuple)) and len(p) >= 2:
+            try:
+                out.append((float(p[0]), float(p[1])))
+            except Exception:
+                pass
+    return out
+
+def _parse_box_json(s: str | None) -> Tuple[float, float, float, float] | None:
+    if not s:
+        return None
+    data = _safe_json_loads(s)
+    if data is None:
+        return None
+    if isinstance(data, dict) and "box" in data:
+        data = data["box"]
+    if isinstance(data, (list, tuple)) and len(data) >= 4:
+        try:
+            return (float(data[0]), float(data[1]), float(data[2]), float(data[3]))
+        except Exception:
+            return None
+    return None
+
+def _resize_max_side(img_rgb: np.ndarray, max_side: int) -> Tuple[np.ndarray, float]:
+    h, w = img_rgb.shape[:2]
+    m = max(h, w)
+    if m <= max_side:
+        return img_rgb, 1.0
+    scale = max_side / float(m)
+    nh, nw = int(round(h * scale)), int(round(w * scale))
+    resized = cv2.resize(img_rgb, (nw, nh), interpolation=cv2.INTER_AREA)
+    return resized, scale
+
+# ---- ADD THESE HELPERS somewhere ABOVE _sam_prompt_mask ----
+from typing import Optional, List, Tuple, Dict
+
+def _clamp_f(v: float, lo: float, hi: float) -> float:
+    return float(max(lo, min(hi, v)))
+
+def _points_to_pixels(points: List[Tuple[float, float]], w: int, h: int) -> List[Tuple[float, float]]:
+    """Accept either normalized [0..1] points or pixel points; return pixel points clamped to image."""
+    if not points:
+        return []
+
+    is_norm = True
+    for x, y in points:
+        x = float(x); y = float(y)
+        if not (0.0 <= x <= 1.0 and 0.0 <= y <= 1.0):
+            is_norm = False
+            break
+
+    out: List[Tuple[float, float]] = []
+    for x, y in points:
+        x = float(x); y = float(y)
+        if is_norm:
+            px = x * (w - 1)
+            py = y * (h - 1)
+        else:
+            px = x
+            py = y
+        out.append((_clamp_f(px, 0.0, float(w - 1)), _clamp_f(py, 0.0, float(h - 1))))
+    return out
+
+def _box_to_pixels(box: Optional[Tuple[float, float, float, float]], w: int, h: int) -> Optional[Tuple[float, float, float, float]]:
+    """Accept either normalized [0..1] box or pixel box; return pixel box clamped & sorted."""
+    if box is None:
+        return None
+    x0, y0, x1, y1 = [float(v) for v in box]
+    is_norm = all(0.0 <= v <= 1.0 for v in (x0, y0, x1, y1))
+    if is_norm:
+        x0 *= (w - 1); x1 *= (w - 1)
+        y0 *= (h - 1); y1 *= (h - 1)
+
+    xa, xb = sorted([x0, x1])
+    ya, yb = sorted([y0, y1])
+
+    xa = _clamp_f(xa, 0.0, float(w - 1))
+    xb = _clamp_f(xb, 0.0, float(w - 1))
+    ya = _clamp_f(ya, 0.0, float(h - 1))
+    yb = _clamp_f(yb, 0.0, float(h - 1))
+    return (xa, ya, xb, yb)
+
+
+# ---- REPLACE your existing _sam_prompt_mask with this ----
+def _sam_prompt_mask(
+    img_rgb: np.ndarray,
+    pos_points: List[Tuple[float, float]],
+    neg_points: List[Tuple[float, float]],
+    box: Optional[Tuple[float, float, float, float]] = None,
+) -> Tuple[np.ndarray, Dict]:
+    import numpy as np
+    import cv2
+
+    predictor = _get_sam_predictor()
+    max_side = int(globals().get("SAM_MAX_SIDE", 1024))
+
+    h0, w0 = img_rgb.shape[:2]
+
+    # ✅ Convert normalized points/box -> pixel coordinates
+    pos_px = _points_to_pixels(pos_points, w0, h0)
+    neg_px = _points_to_pixels(neg_points, w0, h0)
+    box_px = _box_to_pixels(box, w0, h0)
+
+    img_small, scale = _resize_max_side(img_rgb, max_side=max_side)
+
+    points: List[List[float]] = []
+    labels: List[int] = []
+
+    for (x, y) in pos_px:
+        points.append([x * scale, y * scale])
+        labels.append(1)
+    for (x, y) in neg_px:
+        points.append([x * scale, y * scale])
+        labels.append(0)
+
+    point_coords = np.array(points, dtype=np.float32) if points else None
+    point_labels = np.array(labels, dtype=np.int32) if labels else None
+
+    box_arr = None
+    if box_px is not None:
+        x0, y0, x1, y1 = box_px
+        box_arr = np.array([x0 * scale, y0 * scale, x1 * scale, y1 * scale], dtype=np.float32)
+
+    # Speed: if prompt is “strong” (multi points or box), no need multimask
+    multimask = True if (point_coords is not None and point_coords.shape[0] <= 1 and box_arr is None) else False
+
+    use_fp16 = SAM_USE_FP16 and getattr(predictor, "_device", "cpu").startswith("cuda")
+
+    if use_fp16:
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
+            predictor.set_image(img_small)
+            masks, scores, _ = predictor.predict(
+                point_coords=point_coords,
+                point_labels=point_labels,
+                box=box_arr,
+                multimask_output=multimask,
+            )
+    else:
+        with torch.inference_mode():
+            predictor.set_image(img_small)
+            masks, scores, _ = predictor.predict(
+                point_coords=point_coords,
+                point_labels=point_labels,
+                box=box_arr,
+                multimask_output=multimask,
+            )
+
+    best = int(np.argmax(scores))
+    mask_small = masks[best].astype(np.uint8)
+
+    # upscale back to full-res
+    if scale != 1.0:
+        mask01 = cv2.resize(mask_small, (w0, h0), interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+    else:
+        mask01 = mask_small
+
+    meta = {
+        "engine": "mobile_sam_prompt_v1",
+        "sam_score": float(scores[best]),
+        "sam_max_side": int(max_side),
+        "num_pos": int(len(pos_points)),
+        "num_neg": int(len(neg_points)),
+        "has_box": bool(box_px is not None),
+    }
+    return mask01, meta
+
+def _hex_from_rgb(rgb: Tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(rgb[0], rgb[1], rgb[2])
+
+def _hsv_to_color_vi(h: int, s: int, v: int) -> str:
+    # OpenCV HSV: H 0..179
+    if v < 40:
+        return "Đen"
+    if s < 25 and v > 220:
+        return "Trắng"
+    if s < 25:
+        return "Xám" if v < 180 else "Be"
+
+    # Brown heuristic: warm hue + darker value
+    if 10 <= h <= 25 and v < 160:
+        return "Nâu"
+
+    if h <= 10 or h >= 170:
+        return "Đỏ"
+    if 11 <= h <= 20:
+        return "Cam"
+    if 21 <= h <= 34:
+        return "Vàng"
+    if 35 <= h <= 85:
+        return "Xanh lá"
+    if 86 <= h <= 125:
+        return "Xanh dương"
+    if 126 <= h <= 150:
+        return "Tím"
+    if 151 <= h <= 169:
+        return "Hồng"
+    return "Không rõ"
+
+def _dominant_color_vi(pil_rgba: Image.Image) -> dict:
+    arr = np.array(pil_rgba.convert("RGBA"))
+    alpha = arr[:, :, 3]
+    mask = alpha > 32
+    cnt = int(mask.sum())
+    if cnt < 50:
+        return {"color": "Không rõ"}
+
+    rgb = arr[:, :, :3][mask]
+    # sample to keep it fast
+    if rgb.shape[0] > 50000:
+        idx = np.random.choice(rgb.shape[0], 50000, replace=False)
+        rgb = rgb[idx]
+
+    med = np.median(rgb, axis=0).astype(np.uint8)
+    hsv = cv2.cvtColor(np.uint8([[med]]), cv2.COLOR_RGB2HSV)[0][0]
+    h, s, v = int(hsv[0]), int(hsv[1]), int(hsv[2])
+    color = _hsv_to_color_vi(h, s, v)
+    rgb_tuple = (int(med[0]), int(med[1]), int(med[2]))
+    return {
+        "color": color,
+        "colorRgb": [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]],
+        "colorHex": _hex_from_rgb(rgb_tuple),
+    }
+
+def _ensure_clip_loaded() -> bool:
+    global _clip_model, _clip_preprocess, _clip_text_features, _clip_ready
+
+    if _clip_ready:
+        return True
+    if not ENABLE_AUTO_LABEL:
+        return False
+    if open_clip is None:
+        return False
+
+    try:
+        name = (CLIP_MODEL_NAME or "").strip()
+
+        # Support HuggingFace hub models via OpenCLIP:
+        # Example: CLIP_MODEL_NAME="hf-hub:Marqo/marqo-fashionCLIP"
+        if name.startswith("hf-hub:"):
+            model, _, preprocess = open_clip.create_model_and_transforms(name)
+        else:
+            model, _, preprocess = open_clip.create_model_and_transforms(
+                name, pretrained=CLIP_PRETRAINED
+            )
+
+        model = model.to(CLIP_DEVICE)
+        model.eval()
+
+        tokenizer = open_clip.get_tokenizer(name)
+
+        # Build text features: mean over prompts per category
+        with torch.inference_mode():
+            labels = list(FASHION_CATEGORIES_VI)
+
+            # Flatten prompts for a single forward pass (faster than per-category loop)
+            all_prompts = []
+            spans = []  # (start_idx, end_idx) per label in all_prompts
+            for cat in labels:
+                prompts = _CLIP_PROMPTS[cat]
+                s = len(all_prompts)
+                all_prompts.extend(prompts)
+                e = len(all_prompts)
+                spans.append((s, e))
+
+            tokens = tokenizer(all_prompts)
+            if hasattr(tokens, "to"):
+                tokens = tokens.to(CLIP_DEVICE)
+
+            feats = model.encode_text(tokens)
+            feats = feats / feats.norm(dim=-1, keepdim=True)
+
+            text_feats = []
+            for (s, e) in spans:
+                v = feats[s:e].mean(dim=0)
+                v = v / v.norm()
+                text_feats.append(v)
+
+            text_feats = torch.stack(text_feats, dim=0).to(CLIP_DEVICE)
+
+        _clip_model = model
+        _clip_preprocess = preprocess
+        _clip_text_features = text_feats
+        _clip_ready = True
+        return True
+
+    except Exception as e:
+        # giữ behavior "fail silently" như bạn, nhưng có log nhẹ để debug
+        try:
+            print(f"[clip] _ensure_clip_loaded failed: {e}")
+        except Exception:
+            pass
+        _clip_ready = False
+        return False
+
+def _clip_predict_category(pil_rgba: Image.Image) -> dict | None:
+    if not _ensure_clip_loaded():
+        return None
+    # Composite transparent item onto white bg for stability
+    rgba = pil_rgba.convert("RGBA")
+    bg = Image.new("RGB", rgba.size, (255, 255, 255))
+    bg.paste(rgba, mask=rgba.split()[-1])
+
+    img_tensor = _clip_preprocess(bg).unsqueeze(0).to(CLIP_DEVICE)
+
+    with torch.no_grad():
+        img_feat = _clip_model.encode_image(img_tensor)
+        img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
+        logits = (img_feat @ _clip_text_features.T) * CLIP_TEMPERATURE
+        probs = logits.softmax(dim=-1).detach().cpu().numpy()[0]
+
+    best = int(np.argmax(probs))
+    top_idx = np.argsort(-probs)[:3]
+    top = [{"category": FASHION_CATEGORIES_VI[int(i)], "p": float(probs[int(i)])} for i in top_idx]
+
+    return {
+        "category": FASHION_CATEGORIES_VI[best],
+        "confidence": float(probs[best]),
+        "backend": "clip",
+        "top": top,
+    }
+
+# -----------------------------
+# Config (tune bằng ENV)
+# -----------------------------
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "25"))
+
+# Resize để GrabCut nhanh hơn nếu ảnh quá lớn (0 = không resize)
+PRODUCT_MAX_SIDE = int(os.getenv("PRODUCT_MAX_SIDE", "1600"))
+
+# GrabCut init rectangle: ảnh product thường 1 item nằm giữa
+GC_RECT_MARGIN = float(os.getenv("GC_RECT_MARGIN", "0.06"))  # 0.04-0.10
+GC_ITER_RECT = int(os.getenv("GC_ITER_RECT", "5"))
+GC_ITER_MASK = int(os.getenv("GC_ITER_MASK", "3"))
+
+# tạo sure-foreground/background khi refine để giữ chi tiết mảnh (dây)
+GC_SURE_FG_ERODE = int(os.getenv("GC_SURE_FG_ERODE", "3"))  # px
+GC_SURE_BG_ERODE = int(os.getenv("GC_SURE_BG_ERODE", "3"))  # px
+
+# Post-process mask: close để nối khe nhỏ, attach để không mất phần bị đứt nhẹ
+POST_CLOSE_K = int(os.getenv("POST_CLOSE_K", "5"))
+ATTACH_CC_PX = int(os.getenv("ATTACH_CC_PX", "8"))
+
+# Alpha fallback: feather nhẹ chỉ ở viền (KHÔNG làm mờ cả váy)
+EDGE_BAND_PX = int(os.getenv("EDGE_BAND_PX", "2"))  # 1-3
+MASK_FEATHER_SIGMA = float(os.getenv("MASK_FEATHER_SIGMA", "0.8"))  # 0.6-1.2
+
+# Force alpha=255 ở vùng chắc chắn bên trong (tránh “trong ruột bị trong suốt”)
+FORCE_SOLID_INTERIOR_PX = int(os.getenv("FORCE_SOLID_INTERIOR_PX", "3"))
+
+# Closed-form matting (nếu cài pymatting) -> đẹp nhất cho viền/dây mảnh
+TRIMAP_ERODE_K = int(os.getenv("TRIMAP_ERODE_K", "5"))
+TRIMAP_DILATE_K = int(os.getenv("TRIMAP_DILATE_K", "13"))
+
+# Crop output
+CROP_PAD = int(os.getenv("CROP_PAD", "12"))
+
+# Perf knobs
+SAM_USE_FP16 = os.getenv("SAM_USE_FP16", "1").lower() not in ("0", "false", "no")
+FAST_ROI_CROP = os.getenv("FAST_ROI_CROP", "1").lower() not in ("0", "false", "no")
+PNG_COMPRESS_LEVEL = int(os.getenv("PNG_COMPRESS_LEVEL", "3"))  # 0..9 (lower=faster)
+
+# Khử halo (grey spill) ở viền
+DECONTAMINATE = os.getenv("DECONTAMINATE", "1").strip() not in ("0", "false", "False", "")
+DECONTAM_RING_PX = int(os.getenv("DECONTAM_RING_PX", "15"))
+
+def _ensure_uint8_rgb(img: np.ndarray) -> np.ndarray:
+    """
+    OpenCV grabCut + morphology yêu cầu ảnh uint8.
+    Nếu ảnh float (0..1 hoặc 0..255), ép về uint8.
+    """
+    if img is None:
+        return img
+    if img.dtype == np.uint8:
+        return img
+    mx = float(np.max(img)) if img.size else 0.0
+    if mx <= 1.5:
+        img = img * 255.0
+    return np.clip(img, 0, 255).astype(np.uint8)
+
+def _ensure_mask01_uint8(mask: np.ndarray) -> np.ndarray:
+    """
+    Ép mask về uint8 0/1 (tránh bool).
+    """
+    if mask is None:
+        return mask
+    return (mask > 0).astype(np.uint8)
+
+def _ensure_uint8_rgb(img: np.ndarray) -> np.ndarray:
+    """
+    OpenCV grabCut + morphology muốn uint8 (0..255).
+    Nếu ảnh đang float (0..1 hoặc 0..255), ép về uint8 an toàn.
+    """
+    if img is None:
+        return img
+    if img.dtype == np.uint8:
+        return img
+    # nếu ảnh float 0..1
+    mx = float(np.max(img)) if img.size else 0.0
+    if mx <= 1.5:
+        img = img * 255.0
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    return img
+
+# -----------------------------
+# Utils
+# -----------------------------
+def _resize_max_side(img_rgb: np.ndarray, max_side: int) -> Tuple[np.ndarray, float]:
+    if max_side <= 0:
+        return img_rgb, 1.0
+    h, w = img_rgb.shape[:2]
+    if max(h, w) <= max_side:
+        return img_rgb, 1.0
+    scale = max_side / float(max(h, w))
+    new_w = max(1, int(round(w * scale)))
+    new_h = max(1, int(round(h * scale)))
+    resized = cv2.resize(img_rgb, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    return resized, scale
+
+
+def _read_upload_image_rgb(data: bytes) -> np.ndarray:
+    if MAX_UPLOAD_MB > 0 and len(data) > MAX_UPLOAD_MB * 1024 * 1024:
+        raise RuntimeError(f"File too large (> {MAX_UPLOAD_MB}MB).")
+
+    pil = Image.open(io.BytesIO(data)).convert("RGB")
+    img = np.array(pil)  # RGB uint8
+    if img.ndim != 3 or img.shape[2] != 3:
+        raise RuntimeError("Invalid image format.")
+    return img
+
+
+def _largest_connected_component(mask01: np.ndarray) -> np.ndarray:
+    mask01 = (mask01 > 0).astype(np.uint8)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask01, connectivity=8)
+    if num <= 1:
+        return mask01
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    best = 1 + int(np.argmax(areas))
+    return (labels == best).astype(np.uint8)
+
+
+def _keep_cc_attached(mask01: np.ndarray, attach_px: int) -> np.ndarray:
+    """
+    Giữ CC lớn nhất + các CC nhỏ nằm sát/đụng vùng CC lớn nhất sau khi dilate.
+    Tránh mất dây/chi tiết mảnh nếu bị đứt nhẹ.
+    """
+    mask01 = (mask01 > 0).astype(np.uint8)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask01, connectivity=8)
+    if num <= 2:
+        return _largest_connected_component(mask01)
+
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    best = 1 + int(np.argmax(areas))
+
+    main = (labels == best).astype(np.uint8)
+    if attach_px <= 0:
+        return main
+
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * attach_px + 1, 2 * attach_px + 1))
+    main_dil = cv2.dilate(main, k, iterations=1)
+
+    keep = main.copy()
+    for lab in range(1, num):
+        if lab == best:
+            continue
+        comp = (labels == lab).astype(np.uint8)
+        if np.any((comp == 1) & (main_dil == 1)):
+            keep = np.maximum(keep, comp)
+
+    return keep.astype(np.uint8)
+
+
+def _postprocess_mask(mask01: np.ndarray) -> np.ndarray:
+    mask01 = (mask01 > 0).astype(np.uint8)
+
+    if POST_CLOSE_K and POST_CLOSE_K > 1:
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (POST_CLOSE_K, POST_CLOSE_K))
+        mask01 = cv2.morphologyEx(mask01, cv2.MORPH_CLOSE, k, iterations=2)
+
+    mask01 = _keep_cc_attached(mask01, attach_px=ATTACH_CC_PX)
+    return mask01.astype(np.uint8)
+
+
+def _border_touch(mask01: np.ndarray) -> float:
+    m = (mask01 > 0).astype(np.uint8)
+    return float(np.mean(np.concatenate([m[0, :], m[-1, :], m[:, 0], m[:, -1]])))
+
+
+def _mask_score(mask01: np.ndarray) -> float:
+    """
+    Score để chọn mask tốt nhất khi thử nhiều margin.
+    Ưu tiên: không chạm viền, diện tích vừa phải.
+    """
+    area = float(np.mean(mask01))
+    bt = _border_touch(mask01)
+    area_score = 1.0 - min(1.0, abs(area - 0.25) / 0.75)
+    border_score = 1.0 - min(1.0, bt / 0.6)
+    return 0.7 * border_score + 0.3 * area_score
+
+
+# -----------------------------
+# GrabCut product mask (no torch)
+# -----------------------------
+def _grabcut_rect_mask(img_rgb: np.ndarray, margin: float) -> np.ndarray:
+    h, w = img_rgb.shape[:2]
+    img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+
+    mx = int(round(margin * w))
+    my = int(round(margin * h))
+    rect = (mx, my, max(1, w - 2 * mx), max(1, h - 2 * my))
+
+    gc = np.zeros((h, w), dtype=np.uint8)
+    bgModel = np.zeros((1, 65), np.float64)
+    fgModel = np.zeros((1, 65), np.float64)
+
+    cv2.grabCut(img_bgr, gc, rect, bgModel, fgModel, GC_ITER_RECT, cv2.GC_INIT_WITH_RECT)
+    mask01 = np.where((gc == cv2.GC_FGD) | (gc == cv2.GC_PR_FGD), 1, 0).astype(np.uint8)
+    return mask01
+
+
+def _grabcut_refine_with_mask(img_rgb: np.ndarray, init01: np.ndarray, iters: int = 2) -> np.ndarray:
+    """
+    Refine mask bằng GrabCut (INIT_WITH_MASK), output uint8 0/1
+    """
+    import cv2
+    import numpy as np
+
+    img = _ensure_uint8_rgb(img_rgb)
+    init01 = _ensure_mask01_uint8(init01)
+
+    # GrabCut mask phải là labels {0,1,2,3} (BG, FG, PR_BG, PR_FG)
+    gc_mask = np.where(init01 == 1, cv2.GC_PR_FGD, cv2.GC_BGD).astype(np.uint8)
+
+    # ép border là background để giảm trường hợp “ăn cả ảnh”
+    gc_mask[:2, :] = cv2.GC_BGD
+    gc_mask[-2:, :] = cv2.GC_BGD
+    gc_mask[:, :2] = cv2.GC_BGD
+    gc_mask[:, -2:] = cv2.GC_BGD
+
+    bgdModel = np.zeros((1, 65), np.float64)
+    fgdModel = np.zeros((1, 65), np.float64)
+
+    # grabCut cần ảnh 3-channel uint8
+    cv2.grabCut(img, gc_mask, None, bgdModel, fgdModel, int(iters), cv2.GC_INIT_WITH_MASK)
+
+    out01 = np.where((gc_mask == cv2.GC_FGD) | (gc_mask == cv2.GC_PR_FGD), 1, 0).astype(np.uint8)
+    return out01
+
+
+def _product_auto_mask(img_rgb_full: np.ndarray) -> Tuple[np.ndarray, Dict[str, float]]:
+    """
+    Auto mask cho ảnh product:
+    - Thử vài margin để GrabCut ổn định hơn
+    - Refine 2-pass
+    """
+    img_rgb, scale = _resize_max_side(img_rgb_full, PRODUCT_MAX_SIDE)
+
+    margins = [GC_RECT_MARGIN, 0.03, 0.10]
+    best_mask = None
+    best_s = -1e9
+    best_m = None
+
+    for m in margins:
+        mask01 = _grabcut_rect_mask(img_rgb, margin=m)
+        mask01 = _postprocess_mask(mask01)
+        mask01 = _grabcut_refine_with_mask(img_rgb, mask01)
+        mask01 = _postprocess_mask(mask01)
+
+        s = _mask_score(mask01)
+        if s > best_s:
+            best_s = s
+            best_mask = mask01
+            best_m = m
+
+    if best_mask is None:
+        best_mask = np.ones(img_rgb.shape[:2], dtype=np.uint8)
+
+    # nếu bị invert (foreground quá lớn & chạm viền nhiều), đảo lại
+    area = float(np.mean(best_mask))
+    bt = _border_touch(best_mask)
+    if area > 0.85 and bt > 0.35:
+        best_mask = (1 - best_mask).astype(np.uint8)
+        best_mask = _postprocess_mask(best_mask)
+        area = float(np.mean(best_mask))
+        bt = _border_touch(best_mask)
+
+    # upscale về full-res
+    if scale != 1.0:
+        h0, w0 = img_rgb_full.shape[:2]
+        best_mask = cv2.resize(best_mask, (w0, h0), interpolation=cv2.INTER_NEAREST)
+    else:
+        best_mask = best_mask.astype(np.uint8)
+
+    meta = {
+        "scale": float(scale),
+        "margin_used": float(best_m if best_m is not None else GC_RECT_MARGIN),
+        "score": float(best_s),
+        "area_frac": float(area),
+        "border_touch": float(bt),
+    }
+    return best_mask.astype(np.uint8), meta
+
+# -----------------------------
+# Optional SAM point mask (needs checkpoint)
+# -----------------------------
+SAM_ENABLED = os.getenv("ENABLE_SAM", "1").lower() not in ("0", "false", "no")
+SAM_MODEL_TYPE = os.getenv("SAM_MODEL_TYPE", "vit_t")
+SAM_CHECKPOINT = os.getenv("SAM_CHECKPOINT", "/app/checkpoints/mobile_sam.pt")
+SAM_MAX_SIDE = int(os.getenv("SAM_MAX_SIDE", "768"))
+
+PRELOAD_CLIP = os.getenv("PRELOAD_CLIP", "0").lower() not in ("0", "false", "no")
+CUTOUT_MAX_CONCURRENCY = max(1, int(os.getenv("CUTOUT_MAX_CONCURRENCY", "1")))
+TORCH_NUM_THREADS = max(1, int(os.getenv("TORCH_NUM_THREADS", "1")))
+
+_sam_predictor = None
+_cutout_semaphore = asyncio.Semaphore(CUTOUT_MAX_CONCURRENCY)
+
+if not torch.cuda.is_available():
+    try:
+        torch.set_num_threads(TORCH_NUM_THREADS)
+        torch.set_num_interop_threads(1)
+    except Exception:
+        pass
+
+def _sam_ready() -> bool:
+    if not SAM_ENABLED:
+        return False
+    if not os.path.exists(SAM_CHECKPOINT):
+        return False
+    try:
+        import torch  # noqa
+        from mobile_sam import sam_model_registry, SamPredictor  # noqa
+        return True
+    except Exception:
+        return False
+
+def _get_sam_predictor():
+    global _sam_predictor
+    if _sam_predictor is not None:
+        return _sam_predictor
+
+    import torch
+    from mobile_sam import sam_model_registry, SamPredictor
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
+    mobile_sam = sam_model_registry[SAM_MODEL_TYPE](checkpoint=SAM_CHECKPOINT)
+    mobile_sam.to(device=device)
+    mobile_sam.eval()
+
+    predictor = SamPredictor(mobile_sam)
+    predictor._device = device
+    _sam_predictor = predictor
+    return _sam_predictor
+
+def _sam_point_mask(img_rgb_full: np.ndarray, x_norm: float, y_norm: float) -> Tuple[np.ndarray, Dict[str, float]]:
+    import numpy as np
+    import cv2
+
+    predictor = _get_sam_predictor()
+
+    img_rgb, scale = _resize_max_side(img_rgb_full, SAM_MAX_SIDE)
+    h, w = img_rgb.shape[:2]
+
+    x_norm = float(max(0.0, min(1.0, x_norm)))
+    y_norm = float(max(0.0, min(1.0, y_norm)))
+    x_px = int(round(x_norm * (w - 1)))
+    y_px = int(round(y_norm * (h - 1)))
+
+    point_coords = np.array([[x_px, y_px]], dtype=np.float32)
+    point_labels = np.array([1], dtype=np.int32)
+
+    use_fp16 = SAM_USE_FP16 and getattr(predictor, "_device", "cpu").startswith("cuda")
+
+    if use_fp16:
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
+            predictor.set_image(img_rgb)
+            masks, scores, _ = predictor.predict(
+                point_coords=point_coords,
+                point_labels=point_labels,
+                multimask_output=True
+            )
+    else:
+        with torch.inference_mode():
+            predictor.set_image(img_rgb)
+            masks, scores, _ = predictor.predict(
+                point_coords=point_coords,
+                point_labels=point_labels,
+                multimask_output=True
+            )
+
+    best = int(np.argmax(scores))
+    mask01 = masks[best].astype(np.uint8)
+
+    if scale != 1.0:
+        h0, w0 = img_rgb_full.shape[:2]
+        mask01 = cv2.resize(mask01, (w0, h0), interpolation=cv2.INTER_NEAREST)
+
+    meta = {
+        "engine": "mobile_sam_point_v1",
+        "sam_score": float(scores[best]),
+        "point_x": float(x_norm),
+        "point_y": float(y_norm),
+        "sam_max_side": int(SAM_MAX_SIDE),
+    }
+    return mask01.astype(np.uint8), meta
+
+# -----------------------------
+# Alpha refine + halo reduction
+# -----------------------------
+def _safe_import_pymatting():
+    try:
+        from pymatting.alpha.estimate_alpha_cf import estimate_alpha_cf  # type: ignore
+        return estimate_alpha_cf
+    except Exception:
+        return None
+
+
+def _make_trimap_from_mask(mask01: np.ndarray, erode_k: int, dilate_k: int) -> np.ndarray:
+    m = (mask01 > 0).astype(np.uint8)
+
+    erode_k = max(1, int(erode_k) | 1)  # odd
+    dilate_k = max(erode_k + 2, int(dilate_k) | 1)
+
+    k_er = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (erode_k, erode_k))
+    k_di = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_k, dilate_k))
+
+    sure_fg = cv2.erode(m, k_er, iterations=1)
+    sure_bg = 1 - cv2.dilate(m, k_di, iterations=1)
+
+    trimap = np.full_like(m, 0.5, dtype=np.float32)
+    trimap[sure_bg == 1] = 0.0
+    trimap[sure_fg == 1] = 1.0
+    return trimap
+
+
+def _alpha_fallback_band(mask01: np.ndarray) -> np.ndarray:
+    """
+    Alpha = 255 bên trong, 0 bên ngoài, feather nhẹ chỉ ở viền.
+    """
+    alpha255 = (mask01.astype(np.uint8) * 255).astype(np.uint8)
+
+    if EDGE_BAND_PX <= 0 or MASK_FEATHER_SIGMA <= 0:
+        alpha255[alpha255 < 2] = 0
+        return alpha255
+
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * EDGE_BAND_PX + 1, 2 * EDGE_BAND_PX + 1))
+    er = cv2.erode(alpha255, k, iterations=1)
+    di = cv2.dilate(alpha255, k, iterations=1)
+    band = (di > 0) & (er == 0)
+
+    blurred = cv2.GaussianBlur(
+        alpha255.astype(np.float32),
+        (0, 0),
+        sigmaX=MASK_FEATHER_SIGMA,
+        sigmaY=MASK_FEATHER_SIGMA,
+    )
+    alpha255[band] = np.clip(blurred[band], 0, 255).astype(np.uint8)
+
+    alpha255[alpha255 < 2] = 0
+    return alpha255
+
+
+def _force_solid_interior(alpha255: np.ndarray, mask01: np.ndarray) -> np.ndarray:
+    if FORCE_SOLID_INTERIOR_PX <= 0:
+        return alpha255
+    k = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE, (2 * FORCE_SOLID_INTERIOR_PX + 1, 2 * FORCE_SOLID_INTERIOR_PX + 1)
+    )
+    sure = cv2.erode((mask01 > 0).astype(np.uint8), k, iterations=1)
+    alpha255[sure == 1] = 255
+    return alpha255
+
+
+def _estimate_bg_near_object(img_rgb: np.ndarray, mask01: np.ndarray, ring_px: int) -> np.ndarray:
+    """
+    Ước lượng màu nền sát viền object (để khử halo).
+    """
+    ring_px = max(1, int(ring_px))
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * ring_px + 1, 2 * ring_px + 1))
+    di = cv2.dilate((mask01 > 0).astype(np.uint8), k, iterations=1)
+    ring = (di == 1) & (mask01 == 0)
+
+    ys, xs = np.where(ring)
+    if len(xs) < 50:
+        border = np.concatenate([img_rgb[0, :, :], img_rgb[-1, :, :], img_rgb[:, 0, :], img_rgb[:, -1, :]], axis=0)
+        return np.median(border.astype(np.float32), axis=0)
+
+    n = min(6000, len(xs))
+    idx = np.random.choice(len(xs), size=n, replace=False)
+    samp = img_rgb[ys[idx], xs[idx], :].astype(np.float32)
+    return np.median(samp, axis=0)
+
+
+def _decontaminate_rgb(img_rgb: np.ndarray, alpha255: np.ndarray, bg_rgb: np.ndarray) -> np.ndarray:
+    """
+    Khử màu nền bị “dính” ở viền (grey halo), chỉ áp dụng cho pixel bán trong suốt.
+    """
+    a = alpha255.astype(np.float32) / 255.0
+    a3 = a[..., None]
+    bg = bg_rgb.astype(np.float32)[None, None, :]
+    rgb = img_rgb.astype(np.float32)
+
+    edge = (a > 0.0) & (a < 1.0)
+    if np.any(edge):
+        m = edge[..., None]
+        rgb_corr = (rgb - (1.0 - a3) * bg) / np.clip(a3, 1e-3, 1.0)
+        rgb = np.where(m, np.clip(rgb_corr, 0, 255), rgb)
+
+    return rgb.astype(np.uint8)
+
+
+def _alpha_refine(img_rgb: np.ndarray, mask01: np.ndarray) -> Tuple[np.ndarray, Dict[str, str]]:
+    """
+    Alpha refine:
+    - Nếu có pymatting: closed-form matting
+    - Nếu lỗi / không có: band-feather fallback
+    """
+    estimate_alpha_cf = _safe_import_pymatting()
+    if estimate_alpha_cf is not None:
+        try:
+            trimap = _make_trimap_from_mask(mask01, erode_k=TRIMAP_ERODE_K, dilate_k=TRIMAP_DILATE_K)
+
+            # ✅ Pymatting/numba thường ổn định hơn với float64
+            img_f = img_rgb.astype(np.float64) / 255.0
+            trimap_f = trimap.astype(np.float64)
+
+            alpha = estimate_alpha_cf(img_f, trimap_f)  # float 0..1
+            alpha255 = (np.clip(alpha, 0, 1) * 255.0).astype(np.uint8)
+            alpha255 = _force_solid_interior(alpha255, mask01)
+            alpha255[alpha255 < 2] = 0
+            return alpha255, {"alpha": "pymatting_cf"}
+        except Exception as e:
+            # ✅ nếu pymatting fail thì vẫn trả kết quả đẹp vừa đủ (không sập API)
+            alpha255 = _alpha_fallback_band(mask01)
+            alpha255 = _force_solid_interior(alpha255, mask01)
+            alpha255[alpha255 < 2] = 0
+            return alpha255, {"alpha": "band_fallback", "pymatting_error": str(e)[:200]}
+
+    alpha255 = _alpha_fallback_band(mask01)
+    alpha255 = _force_solid_interior(alpha255, mask01)
+    alpha255[alpha255 < 2] = 0
+    return alpha255, {"alpha": "band"}
+
+
+def _crop_to_alpha(img_rgba: Image.Image, alpha255: np.ndarray, pad: int) -> Image.Image:
+    ys, xs = np.where(alpha255 > 127)
+    if len(xs) == 0 or len(ys) == 0:
+        return img_rgba
+    x0, x1 = xs.min(), xs.max()
+    y0, y1 = ys.min(), ys.max()
+    x0 = max(0, x0 - pad)
+    y0 = max(0, y0 - pad)
+    x1 = min(alpha255.shape[1] - 1, x1 + pad)
+    y1 = min(alpha255.shape[0] - 1, y1 + pad)
+    return img_rgba.crop((int(x0), int(y0), int(x1 + 1), int(y1 + 1)))
+
+
+from typing import Optional, Tuple, Dict
+import numpy as np
+
+def _bbox_from_mask01(mask01: np.ndarray, pad: int) -> Optional[Tuple[int, int, int, int]]:
+    ys, xs = np.where(mask01 > 0)
+    if xs.size == 0 or ys.size == 0:
+        return None
+    x0 = int(max(0, xs.min() - pad))
+    y0 = int(max(0, ys.min() - pad))
+    x1 = int(min(mask01.shape[1] - 1, xs.max() + pad))
+    y1 = int(min(mask01.shape[0] - 1, ys.max() + pad))
+    if x1 <= x0 or y1 <= y0:
+        return None
+    return x0, y0, x1, y1
+
+
+def _build_cutout(
+    img_rgb: np.ndarray,
+    mask01: np.ndarray,
+    crop: bool = True
+) -> Tuple[bytes, np.ndarray, np.ndarray, Dict]:
+    """
+    Returns:
+      - cutout PNG bytes (RGBA)
+      - alpha255 array (cropped-final)
+      - mask255 array (cropped-final)
+      - meta dict
+    """
+    import io
+    from PIL import Image
+
+    mask01 = (mask01 > 0).astype(np.uint8)
+
+    meta: Dict = {}
+    img_work = img_rgb
+    mask_work = mask01
+
+    # ✅ ROI crop BEFORE alpha refine/decontam (big speed-up on large photos)
+    if crop and FAST_ROI_CROP:
+        safety = int(max(TRIMAP_DILATE_K, DECONTAM_RING_PX, 16))
+        roi_pad = int(CROP_PAD + safety)
+        bbox = _bbox_from_mask01(mask01, pad=roi_pad)
+        if bbox is not None:
+            x0, y0, x1, y1 = bbox
+            img_work = img_rgb[y0:y1 + 1, x0:x1 + 1]
+            mask_work = mask01[y0:y1 + 1, x0:x1 + 1]
+            meta["roi"] = [x0, y0, x1, y1]
+            meta["roi_pad"] = roi_pad
+
+    # Alpha refine on work area
+    alpha255, meta_a = _alpha_refine(img_work, mask_work)
+    meta.update(meta_a)
+
+    # Use refined alpha as final mask for decontam + output
+    mask01_ref = (alpha255 > 127).astype(np.uint8)
+
+    rgb_out = img_work
+    if DECONTAMINATE:
+        bg_rgb = _estimate_bg_near_object(img_work, mask01_ref, ring_px=DECONTAM_RING_PX)
+        rgb_out = _decontaminate_rgb(img_work, alpha255, bg_rgb)
+        meta["decontam"] = True
+        meta["decontam_ring"] = int(DECONTAM_RING_PX)
+
+    rgba = np.dstack([rgb_out, alpha255]).astype(np.uint8)
+    img_rgba = Image.fromarray(rgba, mode="RGBA")
+
+    # Final crop (same external behaviour)
+    if crop:
+        img_rgba = _crop_to_alpha(img_rgba, alpha255, pad=CROP_PAD)
+
+    # Keep alpha/mask synced with final image size
+    alpha_final = np.array(img_rgba)[:, :, 3].astype(np.uint8)
+    mask255_final = (alpha_final > 127).astype(np.uint8) * 255
+
+    buf = io.BytesIO()
+    img_rgba.save(buf, format="PNG", compress_level=PNG_COMPRESS_LEVEL)
+    return buf.getvalue(), alpha_final, mask255_final, meta
+
+# -----------------------------
+# API
+# -----------------------------
+@app.post("/cutout")
+async def cutout(
+    file: UploadFile = File(...),
+    item_type: str = Form("item"),
+    x: Optional[float] = Form(None),
+    y: Optional[float] = Form(None),
+
+    pos_points_json: Optional[str] = Form(None),
+    neg_points_json: Optional[str] = Form(None),
+    box_json: Optional[str] = Form(None),
+
+    crop: bool = Form(True),
+    output: str = Form("base64"),  # "base64" | "file"
+    return_mask: bool = Form(False),
+
+    auto_label: bool = Form(True),
+    label_backend: str = Form("clip"),  # clip | none
+):
+    try:
+        if file.content_type not in ("image/jpeg", "image/png", "image/webp"):
+            return JSONResponse({"ok": False, "message": "Only jpg/png/webp supported"}, status_code=400)
+
+        img_bytes = await file.read()
+        if not img_bytes:
+            return JSONResponse({"ok": False, "message": "Empty file"}, status_code=400)
+
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_bgr is None:
+            return JSONResponse({"ok": False, "message": "Decode failed"}, status_code=400)
+
+        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+        pos_points = _parse_points_json(pos_points_json)
+        neg_points = _parse_points_json(neg_points_json)
+        box = _parse_box_json(box_json)
+
+        if x is not None and y is not None:
+            pos_points = list(pos_points) + [(float(x), float(y))]
+
+        async with _cutout_semaphore:
+            meta_engine: Dict[str, Any] = {}
+            mask01: Optional[np.ndarray] = None
+
+            print(
+                f"[cutout] sam_ready={_sam_ready()}, x={x}, y={y}, "
+                f"pos_points={len(pos_points)}, neg_points={len(neg_points)}, box={box}"
+            )
+
+            used_sam_prompt = _sam_ready() and (
+                len(pos_points) > 0 or len(neg_points) > 0 or box is not None
+            )
+
+            if used_sam_prompt:
+                try:
+                    print("[cutout] using MobileSAM prompt mask")
+                    mask01, meta_engine = _sam_prompt_mask(img_rgb, pos_points, neg_points, box)
+                except Exception as e:
+                    meta_engine = {"engine": "mobile_sam", "error": f"mobile_sam_prompt_failed: {str(e)}"}
+                    mask01 = None
+
+            if mask01 is None:
+                if x is not None and y is not None and _sam_ready():
+                    print("[cutout] using MobileSAM point mask")
+                    mask01, meta_engine = _sam_point_mask(img_rgb, float(x), float(y))
+                else:
+                    print("[cutout] using product auto mask (GrabCut fallback)")
+                    mask01, meta_engine = _product_auto_mask(img_rgb)
+
+            cut_png, _alpha255, mask255, meta_build = _build_cutout(img_rgb, mask01, crop=crop)
+            meta: Dict[str, Any] = {**meta_engine, **meta_build}
+
+            item_type_out = item_type
+            if output != "file" and auto_label and ENABLE_AUTO_LABEL and label_backend != "none":
+                try:
+                    pil_rgba = Image.open(io.BytesIO(cut_png)).convert("RGBA")
+
+                    auto = {}
+
+                    if AUTO_LABEL_INCLUDE_COLOR:
+                        auto.update(_dominant_color_vi(pil_rgba))
+
+                    if label_backend in ("clip", "auto"):
+                        auto_pred = _clip_predict_category(pil_rgba)
+                        if auto_pred:
+                            auto.update(auto_pred)
+
+                    if auto:
+                        meta["autoLabel"] = auto
+
+                    if item_type.strip().lower() in ("item", "auto", "", "unknown") and isinstance(auto.get("category"), str):
+                        item_type_out = auto.get("category", item_type_out)
+
+                except Exception as e:
+                    meta["autoLabelError"] = str(e)
+
+        if output == "file":
+            return Response(content=cut_png, media_type="image/png")
+
+        item_b64 = base64.b64encode(cut_png).decode("utf-8")
+
+        resp_item: Dict[str, Any] = {
+            "type": item_type_out,
+            "image_png_base64": item_b64,
+            "meta": meta,
+        }
+
+        if return_mask:
+            mimg = Image.fromarray(mask255, mode="L")
+            mbuf = io.BytesIO()
+            mimg.save(mbuf, format="PNG", compress_level=PNG_COMPRESS_LEVEL)
+            resp_item["mask_png_base64"] = base64.b64encode(mbuf.getvalue()).decode("utf-8")
+
+        return JSONResponse({"ok": True, "items": [resp_item]})
+
+    except Exception as e:
+        print("cutout error:", e)
+        return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
+
+
+@app.post("/parse")
+async def parse(file: UploadFile = File(...)):
+    # Backward compatible endpoint
+    return await cutout(
+        file=file,
+        x=None,
+        y=None,
+        pos_points_json=None,
+        neg_points_json=None,
+        box_json=None,
+        item_type="item",
+        output="base64",
+        crop=True,
+        return_mask=False,
+    )
+
+from pydantic import BaseModel
+
+class LabelRequest(BaseModel):
+    image_png_base64: str
+    backend: str = "clip"          # "clip" | "none"
+    include_color: bool = False    # default false (you don't want color)
+
+def _decode_png_base64_to_pil_rgba(b64: str) -> Image.Image:
+    if not isinstance(b64, str) or not b64.strip():
+        raise RuntimeError("image_png_base64 is empty")
+
+    s = b64.strip()
+    if s.startswith("data:"):
+        # data:image/png;base64,....
+        parts = s.split(",", 1)
+        if len(parts) == 2:
+            s = parts[1]
+
+    raw = base64.b64decode(s)
+    return Image.open(io.BytesIO(raw)).convert("RGBA")
+
+@app.post("/label")
+async def label_endpoint(req: LabelRequest):
+    try:
+        if req.backend == "none":
+            return JSONResponse({"ok": True, "label": {"category": "Khác", "confidence": 0.0}})
+
+        pil_rgba = _decode_png_base64_to_pil_rgba(req.image_png_base64)
+
+        out = {}
+        if req.include_color and AUTO_LABEL_INCLUDE_COLOR:
+            out.update(_dominant_color_vi(pil_rgba))
+
+        out.update(_clip_predict_category(pil_rgba))
+
+        # Normalize: ensure only category/confidence returned (and optional color)
+        label = {
+            "category": out.get("category", "Khác"),
+            "confidence": float(out.get("confidence", 0.0)),
+        }
+        if "color" in out:
+            label["color"] = out["color"]
+
+        return JSONResponse({"ok": True, "label": label})
+    except Exception as e:
+        return JSONResponse({"ok": False, "message": str(e)}, status_code=400)
+
+@app.on_event("startup")
+def _warmup():
+    if PRELOAD_CLIP and ENABLE_AUTO_LABEL and open_clip is not None:
+        try:
+            _ensure_clip_loaded()
+        except Exception:
+            pass
+
+@app.get("/health")
+def health():
+    pymatting_ok = _safe_import_pymatting() is not None
+    return {
+        "ok": True,
+        "engine_default": "mobile_sam+grabcut_fallback",
+        "sam_impl": "mobile_sam",
+        "sam_model_type": SAM_MODEL_TYPE,
+        "sam_checkpoint": bool(os.path.exists(SAM_CHECKPOINT)),
+        "sam_ready": _sam_ready(),
+        "sam_max_side": int(SAM_MAX_SIDE),
+        "cutout_max_concurrency": int(CUTOUT_MAX_CONCURRENCY),
+        "preload_clip": bool(PRELOAD_CLIP),
+        "pymatting": pymatting_ok,
+        "decontaminate": bool(DECONTAMINATE),
+        "product_max_side": int(PRODUCT_MAX_SIDE),
+    }
+```
+
+
+---
+# ai-service/requirements.txt
+```text
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pillow==10.4.0
+numpy==1.26.4
+opencv-python==4.10.0.84
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+
+# MobileSAM 
+git+https://github.com/ChaoningZhang/MobileSAM.git
+
+# edge refinement
+pymatting>=1.1.12
+scipy>=1.10
+
+# optional local zero-shot label
+open_clip_torch>=2.26.0
+timm>=0.9
+ftfy>=6.1
+regex>=2024.0
+```
+
+
+---
+# ai-service/utils/__init__.py
+```text
+
+```
+
+
+---
+# ai-service/utils/transforms.py
+```text
+# ------------------------------------------------------------------------------
+# Copyright (c) Microsoft
+# Licensed under the MIT License.
+# Written by Bin Xiao (Bin.Xiao@microsoft.com)
+# ------------------------------------------------------------------------------
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import numpy as np
+import cv2
+import torch
+
+class BRG2Tensor_transform(object):
+    def __call__(self, pic):
+        img = torch.from_numpy(pic.transpose((2, 0, 1)))
+        if isinstance(img, torch.ByteTensor):
+            return img.float()
+        else:
+            return img
+
+class BGR2RGB_transform(object):
+    def __call__(self, tensor):
+        return tensor[[2,1,0],:,:]
+
+def flip_back(output_flipped, matched_parts):
+    '''
+    ouput_flipped: numpy.ndarray(batch_size, num_joints, height, width)
+    '''
+    assert output_flipped.ndim == 4,\
+        'output_flipped should be [batch_size, num_joints, height, width]'
+
+    output_flipped = output_flipped[:, :, :, ::-1]
+
+    for pair in matched_parts:
+        tmp = output_flipped[:, pair[0], :, :].copy()
+        output_flipped[:, pair[0], :, :] = output_flipped[:, pair[1], :, :]
+        output_flipped[:, pair[1], :, :] = tmp
+
+    return output_flipped
+
+
+def fliplr_joints(joints, joints_vis, width, matched_parts):
+    """
+    flip coords
+    """
+    # Flip horizontal
+    joints[:, 0] = width - joints[:, 0] - 1
+
+    # Change left-right parts
+    for pair in matched_parts:
+        joints[pair[0], :], joints[pair[1], :] = \
+            joints[pair[1], :], joints[pair[0], :].copy()
+        joints_vis[pair[0], :], joints_vis[pair[1], :] = \
+            joints_vis[pair[1], :], joints_vis[pair[0], :].copy()
+
+    return joints*joints_vis, joints_vis
+
+
+def transform_preds(coords, center, scale, input_size):
+    target_coords = np.zeros(coords.shape)
+    trans = get_affine_transform(center, scale, 0, input_size, inv=1)
+    for p in range(coords.shape[0]):
+        target_coords[p, 0:2] = affine_transform(coords[p, 0:2], trans)
+    return target_coords
+
+def transform_parsing(pred, center, scale, width, height, input_size):
+
+    trans = get_affine_transform(center, scale, 0, input_size, inv=1)
+    target_pred = cv2.warpAffine(
+            pred,
+            trans,
+            (int(width), int(height)), #(int(width), int(height)),
+            flags=cv2.INTER_NEAREST,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=(0))
+
+    return target_pred
+
+def transform_logits(logits, center, scale, width, height, input_size):
+
+    trans = get_affine_transform(center, scale, 0, input_size, inv=1)
+    channel = logits.shape[2]
+    target_logits = []
+    for i in range(channel):
+        target_logit = cv2.warpAffine(
+            logits[:,:,i],
+            trans,
+            (int(width), int(height)), #(int(width), int(height)),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=(0))
+        target_logits.append(target_logit)
+    target_logits = np.stack(target_logits,axis=2)
+
+    return target_logits
+
+
+def get_affine_transform(center,
+                         scale,
+                         rot,
+                         output_size,
+                         shift=np.array([0, 0], dtype=np.float32),
+                         inv=0):
+    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
+        print(scale)
+        scale = np.array([scale, scale])
+
+    scale_tmp = scale
+
+    src_w = scale_tmp[0]
+    dst_w = output_size[1]
+    dst_h = output_size[0]
+
+    rot_rad = np.pi * rot / 180
+    src_dir = get_dir([0, src_w * -0.5], rot_rad)
+    dst_dir = np.array([0, (dst_w-1) * -0.5], np.float32)
+
+    src = np.zeros((3, 2), dtype=np.float32)
+    dst = np.zeros((3, 2), dtype=np.float32)
+    src[0, :] = center + scale_tmp * shift
+    src[1, :] = center + src_dir + scale_tmp * shift
+    dst[0, :] = [(dst_w-1) * 0.5, (dst_h-1) * 0.5]
+    dst[1, :] = np.array([(dst_w-1) * 0.5, (dst_h-1) * 0.5]) + dst_dir
+
+    src[2:, :] = get_3rd_point(src[0, :], src[1, :])
+    dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
+
+    if inv:
+        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+    else:
+        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+
+    return trans
+
+
+def affine_transform(pt, t):
+    new_pt = np.array([pt[0], pt[1], 1.]).T
+    new_pt = np.dot(t, new_pt)
+    return new_pt[:2]
+
+
+def get_3rd_point(a, b):
+    direct = a - b
+    return b + np.array([-direct[1], direct[0]], dtype=np.float32)
+
+
+def get_dir(src_point, rot_rad):
+    sn, cs = np.sin(rot_rad), np.cos(rot_rad)
+
+    src_result = [0, 0]
+    src_result[0] = src_point[0] * cs - src_point[1] * sn
+    src_result[1] = src_point[0] * sn + src_point[1] * cs
+
+    return src_result
+
+
+def crop(img, center, scale, output_size, rot=0):
+    trans = get_affine_transform(center, scale, rot, output_size)
+
+    dst_img = cv2.warpAffine(img,
+                             trans,
+                             (int(output_size[1]), int(output_size[0])),
+                             flags=cv2.INTER_LINEAR)
+
+    return dst_img
+
+```
+
+
+---
+# ai-service/networks/AugmentCE2P.py
+```text
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+"""
+@Author  :   Peike Li
+@Contact :   peike.li@yahoo.com
+@File    :   AugmentCE2P.py
+@Time    :   8/4/19 3:35 PM
+@Desc    :
+@License :   This source code is licensed under the license found in the
+             LICENSE file in the root directory of this source tree.
+"""
+
+import functools
+
+import torch
+import torch.nn as nn
+from torch.nn import functional as F
+# Note here we adopt the InplaceABNSync implementation from https://github.com/mapillary/inplace_abn
+# By default, the InplaceABNSync module contains a BatchNorm Layer and a LeakyReLu layer
+from modules import InPlaceABNSync
+
+BatchNorm2d = functools.partial(InPlaceABNSync, activation='none')
+
+affine_par = True
+
+pretrained_settings = {
+    'resnet101': {
+        'imagenet': {
+            'input_space': 'BGR',
+            'input_size': [3, 224, 224],
+            'input_range': [0, 1],
+            'mean': [0.406, 0.456, 0.485],
+            'std': [0.225, 0.224, 0.229],
+            'num_classes': 1000
+        }
+    },
+}
+
+
+def conv3x3(in_planes, out_planes, stride=1):
+    "3x3 convolution with padding"
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+
+
+class Bottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, dilation=1, downsample=None, fist_dilation=1, multi_grid=1):
+        super(Bottleneck, self).__init__()
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        self.bn1 = BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
+                               padding=dilation * multi_grid, dilation=dilation * multi_grid, bias=False)
+        self.bn2 = BatchNorm2d(planes)
+        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
+        self.bn3 = BatchNorm2d(planes * 4)
+        self.relu = nn.ReLU(inplace=False)
+        self.relu_inplace = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.dilation = dilation
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out = out + residual
+        out = self.relu_inplace(out)
+
+        return out
+
+
+class PSPModule(nn.Module):
+    """
+    Reference:
+        Zhao, Hengshuang, et al. *"Pyramid scene parsing network."*
+    """
+
+    def __init__(self, features, out_features=512, sizes=(1, 2, 3, 6)):
+        super(PSPModule, self).__init__()
+
+        self.stages = []
+        self.stages = nn.ModuleList([self._make_stage(features, out_features, size) for size in sizes])
+        self.bottleneck = nn.Sequential(
+            nn.Conv2d(features + len(sizes) * out_features, out_features, kernel_size=3, padding=1, dilation=1,
+                      bias=False),
+            InPlaceABNSync(out_features),
+        )
+
+    def _make_stage(self, features, out_features, size):
+        prior = nn.AdaptiveAvgPool2d(output_size=(size, size))
+        conv = nn.Conv2d(features, out_features, kernel_size=1, bias=False)
+        bn = InPlaceABNSync(out_features)
+        return nn.Sequential(prior, conv, bn)
+
+    def forward(self, feats):
+        h, w = feats.size(2), feats.size(3)
+        priors = [F.interpolate(input=stage(feats), size=(h, w), mode='bilinear', align_corners=True) for stage in
+                  self.stages] + [feats]
+        bottle = self.bottleneck(torch.cat(priors, 1))
+        return bottle
+
+
+class ASPPModule(nn.Module):
+    """
+    Reference: 
+        Chen, Liang-Chieh, et al. *"Rethinking Atrous Convolution for Semantic Image Segmentation."*
+    """
+
+    def __init__(self, features, inner_features=256, out_features=512, dilations=(12, 24, 36)):
+        super(ASPPModule, self).__init__()
+
+        self.conv1 = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)),
+                                   nn.Conv2d(features, inner_features, kernel_size=1, padding=0, dilation=1,
+                                             bias=False),
+                                   InPlaceABNSync(inner_features))
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(features, inner_features, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(inner_features))
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(features, inner_features, kernel_size=3, padding=dilations[0], dilation=dilations[0], bias=False),
+            InPlaceABNSync(inner_features))
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(features, inner_features, kernel_size=3, padding=dilations[1], dilation=dilations[1], bias=False),
+            InPlaceABNSync(inner_features))
+        self.conv5 = nn.Sequential(
+            nn.Conv2d(features, inner_features, kernel_size=3, padding=dilations[2], dilation=dilations[2], bias=False),
+            InPlaceABNSync(inner_features))
+
+        self.bottleneck = nn.Sequential(
+            nn.Conv2d(inner_features * 5, out_features, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(out_features),
+            nn.Dropout2d(0.1)
+        )
+
+    def forward(self, x):
+        _, _, h, w = x.size()
+
+        feat1 = F.interpolate(self.conv1(x), size=(h, w), mode='bilinear', align_corners=True)
+
+        feat2 = self.conv2(x)
+        feat3 = self.conv3(x)
+        feat4 = self.conv4(x)
+        feat5 = self.conv5(x)
+        out = torch.cat((feat1, feat2, feat3, feat4, feat5), 1)
+
+        bottle = self.bottleneck(out)
+        return bottle
+
+
+class Edge_Module(nn.Module):
+    """
+    Edge Learning Branch
+    """
+
+    def __init__(self, in_fea=[256, 512, 1024], mid_fea=256, out_fea=2):
+        super(Edge_Module, self).__init__()
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_fea[0], mid_fea, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(mid_fea)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(in_fea[1], mid_fea, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(mid_fea)
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(in_fea[2], mid_fea, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(mid_fea)
+        )
+        self.conv4 = nn.Conv2d(mid_fea, out_fea, kernel_size=3, padding=1, dilation=1, bias=True)
+        self.conv5 = nn.Conv2d(out_fea * 3, out_fea, kernel_size=1, padding=0, dilation=1, bias=True)
+
+    def forward(self, x1, x2, x3):
+        _, _, h, w = x1.size()
+
+        edge1_fea = self.conv1(x1)
+        edge1 = self.conv4(edge1_fea)
+        edge2_fea = self.conv2(x2)
+        edge2 = self.conv4(edge2_fea)
+        edge3_fea = self.conv3(x3)
+        edge3 = self.conv4(edge3_fea)
+
+        edge2_fea = F.interpolate(edge2_fea, size=(h, w), mode='bilinear', align_corners=True)
+        edge3_fea = F.interpolate(edge3_fea, size=(h, w), mode='bilinear', align_corners=True)
+        edge2 = F.interpolate(edge2, size=(h, w), mode='bilinear', align_corners=True)
+        edge3 = F.interpolate(edge3, size=(h, w), mode='bilinear', align_corners=True)
+
+        edge = torch.cat([edge1, edge2, edge3], dim=1)
+        edge_fea = torch.cat([edge1_fea, edge2_fea, edge3_fea], dim=1)
+        edge = self.conv5(edge)
+
+        return edge, edge_fea
+
+
+class Decoder_Module(nn.Module):
+    """
+    Parsing Branch Decoder Module.
+    """
+
+    def __init__(self, num_classes):
+        super(Decoder_Module, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(512, 256, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(256)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(256, 48, kernel_size=1, stride=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(48)
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(304, 256, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(256),
+            nn.Conv2d(256, 256, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(256)
+        )
+
+        self.conv4 = nn.Conv2d(256, num_classes, kernel_size=1, padding=0, dilation=1, bias=True)
+
+    def forward(self, xt, xl):
+        _, _, h, w = xl.size()
+        xt = F.interpolate(self.conv1(xt), size=(h, w), mode='bilinear', align_corners=True)
+        xl = self.conv2(xl)
+        x = torch.cat([xt, xl], dim=1)
+        x = self.conv3(x)
+        seg = self.conv4(x)
+        return seg, x
+
+
+class ResNet(nn.Module):
+    def __init__(self, block, layers, num_classes):
+        self.inplanes = 128
+        super(ResNet, self).__init__()
+        self.conv1 = conv3x3(3, 64, stride=2)
+        self.bn1 = BatchNorm2d(64)
+        self.relu1 = nn.ReLU(inplace=False)
+        self.conv2 = conv3x3(64, 64)
+        self.bn2 = BatchNorm2d(64)
+        self.relu2 = nn.ReLU(inplace=False)
+        self.conv3 = conv3x3(64, 128)
+        self.bn3 = BatchNorm2d(128)
+        self.relu3 = nn.ReLU(inplace=False)
+
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=1, dilation=2, multi_grid=(1, 1, 1))
+
+        self.context_encoding = PSPModule(2048, 512)
+
+        self.edge = Edge_Module()
+        self.decoder = Decoder_Module(num_classes)
+
+        self.fushion = nn.Sequential(
+            nn.Conv2d(1024, 256, kernel_size=1, padding=0, dilation=1, bias=False),
+            InPlaceABNSync(256),
+            nn.Dropout2d(0.1),
+            nn.Conv2d(256, num_classes, kernel_size=1, padding=0, dilation=1, bias=True)
+        )
+
+    def _make_layer(self, block, planes, blocks, stride=1, dilation=1, multi_grid=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion,
+                          kernel_size=1, stride=stride, bias=False),
+                BatchNorm2d(planes * block.expansion, affine=affine_par))
+
+        layers = []
+        generate_multi_grid = lambda index, grids: grids[index % len(grids)] if isinstance(grids, tuple) else 1
+        layers.append(block(self.inplanes, planes, stride, dilation=dilation, downsample=downsample,
+                            multi_grid=generate_multi_grid(0, multi_grid)))
+        self.inplanes = planes * block.expansion
+        for i in range(1, blocks):
+            layers.append(
+                block(self.inplanes, planes, dilation=dilation, multi_grid=generate_multi_grid(i, multi_grid)))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.relu1(self.bn1(self.conv1(x)))
+        x = self.relu2(self.bn2(self.conv2(x)))
+        x = self.relu3(self.bn3(self.conv3(x)))
+        x = self.maxpool(x)
+        x2 = self.layer1(x)
+        x3 = self.layer2(x2)
+        x4 = self.layer3(x3)
+        x5 = self.layer4(x4)
+        x = self.context_encoding(x5)
+        parsing_result, parsing_fea = self.decoder(x, x2)
+        # Edge Branch
+        edge_result, edge_fea = self.edge(x2, x3, x4)
+        # Fusion Branch
+        x = torch.cat([parsing_fea, edge_fea], dim=1)
+        fusion_result = self.fushion(x)
+        return [[parsing_result, fusion_result], [edge_result]]
+
+
+def initialize_pretrained_model(model, settings, pretrained='./models/resnet101-imagenet.pth'):
+    model.input_space = settings['input_space']
+    model.input_size = settings['input_size']
+    model.input_range = settings['input_range']
+    model.mean = settings['mean']
+    model.std = settings['std']
+
+    if pretrained is not None:
+        saved_state_dict = torch.load(pretrained)
+        new_params = model.state_dict().copy()
+        for i in saved_state_dict:
+            i_parts = i.split('.')
+            if not i_parts[0] == 'fc':
+                new_params['.'.join(i_parts[0:])] = saved_state_dict[i]
+        model.load_state_dict(new_params)
+
+
+def resnet101(num_classes=20, pretrained='./models/resnet101-imagenet.pth'):
+    model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes)
+    settings = pretrained_settings['resnet101']['imagenet']
+    initialize_pretrained_model(model, settings, pretrained)
+    return model
+
+```
+
+
+---
+# ai-service/networks/__init__.py
+```text
+from __future__ import absolute_import
+
+from networks.AugmentCE2P import resnet101
+
+__factory = {
+    'resnet101': resnet101,
+}
+
+
+def init_model(name, *args, **kwargs):
+    if name not in __factory.keys():
+        raise KeyError("Unknown model arch: {}".format(name))
+    return __factory[name](*args, **kwargs)
+```
+
+
+---
+# ai-service/scripts/download_checkpoints.sh
+```text
+#!/usr/bin/env bash
+set -e
+
+mkdir -p ai-service/checkpoints
+
+echo "Downloading lip.pth..."
+curl -L -o ai-service/checkpoints/lip.pth \
+"https://huggingface.co/aravindhv10/Self-Correction-Human-Parsing/resolve/main/checkpoints/lip.pth"
+
+echo "Done: ai-service/checkpoints/lip.pth"
+
+```
+
+
+---
+# ai-service/modules/__init__.py
+```text
+import torch.nn as nn
+import torch.nn.functional as F
+
+class InPlaceABNSync(nn.BatchNorm2d):
+    def __init__(
+        self,
+        num_features,
+        eps=1e-5,
+        momentum=0.1,
+        affine=True,
+        activation="leaky_relu",
+        slope=0.01,
+    ):
+        super().__init__(num_features, eps=eps, momentum=momentum, affine=affine, track_running_stats=True)
+        self.activation = (activation or "none").lower()
+        self.slope = slope
+
+    def forward(self, x):
+        x = super().forward(x)
+        if self.activation == "none":
+            return x
+        if self.activation == "relu":
+            return F.relu(x, inplace=True)
+        if self.activation == "leaky_relu":
+            return F.leaky_relu(x, negative_slope=self.slope, inplace=True)
+        if self.activation == "elu":
+            return F.elu(x, inplace=True)
+        return x
+
+```
+
+
+---
+# src/app/globals.css
+```text
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+@import "tailwindcss";
+
+:root {
+    --bg0: #070812;
+    --bg1: #0b1020;
+    --card: rgba(255, 255, 255, .06);
+    --stroke: rgba(255, 255, 255, .12);
+    --stroke2: rgba(255, 255, 255, .18);
+    --text: rgba(255, 255, 255, .92);
+    --muted: rgba(255, 255, 255, .68);
+    --shadow: 0 22px 60px rgba(0, 0, 0, .55);
+    --radius: 22px;
+}
+
+.dashboard-container {
+    min-height: 100vh;
+    position: relative;
+    isolation: isolate;
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background:
+        radial-gradient(1200px 650px at 15% -10%, rgba(99, 102, 241, .38), transparent 55%),
+        radial-gradient(900px 520px at 85% 10%, rgba(236, 72, 153, .25), transparent 60%),
+        radial-gradient(1100px 600px at 50% 120%, rgba(34, 197, 94, .14), transparent 52%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    overflow: hidden;
+}
+
+.dashboard-container::before,
+.dashboard-container::after {
+    content: "";
+    position: absolute;
+    inset: auto;
+    width: 520px;
+    height: 520px;
+    border-radius: 999px;
+    filter: blur(40px);
+    opacity: .35;
+    z-index: -1;
+    animation: drift 10s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.dashboard-container::before {
+    left: -180px;
+    top: 90px;
+    background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, .9), transparent 60%);
+}
+
+.dashboard-container::after {
+    right: -220px;
+    top: 180px;
+    background: radial-gradient(circle at 30% 30%, rgba(236, 72, 153, .85), transparent 60%);
+    animation-duration: 12s;
+    animation-direction: alternate-reverse;
+}
+
+@keyframes drift {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate3d(30px, -20px, 0) scale(1.04);
+    }
+
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+.wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    /* padding-bottom: 90px;
+    padding-top: 50px; */
+}
+
+header.hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.hero-left h1 {
+    margin: 0;
+    font-size: clamp(32px, 3.3vw, 52px);
+    letter-spacing: -.03em;
+    line-height: 1.05;
+}
+
+.grad-text {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 1), rgba(236, 72, 153, 1), rgba(34, 197, 94, 1));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.hero-left p {
+    margin: 12px 0 0;
+    color: var(--muted);
+    max-width: 58ch;
+    line-height: 1.55;
+    font-size: 15px;
+}
+
+.hero-left {
+    flex: 1;
+}
+
+.hero-right {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: flex-end;
+    margin-top: 10px;
+    margin-right: 20px;
+    flex-direction: column;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.user-name {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.user-email {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--stroke);
+    background: rgba(255, 255, 255, .05);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, .82);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: rgba(34, 197, 94, 1);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, .15);
+}
+
+
+
+.card {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--stroke);
+    box-shadow: var(--shadow);
+    transform: translateZ(0);
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+}
+
+.card::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background:
+        radial-gradient(700px 260px at 20% 0%, rgba(99, 102, 241, .55), transparent 55%),
+        radial-gradient(700px 260px at 90% 10%, rgba(236, 72, 153, .40), transparent 55%),
+        radial-gradient(680px 260px at 60% 120%, rgba(34, 197, 94, .22), transparent 58%);
+    opacity: .55;
+    pointer-events: none;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    border-color: var(--stroke2);
+    box-shadow: 0 28px 85px rgba(0, 0, 0, .62);
+}
+
+.media {
+    position: relative;
+    height: 210px;
+    overflow: hidden;
+    background: #0a0b14;
+}
+
+.media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.02);
+    transition: transform .35s ease, filter .35s ease;
+    filter: saturate(1.05) contrast(1.05);
+    display: block;
+}
+
+.card:hover .media img {
+    transform: scale(1.08);
+    filter: saturate(1.15) contrast(1.1);
+}
+
+.media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, .0) 0%, rgba(0, 0, 0, .45) 78%, rgba(0, 0, 0, .62) 100%);
+    pointer-events: none;
+}
+
+.badge {
+    position: absolute;
+    left: 14px;
+    top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .38);
+    border: 1px solid rgba(255, 255, 255, .16);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, .9);
+    font-size: 12px;
+    z-index: 2;
+}
+
+.badge svg {
+    width: 16px;
+    height: 16px;
+    opacity: .95;
+}
+
+.content {
+    position: relative;
+    padding: 16px 16px 18px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .02));
+    backdrop-filter: blur(10px);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: -.01em;
+}
+
+.desc {
+    margin: 8px 0 14px;
+    color: var(--muted);
+    line-height: 1.55;
+    font-size: 14px;
+}
+
+.meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.pill {
+    border: 1px solid var(--stroke);
+    background: rgba(255, 255, 255, .04);
+    color: rgba(255, 255, 255, .82);
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--stroke);
+    background: rgba(255, 255, 255, .05);
+    color: var(--text);
+    text-decoration: none;
+    transition: transform .14s ease, background .14s ease, border-color .14s ease;
+    font-weight: 550;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .22);
+}
+
+.btn.primary {
+    border-color: rgba(99, 102, 241, .55);
+    background: linear-gradient(90deg, rgba(99, 102, 241, .35), rgba(236, 72, 153, .22));
+}
+
+.btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.hint {
+    color: rgba(255, 255, 255, .55);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+    header.hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .hero-right {
+        justify-content: flex-start;
+        flex-direction: row;
+    }
+
+
+
+    .media {
+        height: 200px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .dashboard-container::before,
+    .dashboard-container::after {
+        animation: none;
+    }
+
+    .card,
+    .media img,
+    .btn {
+        transition: none;
+    }
+
+    .card:hover {
+        transform: none;
+    }
+
+    .card:hover .media img {
+        transform: none;
+    }
+
+    /* tắt scanline nếu user không thích motion */
+    .cy-hud::before,
+    .cy-hud::after,
+    .cy-hud-panel::before,
+    .cy-hud-panel::after {
+        animation: none !important;
+    }
+}
+
+/* ===== DEMO CYBER SCANLINE (apply normally) ===== */
+
+/* Panel lớn (bọc toàn bộ onboarding card) */
+.cy-hud-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.cy-hud-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    /* scanlines rất nhẹ */
+    background-image: repeating-linear-gradient(to bottom,
+            rgba(255, 255, 255, .10) 0px,
+            rgba(255, 255, 255, .10) 1px,
+            transparent 1px,
+            transparent 7px);
+    background-size: 100% 8px;
+
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+
+    animation: cy-scan 12s linear infinite;
+}
+
+/* Card nhỏ (AGE/HEIGHT/WEIGHT) */
+.cy-hud {
+    position: relative;
+    overflow: hidden;
+}
+
+.cy-hud::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background-image: repeating-linear-gradient(to bottom,
+            rgba(255, 255, 255, .14) 0px,
+            rgba(255, 255, 255, .14) 1px,
+            transparent 1px,
+            transparent 6px);
+    background-size: 100% 7px;
+
+    opacity: 0.10;
+    mix-blend-mode: overlay;
+
+    animation: cy-scan 8s linear infinite;
+}
+
+/* Glint (tia sáng quét chéo) – cực nhẹ nhưng “ăn điểm demo” */
+.cy-hud::before {
+    content: "";
+    position: absolute;
+    top: -60%;
+    left: -50%;
+    width: 200%;
+    height: 120%;
+    pointer-events: none;
+
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(56, 189, 248, .14),
+            transparent);
+    transform: rotate(12deg);
+    opacity: 0.35;
+
+    animation: cy-glint 6.5s ease-in-out infinite;
+}
+
+@keyframes cy-scan {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 0 220px;
+    }
+}
+
+@keyframes cy-glint {
+
+    0%,
+    65% {
+        transform: translateX(-18%) rotate(12deg);
+        opacity: .18;
+    }
+
+    100% {
+        transform: translateX(14%) rotate(12deg);
+        opacity: .35;
+    }
+}
+
+/* ===== Hide number input spinners (Safari/Chrome) ===== */
+.cy-num::-webkit-outer-spin-button,
+.cy-num::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.cy-num {
+    -moz-appearance: textfield;
+}
+
+/* ===== Chat scanline + typing dots + hide scrollbar ===== */
+.cy-scanline {
+    background: repeating-linear-gradient(to bottom,
+            rgba(255, 255, 255, 0.14) 0px,
+            rgba(255, 255, 255, 0.14) 1px,
+            transparent 1px,
+            transparent 7px);
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    animation: scan 10s linear infinite;
+    background-size: 100% 8px;
+}
+
+@keyframes scan {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 0 220px;
+    }
+}
+
+.dotty {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.65);
+    display: inline-block;
+    animation: bounce 1s infinite;
+}
+
+.delay-150 {
+    animation-delay: 0.15s;
+}
+
+.delay-300 {
+    animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+
+    0%,
+    80%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+
+    40% {
+        transform: translateY(-3px);
+        opacity: 1;
+    }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .cy-scanline,
+    .dotty {
+        animation: none !important;
+    }
+}
+
+/* ===== Chat scanline + typing dots + hide scrollbar ===== */
+.cy-scanline {
+    background: repeating-linear-gradient(to bottom,
+            rgba(255, 255, 255, 0.14) 0px,
+            rgba(255, 255, 255, 0.14) 1px,
+            transparent 1px,
+            transparent 7px);
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    animation: scan 10s linear infinite;
+    background-size: 100% 8px;
+}
+
+@keyframes scan {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 0 220px;
+    }
+}
+
+.dotty {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.65);
+    display: inline-block;
+    animation: bounce 1s infinite;
+}
+
+.delay-150 {
+    animation-delay: 0.15s;
+}
+
+.delay-300 {
+    animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+
+    0%,
+    80%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+
+    40% {
+        transform: translateY(-3px);
+        opacity: 1;
+    }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .cy-scanline,
+    .dotty {
+        animation: none !important;
+    }
+}
+```
+
+
+---
+# src/app/layout.tsx
+```text
+import "./globals.css";
+import { AuthProvider } from "@/lib/AuthContext";
+import Footer from "@/components/Footer";
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="vi">
+
+      <body className="flex flex-col min-h-screen">
+
+        <AuthProvider>
+
+          <div className="dashboard-container flex-1">
+            <div>{children}</div>
+          </div>
+
+        </AuthProvider>
+        <Footer />
+
+      </body>
+
+    </html>
+  );
+}
+
+```
+
+
+---
+# src/app/page.tsx
+```text
+import Header from "@/components/Header";
+
+export default function Home() {
+  return (
+    <main>
+      <Header />
+      <div className="wrap">
+        {/* Hero Section */}
+        <section className="text-center py-20">
+          <h1 className="text-5xl font-bold grad-text mb-4">
+            Chào mừng đến với AI Digital Wardrobe
+          </h1>
+          <p className="text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Tủ đồ thông minh giúp bạn quản lý quần áo dễ dàng hơn, số hóa tủ đồ cá nhân
+            và nhận gợi ý trang phục phù hợp bằng trí tuệ nhân tạo.
+          </p>
+
+          <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-8 max-w-4xl mx-auto shadow-xl text-left">
+            <h2 className="text-3xl font-semibold text-white mb-5 text-center">
+              Công dụng của AI Digital Wardrobe
+            </h2>
+
+            <div className="space-y-4 text-gray-300 text-lg leading-relaxed">
+              <p>
+                <span className="text-white font-semibold">AI Digital Wardrobe</span> là
+                ứng dụng hỗ trợ bạn <span className="text-white/90">quản lý tủ đồ cá nhân một cách hiện đại và tiện lợi</span>.
+                Thay vì phải nhớ mình có gì trong tủ, bạn có thể lưu trữ toàn bộ quần áo lên hệ thống để theo dõi dễ dàng hơn.
+              </p>
+
+              <p>
+                Ứng dụng sử dụng <span className="text-white/90">trí tuệ nhân tạo</span> để
+                phân tích hình ảnh, nhận diện và phân loại từng món đồ. Nhờ đó, bạn có thể nhanh chóng tìm kiếm,
+                sắp xếp và quản lý trang phục theo nhu cầu sử dụng.
+              </p>
+
+              <p>
+                Không chỉ dừng lại ở việc lưu trữ, AI Digital Wardrobe còn giúp bạn
+                <span className="text-white/90"> gợi ý trang phục phù hợp</span> dựa trên hoàn cảnh,
+                phong cách mong muốn hoặc điều kiện thời tiết, giúp việc chọn đồ mỗi ngày trở nên nhanh hơn và dễ dàng hơn.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Hướng dẫn sử dụng */}
+        <section className="py-12">
+          <h2 className="text-4xl font-bold text-white text-center mb-12">
+            Hướng dẫn sử dụng
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Bước 1 */}
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-2xl font-bold">1</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Đăng ký tài khoản</h3>
+              <p className="text-gray-300">
+                Tạo tài khoản để bắt đầu sử dụng AI Digital Wardrobe. Bạn có thể đăng ký
+                bằng email hoặc tài khoản Google.
+              </p>
+              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                <span className="text-gray-400">Ảnh minh họa bước 1</span>
+              </div>
+            </div>
+
+            {/* Bước 2 */}
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-2xl font-bold">2</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Upload tủ đồ</h3>
+              <p className="text-gray-300">
+                Tải lên hình ảnh các món đồ trong tủ đồ của bạn. AI sẽ tự động phân loại
+                và gán nhãn cho từng món đồ.
+              </p>
+              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                <span className="text-gray-400">Ảnh minh họa bước 2</span>
+              </div>
+            </div>
+
+            {/* Bước 3 */}
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-2xl font-bold">3</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Nhận gợi ý trang phục</h3>
+              <p className="text-gray-300">
+                Dựa trên thời tiết và sở thích của bạn, AI sẽ gợi ý các bộ trang phục phù hợp
+                từ chính tủ đồ của bạn.
+              </p>
+              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                <span className="text-gray-400">Ảnh minh họa bước 3</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+```
+
+
+---
+# src/app/wardrobe/page.tsx
+```text
+"use client";
+
+import { useAuth } from "@/lib/AuthContext";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import ConfirmModal from "@/components/ConfirmModal";
+import Header from "@/components/Header";
+
+type WardrobeItem = {
+  id: string;
+  imageUrl: string;
+  category?: string;
+  cloudinaryPublicId?: string;
+  createdAt?: any;
+};
+
+const CATEGORIES = [
+  { key: "ao", label: "Áo" },
+  { key: "quan", label: "Quần" },
+  { key: "vay", label: "Váy" },
+  { key: "dam", label: "Đầm" },
+  { key: "giay", label: "Giày" },
+] as const;
+
+type CatKey = (typeof CATEGORIES)[number]["key"];
+
+function stripVN(s?: string) {
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .trim();
+}
+
+function normalizeCategory(raw?: string): CatKey {
+  const s = stripVN(raw);
+
+  if (s.includes("giay") || s.includes("shoe") || s.includes("sneaker")) return "giay";
+  if (s.includes("dam") || s.includes("dress") || s.includes("gown")) return "dam";
+  if (s.includes("vay") || s.includes("skirt")) return "vay";
+  if (s.includes("quan") || s.includes("pants") || s.includes("trouser") || s.includes("jean")) return "quan";
+  if (s.includes("ao") || s.includes("shirt") || s.includes("tee") || s.includes("top") || s.includes("hoodie")) return "ao";
+
+  return "ao";
+}
+
+export default function WardrobePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const [items, setItems] = useState<WardrobeItem[]>([]);
+  const [fetching, setFetching] = useState(true);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingPublicId, setPendingPublicId] = useState<string | undefined>(undefined);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const [activeCat, setActiveCat] = useState<CatKey>("ao");
+
+  useEffect(() => {
+    const run = async () => {
+      if (!user) return;
+      setFetching(true);
+
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/wardrobe/list", {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "List failed");
+        setItems(data.items || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    if (!loading && user) run();
+  }, [loading, user]);
+
+  const grouped = useMemo(() => {
+    const g: Record<CatKey, WardrobeItem[]> = { ao: [], quan: [], vay: [], dam: [], giay: [] };
+
+    for (const it of items) {
+      const k = normalizeCategory(it.category);
+      g[k].push(it);
+    }
+
+    for (const k of Object.keys(g) as CatKey[]) {
+      g[k].sort((a, b) => {
+        const ta = a.createdAt?.seconds ? a.createdAt.seconds : 0;
+        const tb = b.createdAt?.seconds ? b.createdAt.seconds : 0;
+        return tb - ta;
+      });
+    }
+
+    return g;
+  }, [items]);
+
+  const activeList = grouped[activeCat] || [];
+  const activeLabel = CATEGORIES.find((c) => c.key === activeCat)?.label || "Danh mục";
+
+  if (loading || fetching) return <div className="p-6">Loading...</div>;
+  if (!user) {
+    router.replace("/");
+    return null;
+  }
+
+  const openConfirm = (id: string, publicId?: string) => {
+    setPendingId(id);
+    setPendingPublicId(publicId);
+    setConfirmOpen(true);
+  };
+
+  const deleteItemConfirmed = async () => {
+    const id = pendingId;
+    const publicId = pendingPublicId;
+    if (!id || !user) return;
+
+    try {
+      setConfirmLoading(true);
+      setDeletingId(id);
+
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/wardrobe/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ id, publicId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.message || "Xóa thất bại");
+        return;
+      }
+
+      setItems((prev) => prev.filter((it) => it.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("Xóa thất bại (lỗi mạng hoặc API).");
+    } finally {
+      setDeletingId(null);
+      setConfirmLoading(false);
+      setConfirmOpen(false);
+      setPendingId(null);
+      setPendingPublicId(undefined);
+    }
+  };
+
+  return (
+    <main className="min-h-screen space-y-6 ">
+      <Header />
+      <div className="wrap ">
+        <header className="mb-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <button onClick={() => router.push("/dashboard")} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">
+              ← Dashboard
+            </button>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
+              Tủ đồ của bạn
+            </h1>
+            <Link href="/wardrobe/upload" className="px-4 py-2 rounded-xl font-semibold border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white hover:border-cyan-300/40 transition shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+              + Thêm đồ
+            </Link>
+          </div>
+        </header>
+        {/* Tabs */}
+        <div className="flex gap-2 overflow-x-auto py-1">
+          {CATEGORIES.map((c) => {
+            const count = grouped[c.key]?.length ?? 0;
+            const active = activeCat === c.key;
+            return (
+              <button
+                key={c.key}
+                onClick={() => setActiveCat(c.key)}
+                className={`px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap transition
+                ${active ? "bg-gradient-to-r from-sky-400/80 to-indigo-500/80 text-white border-transparent shadow-[0_0_15px_rgba(56,189,248,0.2)]" : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80"}`}
+              >
+                {c.label} <span className={`${active ? "opacity-90" : "opacity-50"}`}>({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* List */}
+        {activeList.length === 0 ? (
+          <div className="border border-white/10 bg-white/5 rounded-xl p-8 text-center text-white/60">
+            Chưa có món nào trong mục <b className="text-white/80">{activeLabel}</b>.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {activeList.map((it) => (
+              <div key={it.id} className="border border-white/10 bg-white/5 rounded-xl overflow-hidden relative shadow-lg hover:border-white/20 transition group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={it.imageUrl} alt="item" className="w-full h-64 object-contain p-2" />
+                <div className="p-4 bg-black/40 backdrop-blur-md text-sm border-t border-white/10">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-semibold text-white/90">{it.category || "Không rõ"}</div>
+                    </div>
+                    <button
+                      onClick={() => openConfirm(it.id, it.cloudinaryPublicId)}
+                      disabled={deletingId === it.id}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition"
+                    >
+                      {deletingId === it.id ? "Đang xóa..." : "Xóa"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <ConfirmModal
+          open={confirmOpen}
+          message={<span>Bạn có chắc muốn xóa món này khỏi tủ đồ?</span>}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={deleteItemConfirmed}
+          loading={confirmLoading}
+        />
+      </div>
+    </main>
+  );
+}
+
+```
+
+
+---
+# src/app/wardrobe/upload/page.tsx
+```text
+"use client";
+
+import WardrobeUploader from "@/components/WardrobeUploader";
+import { useAuth } from "@/lib/AuthContext";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import Header from "@/components/Header";
+
+export default function WardrobeUploadPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // ✅ Redirect phải nằm trong useEffect, không được router.replace trong render
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/");
+    }
+  }, [loading, user, router]);
+
+  // ✅ Hooks luôn phải chạy trước mọi return
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+
+    if (showSuccess) {
+      t = setTimeout(() => {
+        setShowSuccess(false);
+        setIsUploading(false);
+        router.push("/wardrobe");
+      }, 1000);
+    }
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [showSuccess, router]);
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!user) return null; // đang redirect
+
+  return (
+    <main>
+      <Header />
+      <div className="wrap">
+        <div className="dashboard-container">
+          <div className="wrap pt-5">
+            <header className="mb-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  disabled={isUploading}
+                  className={`px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition ${isUploading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                >
+                  ← Dashboard
+                </button>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
+                  Upload vào tủ đồ
+                </h1>
+
+                <button
+                  onClick={() => router.push("/wardrobe")}
+                  disabled={isUploading}
+                  className={`px-4 py-2 rounded-xl font-semibold border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white hover:border-cyan-300/40 transition shadow-[0_0_15px_rgba(56,189,248,0.15)] ${isUploading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                >
+                  Xem tủ đồ →
+                </button>
+              </div>
+            </header>
+
+            <section style={{ marginTop: 18 }}>
+              <div className="card">
+                <div className="content">
+                  <div className="mb-4">
+                    <h3 className="title">Upload và tách đồ</h3>
+                    <p className="desc">
+                      Chọn ảnh, AI sẽ tự tách từng item và bạn có thể lưu vào tủ đồ.
+                    </p>
+                  </div>
+
+                  <WardrobeUploader
+                    onUploadingChange={setIsUploading}
+                    onUploadSuccess={() => setShowSuccess(true)}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* full-screen overlay to block interactions while processing/parsing */}
+            {isUploading && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto">
+                <div className="absolute inset-0 bg-black/40" />
+                <div className="relative z-50 flex flex-col items-center gap-3 p-6 rounded-lg bg-black/60 text-white">
+                  {!showSuccess ? (
+                    <>
+                      <div className="loader w-10 h-10 border-4 border-t-transparent rounded-full animate-spin border-white/60" />
+                      <div>Đang xử lý, xin chờ...</div>
+                    </>
+                  ) : (
+                    <div className="text-green-300 font-medium">
+                      đưa vào tủ đồ thành công
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main >
+  );
+}
+```
+
+
+---
+# src/app/auth/register/page.tsx
+```text
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  type AuthError,
+} from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import Header from "@/components/Header";
+
+function firebaseMsg(err: unknown) {
+  const e = err as AuthError;
+  const code = (e?.code ?? "").toString();
+
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "Tài khoản này đã được sử dụng. Hãy đăng nhập hoặc dùng thông tin khác.";
+    case "auth/invalid-email":
+      return "Email không hợp lệ.";
+    case "auth/weak-password":
+      return "Mật khẩu quá yếu. Firebase yêu cầu ít nhất 6 ký tự.";
+    case "auth/operation-not-allowed":
+      return "Email/Password chưa được bật trong Firebase Authentication.";
+    case "auth/network-request-failed":
+      return "Lỗi mạng. Kiểm tra kết nối internet.";
+    default:
+      return e?.message || "Đăng ký thất bại (không rõ lý do).";
+  }
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export default function RegisterPage() {
+  const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const onRegister = async () => {
+    const uname = username.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!uname) return alert("Nhập tên đăng nhập.");
+    if (!/^[a-z0-9_-]{3,32}$/.test(uname)) {
+      return alert(
+        "Tên đăng nhập chỉ gồm chữ thường, số, gạch dưới hoặc gạch ngang (3-32 ký tự)."
+      );
+    }
+
+    if (!normalizedEmail) return alert("Nhập email.");
+    if (!isValidEmail(normalizedEmail)) return alert("Email không hợp lệ.");
+
+    if (!pass) return alert("Nhập mật khẩu.");
+    if (pass.length < 6) return alert("Mật khẩu phải từ 6 ký tự trở lên.");
+    if (pass !== confirm) return alert("Mật khẩu nhập lại không khớp.");
+
+    setLoading(true);
+
+    try {
+      if (!db || !auth) {
+        throw new Error("Firebase chưa được khởi tạo!");
+      }
+
+      const unameRef = doc(db, "usernames", uname);
+      const unameSnap = await getDoc(unameRef);
+
+      if (unameSnap.exists()) {
+        alert("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
+        return;
+      }
+
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        pass
+      );
+
+      const displayName = name.trim();
+      if (displayName) {
+        await updateProfile(cred.user, { displayName });
+      }
+
+      await setDoc(unameRef, {
+        uid: cred.user.uid,
+        email: normalizedEmail,
+        createdAt: serverTimestamp(),
+      });
+
+      await setDoc(doc(db, "users", cred.user.uid), {
+        username: uname,
+        displayName: displayName || null,
+        email: normalizedEmail,
+        createdAt: serverTimestamp(),
+        isVIP: false,
+        itemQuantity: 0,
+        outfitGenerationsToday: 0,
+        outfitGenerationDate: "",
+      });
+
+      router.replace("/onboarding");
+    } catch (err) {
+      alert(firebaseMsg(err));
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main>
+      <Header />
+
+      <header className="hero text-center md:context-centered">
+        <div className="hero-left">
+          <h1>
+            <span className="grad">AI Digital Wardrobe</span>
+          </h1>
+        </div>
+      </header>
+
+      <main className="flex items-center justify-center p-6">
+        <div className="w-full max-w-sm shadow-2xl rounded-xl p-6 space-y-4 bg-gray-900">
+          <h2 className="text-2xl font-semibold text-center">Đăng ký</h2>
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Tên hiển thị (tuỳ chọn)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Tên đăng nhập"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Mật khẩu (>= 6 ký tự)"
+            type="password"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            autoComplete="new-password"
+          />
+
+          <input
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Nhập lại mật khẩu"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+          />
+
+          <button
+            onClick={onRegister}
+            disabled={loading}
+            className="w-full bg-[#00a400] text-white rounded py-2 disabled:opacity-50"
+          >
+            {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
+          </button>
+
+          <p className="text-sm text-gray-300 text-center">
+            Đã có tài khoản?{" "}
+            <Link className="underline" href="/auth/login">
+              Đăng nhập
+            </Link>
+          </p>
+        </div>
+      </main>
+    </main>
+  );
+}
+
+```
+
+
+---
+# src/app/auth/forgot-password/page.tsx
+```text
+"use client";
+
+import Header from "@/components/Header";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+export default function ForgotPasswordPage() {
+  const router = useRouter();
+
+  const [username, setUsername] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [loadingSend, setLoadingSend] = useState(false);
+  const [loadingReset, setLoadingReset] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const onSendCode = async () => {
+    const uname = username.trim().toLowerCase();
+
+    if (!uname) {
+      alert("Nhập tên đăng nhập.");
+      return;
+    }
+
+    setLoadingSend(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/auth/forgot-password/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: uname }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Không gửi được mã xác nhận.");
+      }
+
+      setSent(true);
+      setMessage(
+        data?.message ||
+          "Nếu tài khoản tồn tại và đã có email đăng ký, mã xác nhận đã được gửi."
+      );
+    } catch (err: any) {
+      alert(err?.message || "Không gửi được mã xác nhận.");
+    } finally {
+      setLoadingSend(false);
+    }
+  };
+
+  const onResetPassword = async () => {
+    const uname = username.trim().toLowerCase();
+
+    if (!uname) return alert("Nhập tên đăng nhập.");
+    if (!code) return alert("Nhập mã xác nhận.");
+    if (!newPassword) return alert("Nhập mật khẩu mới.");
+    if (newPassword.length < 6)
+      return alert("Mật khẩu mới phải có ít nhất 6 ký tự.");
+    if (newPassword !== confirmPassword)
+      return alert("Mật khẩu nhập lại không khớp.");
+
+    setLoadingReset(true);
+
+    try {
+      const res = await fetch("/api/auth/forgot-password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: uname,
+          code,
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Không đặt lại được mật khẩu.");
+      }
+
+      alert("Đặt lại mật khẩu thành công. Hãy đăng nhập lại.");
+      router.push("/auth/login");
+    } catch (err: any) {
+      alert(err?.message || "Không đặt lại được mật khẩu.");
+    } finally {
+      setLoadingReset(false);
+    }
+  };
+
+  return (
+    <main>
+      <Header />
+      <div className="wrap">
+        <div className="mt-20 flex items-center justify-center min-h-[60vh]">
+          <div className="w-full max-w-[420px] bg-gray-900 rounded-xl p-6 shadow-2xl">
+            <h2 className="text-3xl font-light text-white mb-2 tracking-tight text-center">
+              Quên mật khẩu
+            </h2>
+
+            <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">
+              Nhập tên đăng nhập để nhận mã xác nhận qua email đã đăng ký.
+            </p>
+
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Tên đăng nhập"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+              />
+
+              <button
+                onClick={onSendCode}
+                disabled={loadingSend}
+                className="w-full bg-blue-500 text-white p-3 rounded font-semibold hover:bg-blue-600 transition-colors disabled:opacity-60"
+              >
+                {loadingSend ? "Đang gửi mã..." : sent ? "Gửi lại mã" : "Gửi mã xác nhận"}
+              </button>
+
+              {message ? (
+                <p className="text-sm text-green-400 leading-relaxed">{message}</p>
+              ) : null}
+
+              <div className="pt-2 border-t border-gray-700 space-y-4">
+                <input
+                  type="text"
+                  placeholder="Mã xác nhận gồm 6 chữ số"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+                />
+
+                <input
+                  type="password"
+                  placeholder="Mật khẩu mới"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+                />
+
+                <input
+                  type="password"
+                  placeholder="Nhập lại mật khẩu mới"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+                />
+
+                <button
+                  onClick={onResetPassword}
+                  disabled={loadingReset}
+                  className="w-full bg-green-600 text-white p-3 rounded font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
+                >
+                  {loadingReset ? "Đang cập nhật..." : "Tiếp tục"}
+                </button>
+              </div>
+
+              <div className="text-center pt-2">
+                <Link
+                  href="/auth/login"
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  Quay về đăng nhập
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+```
+
+
+---
+# src/app/auth/login/page.tsx
+```text
+"use client";
+
+import { signInWithEmailAndPassword, type AuthError } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import GoogleLoginButton from "@/components/GoogleLoginButton";
+import Header from "@/components/Header";
+
+async function getLoginEmails(username: string) {
+  const fallbackEmail = `${username}@adw.local`;
+
+  if (!db) {
+    return [fallbackEmail];
+  }
+
+  const usernameSnap = await getDoc(doc(db, "usernames", username));
+  const mappedEmail = usernameSnap.exists()
+    ? (usernameSnap.data()?.email as string | undefined)?.trim().toLowerCase()
+    : "";
+
+  return Array.from(
+    new Set([mappedEmail, fallbackEmail].filter(Boolean))
+  );
+}
+
+export default function Login() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [pass, setPass] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const onLogin = async () => {
+    if (!username || !pass) return alert("Nhập tên đăng nhập và mật khẩu");
+
+    setLoading(true);
+
+    if (!auth) {
+      alert("Firebase chưa được khởi tạo!");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const uname = username.trim().toLowerCase();
+      const loginEmails = await getLoginEmails(uname);
+      let lastError: unknown = null;
+
+      for (const loginEmail of loginEmails) {
+        try {
+          await signInWithEmailAndPassword(auth, loginEmail, pass);
+          router.push("/");
+          return;
+        } catch (err) {
+          lastError = err;
+          const code = ((err as AuthError)?.code ?? "").toString();
+          if (
+            code &&
+            code !== "auth/invalid-credential" &&
+            code !== "auth/user-not-found"
+          ) {
+            throw err;
+          }
+        }
+      }
+
+      throw lastError;
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main>
+      <Header />
+      <div className="wrap">
+        <div className="mt-20 flex items-center justify-center min-h-[60vh]">
+          <div className="w-full max-w-[400px] bg-gray-900 rounded-xl p-6 shadow-2xl flex flex-col items-center">
+            <h2 className="text-3xl font-light text-white mb-2 tracking-tight">
+              Đăng nhập
+            </h2>
+
+            <div className="w-full space-y-4">
+              <div className="relative m-2">
+                <input
+                  type="text"
+                  placeholder="Tên đăng nhập"
+                  value={username}
+                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+
+              <div className="relative m-2">
+                <input
+                  type="password"
+                  placeholder="Mật khẩu"
+                  value={pass}
+                  onChange={(e) => setPass(e.target.value)}
+                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+                />
+              </div>
+
+              <div className="flex justify-end px-2 -mt-2">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  Quên mật khẩu?
+                </Link>
+              </div>
+
+              <div className="m-2">
+                <button
+                  onClick={onLogin}
+                  disabled={loading}
+                  className="w-full bg-[#4a90e2] text-white p-3 font-semibold hover:bg-blue-600 transition-colors rounded"
+                >
+                  {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full flex items-center my-6">
+              <div className="flex-1 h-[1px] bg-gray-200"></div>
+              <span className="px-3 text-xs text-gray-400 uppercase">Hoặc</span>
+              <div className="flex-1 h-[1px] bg-gray-200"></div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-700 w-full">
+              <GoogleLoginButton />
+            </div>
+
+            <div className="flex gap-4 text-sm text-white mt-4">
+              <Link href="/auth/register" className="hover:underline">
+                Đăng ký
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+```
+
+
+---
+# src/app/about/page.tsx
+```text
+import Header from "@/components/Header";
+
+export default function About() {
+    return (
+        <main className="">
+            <Header />
+            <div className="wrap">
+                {/* Hero Section */}
+                <section className="text-center py-20">
+                    <h1 className="text-5xl font-bold grad-text mb-4">
+                        Về chúng tôi
+                    </h1>
+                    <p className="text-xl text-gray-300 mb-8">
+                        Đội ngũ đằng sau AI Digital Wardrobe
+                    </p>
+                </section>
+
+                {/* Sứ mệnh */}
+                <section className="py-20">
+                    <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-8 max-w-4xl mx-auto shadow-xl">
+                        <h2 className="text-3xl font-semibold text-white/90 mb-6 text-center">Sứ mệnh của chúng tôi</h2>
+                        <p className="text-gray-300 text-lg leading-relaxed">
+                            Tại AI Digital Wardrobe, sứ mệnh của chúng tôi là cách mạng hóa cách mọi người quản lý và tương tác với tủ đồ cá nhân. Chúng tôi tin rằng công nghệ AI có thể giúp mọi người tiết kiệm thời gian, giảm lãng phí và thể hiện phong cách cá nhân một cách tốt hơn. Bằng cách kết hợp trí tuệ nhân tạo với hiểu biết sâu sắc về thời trang, chúng tôi tạo ra một nền tảng giúp bạn dễ dàng khám phá và tận dụng tối đa bộ sưu tập quần áo của mình.
+                        </p>
+                    </div>
+                </section>
+
+                {/* Đội ngũ */}
+                <section className="py-20">
+                    <h2 className="text-4xl font-bold text-white text-center mb-12">Đội ngũ phát triển</h2>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {/* Thành viên 1 */}
+                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+                            <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-white text-3xl font-bold">A</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-white/90 mb-2">Nguyễn Văn A</h3>
+                            <p className="text-gray-400 mb-4">Frontend Developer</p>
+                            <p className="text-gray-300 text-sm">
+                                Chuyên gia phát triển giao diện người dùng với niềm đam mê tạo ra trải nghiệm người dùng tuyệt vời.
+                            </p>
+                        </div>
+
+                        {/* Thành viên 2 */}
+                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+                            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-white text-3xl font-bold">B</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-white/90 mb-2">Trần Thị B</h3>
+                            <p className="text-gray-400 mb-4">AI Engineer</p>
+                            <p className="text-gray-300 text-sm">
+                                Chuyên gia trí tuệ nhân tạo, phát triển các thuật toán phân tích hình ảnh và gợi ý trang phục thông minh.
+                            </p>
+                        </div>
+
+                        {/* Thành viên 3 */}
+                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
+                            <div className="w-24 h-24 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-white text-3xl font-bold">C</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-white/90 mb-2">Lê Văn C</h3>
+                            <p className="text-gray-400 mb-4">Backend Developer</p>
+                            <p className="text-gray-300 text-sm">
+                                Phát triển hệ thống backend mạnh mẽ, đảm bảo an toàn và hiệu suất cao cho ứng dụng.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Liên hệ */}
+                <section className="text-center py-20">
+                    <h2 className="text-3xl font-bold text-white mb-6">Liên hệ với chúng tôi</h2>
+                    <p className="text-gray-300 mb-8">
+                        Có câu hỏi hoặc góp ý? Chúng tôi luôn sẵn sàng lắng nghe từ bạn.
+                    </p>
+                    <div className="space-y-4">
+                        <p className="text-gray-300">Email: contact@aidigitalwardrobe.com</p>
+                        <p className="text-gray-300">Địa chỉ: Hà Nội, Việt Nam</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    );
+}
+```
+
+
+---
+# src/app/dashboard/page.tsx
+```text
+"use client";
+
+import { useAuth } from "@/lib/AuthContext";
+import LogoutButton from "@/components/LogoutButton";
+import ProfileDrawer from "@/components/ProfileDrawer";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getUserProfile, type UserProfile } from "@/lib/profile";
+import Link from "next/link";
+import Header from "@/components/Header";
+
+function emailPrefix(email?: string | null) {
+  return (email || "").split("@")[0] || "";
+}
+
+function initialsFrom(name?: string | null, email?: string | null) {
+  const base = (name || "").trim() || emailPrefix(email) || "U";
+  const parts = base.split(/\s+/).filter(Boolean);
+  const a = (parts[0]?.[0] || "U").toUpperCase();
+  const b = (parts[1]?.[0] || "").toUpperCase();
+  return (a + b) || "U";
+}
+
+export default function Dashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) router.replace("/");
+  }, [loading, user, router]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!user) return;
+
+      try {
+        const p = await getUserProfile(user.uid);
+
+        if (!p) {
+          router.replace("/onboarding");
+          return;
+        }
+
+        setProfile(p);
+        setCheckingProfile(false);
+      } catch (e) {
+        console.error(e);
+        router.replace("/onboarding");
+        return;
+      }
+    };
+
+    if (!loading && user) run();
+  }, [loading, user, router]);
+
+  if (loading || checkingProfile) return <div className="p-6">Loading...</div>;
+  if (!user) return null;
+
+  const uname = emailPrefix(user.email);
+  const initials = initialsFrom(user.displayName, user.email);
+
+  return (
+    <main>
+      <Header />
+      <div className="wrap">
+        <div className="dashboard-container pt-5">
+          <div className="hero-left text-center">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
+              Tủ đồ thông minh của bạn
+            </h1>
+          </div>
+
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+            {/* CARD 1: Upload vào tủ đồ */}
+            <Link href="/wardrobe/upload" className="card group">
+              <div className="media">
+                <img src="./scan_clothes_image.png" alt="Upload vào tủ đồ" />
+                <span className="badge" title="AI parse">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l2.2 5.6L20 10l-5.8 2.4L12 18l-2.2-5.6L4 10l5.8-2.4L12 2z" stroke="currentColor" strokeWidth="1.6" /></svg>
+                  Tách đồ (AI)
+                </span>
+              </div>
+
+              <div className="content bg-white/5 border border-white/10 backdrop-blur-md rounded-b-2xl">
+                <h3 className="title font-bold text-white/90">Upload vào tủ đồ</h3>
+                <p className="desc text-white/60">
+                  Chụp/Chọn ảnh quần áo, AI tự tách từng item: áo, quần, váy, giày… xuất PNG nền trong suốt.
+                </p>
+
+                <div className="meta">
+                  <span className="pill bg-white/10 text-white/80 border-white/10">PNG alpha</span>
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Mask clean</span>
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Crop gọn</span>
+                </div>
+
+                <div className="actions mt-4">
+                  <button className="btn rounded-xl px-4 py-2 font-semibold border border-white/10 bg-white/5 text-white/80 group-hover:bg-white/10 transition">
+                    Upload →
+                  </button>
+                  <span className="hint">1 click • preview ngay</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* CARD 2: Gợi ý outfit */}
+            <Link href="/outfit-suggest" className="card group">
+              <div className="media">
+                <img src="./AI_suggestions.png" alt="Gợi ý outfit" />
+                <span className="badge" title="AI suggestions">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 7h16v13H4V7z" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  Gợi ý
+                </span>
+              </div>
+
+              <div className="content bg-white/5 border border-white/10 backdrop-blur-md rounded-b-2xl">
+                <h3 className="title font-bold text-white/90">Gợi ý outfit</h3>
+                <p className="desc text-white/60">
+                  Chatbot gợi ý theo địa điểm, thời tiết hoặc đi cùng ai. Tìm outfit hoàn hảo cho bất kỳ dịp nào.
+                </p>
+
+                <div className="meta">
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Batch save</span>
+                  <span className="pill bg-white/10 text-white/80 border-white/10">AI Suggest</span>
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Real-time</span>
+                </div>
+
+                <div className="actions mt-4">
+                  <button className="btn rounded-xl px-4 py-2 font-semibold border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white hover:border-cyan-300/40 transition">
+                    Nhân gợi ý →
+                  </button>
+                  <span className="hint">gọn • sạch • nhanh</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* CARD 3: Xem tủ đồ */}
+            <Link href="/wardrobe" className="card group">
+              <div className="media">
+                <img src="./wardrobe_image.png" alt="Xem tủ đồ" />
+                <span className="badge" title="Wardrobe gallery">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 6h7v7H4V6zM13 6h7v7h-7V6zM4 15h7v3H4v-3zM13 15h7v3h-7v-3z" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  Xem tủ đồ
+                </span>
+              </div>
+
+              <div className="content bg-white/5 border border-white/10 backdrop-blur-md rounded-b-2xl">
+                <h3 className="title font-bold text-white/90">Xem tủ đồ</h3>
+                <p className="desc text-white/60">
+                  Danh sách đồ đã lưu hiển thị đẹp như lookbook: filter theo loại, kéo mượt, load nhanh.
+                </p>
+
+                <div className="meta">
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Filter</span>
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Lazy load</span>
+                  <span className="pill bg-white/10 text-white/80 border-white/10">Fast UX</span>
+                </div>
+
+                <div className="actions mt-4">
+                  <button className="btn rounded-xl px-4 py-2 font-semibold border border-white/10 bg-white/5 text-white/80 group-hover:bg-white/10 transition">
+                    Mở tủ →
+                  </button>
+                  <span className="hint">lookbook vibe</span>
+                </div>
+              </div>
+            </Link>
+          </section>
+
+          {/* ✅ Drawer profile */}
+          <ProfileDrawer
+            open={profileOpen}
+            onClose={() => setProfileOpen(false)}
+            user={{ email: user.email, displayName: user.displayName, photoURL: user.photoURL }}
+            profile={profile}
+          />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+```
+
+
+---
+# src/app/outfit-suggest/page.tsx
+```text
+"use client";
+
+import WardrobeStylistChat from "@/components/WardrobeStylistChat";
+import { useAuth } from "@/lib/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Header from "@/components/Header";
+
+export default function OutfitSuggestPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) router.replace("/");
+  }, [loading, user, router]);
+
+
+  useEffect(() => {
+    const run = async () => {
+      if (!user) return;
+
+    };
+
+    if (!loading && user) run();
+  }, [loading, user, router]);
+  if (loading) return <div className="p-6 text-white/70">Loading...</div>;
+  if (!user) return null;
+  return (
+    <main>
+      <Header />
+      <div className="wrap">
+        <div className="dashboard-container h-[100svh] overflow-hidden">
+          <WardrobeStylistChat mode="page" idUser={user.uid} />
+        </div>
+      </div>
+    </main>
+  );
+}
+```
+
+
+---
+# src/app/api/wardrobe/delete/route.ts
+```text
+import { NextResponse } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+    api_key: process.env.CLOUDINARY_API_KEY!,
+    api_secret: process.env.CLOUDINARY_API_SECRET!,
+});
+
+function getBearerToken(req: Request) {
+    const h = req.headers.get("authorization") || "";
+    const m = h.match(/^Bearer\s+(.+)$/i);
+    return m?.[1];
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const admin = getAdmin();
+        const token = getBearerToken(req);
+        if (!token) return NextResponse.json({ ok: false, message: "Missing token" }, { status: 401 });
+
+        const { uid } = await admin.auth().verifyIdToken(token);
+
+        const body = await req.json();
+        const id = body?.id as string | undefined;
+        const publicId = body?.publicId as string | undefined;
+
+        if (!id) return NextResponse.json({ ok: false, message: "Missing item id" }, { status: 400 });
+
+        const docRef = admin.firestore().collection("wardrobeItems").doc(id);
+        const snap = await docRef.get();
+        if (!snap.exists) return NextResponse.json({ ok: false, message: "Item not found" }, { status: 404 });
+
+        const data = snap.data() as any;
+        if (data.uid !== uid) return NextResponse.json({ ok: false, message: "Not allowed" }, { status: 403 });
+
+        const pid = publicId || data.cloudinaryPublicId;
+        if (pid) {
+            try {
+                await cloudinary.uploader.destroy(pid, { resource_type: "image" });
+            } catch (e) {
+                console.warn("Cloudinary destroy warning:", e);
+            }
+        }
+
+        await docRef.delete();
+
+        // Decrement itemQuantity
+        const userDocRef = admin.firestore().collection("users").doc(uid);
+        await userDocRef.update({
+            itemQuantity: admin.firestore.FieldValue.increment(-1)
+        });
+
+        return NextResponse.json({ ok: true });
+    } catch (e: any) {
+        console.error(e);
+        return NextResponse.json({ ok: false, message: e?.message || "Delete failed" }, { status: 500 });
+    }
+}
+
+```
+
+
+---
+# src/app/api/wardrobe/parse/route.ts
+```text
+// src/app/api/wardrobe/parse/route.ts
+import { NextResponse } from "next/server";
+import { labelWardrobeItemSimpleFromPngBase64, type SimpleLabel } from "@/lib/ai/labelItem";
+
+export const runtime = "nodejs";
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
+
+// LABEL_STRATEGY:
+// - "openai": giữ tên env cũ để tương thích, nhưng thực tế gọi model local qua /label
+// - "hybrid": chỉ gọi model local nếu service hint yếu / thiếu
+// - "service": chỉ dùng hint từ ai-service
+// - "none": không label
+const LABEL_STRATEGY = (process.env.LABEL_STRATEGY || "service").toLowerCase();
+const HYBRID_MIN_CONF = Number(process.env.LABEL_HYBRID_MIN_CONF ?? "0.35");
+
+type AIItem = {
+  type: string;
+  image_png_base64: string;
+  meta?: any;
+  mask_png_base64?: string;
+};
+
+type AIResponse = {
+  ok: boolean;
+  items: AIItem[];
+  message?: string;
+};
+
+const ALLOWED_CATS = new Set(["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"]);
+function safeCat(x: any): string | undefined {
+  return typeof x === "string" && ALLOWED_CATS.has(x) ? x : undefined;
+}
+
+export async function POST(req: Request) {
+  try {
+    const form = await req.formData();
+    const file = form.get("file") as File | null;
+
+    const x = form.get("x")?.toString();
+    const y = form.get("y")?.toString();
+
+    if (!file) {
+      return NextResponse.json({ ok: false, message: "Missing file" }, { status: 400 });
+    }
+    if (!file.type?.startsWith("image/")) {
+      return NextResponse.json({ ok: false, message: "Only image files are allowed" }, { status: 400 });
+    }
+
+    const aiForm = new FormData();
+    aiForm.append("file", file);
+    aiForm.append("item_type", "item");
+    aiForm.append("crop", "true");
+    aiForm.append("output", "base64");
+
+    const wantServiceHint = LABEL_STRATEGY !== "none";
+    aiForm.append("auto_label", wantServiceHint ? "true" : "false");
+    aiForm.append("label_backend", wantServiceHint ? "clip" : "none");
+
+    if (x && y) {
+      aiForm.append("x", x);
+      aiForm.append("y", y);
+    }
+
+    const aiRes = await fetch(`${AI_SERVICE_URL}/cutout`, { method: "POST", body: aiForm });
+    const aiJson = (await aiRes.json()) as AIResponse;
+
+    if (!aiJson.ok) {
+      return NextResponse.json({ ok: false, message: aiJson.message || "AI service failed" }, { status: 500 });
+    }
+
+    const items = aiJson.items || [];
+
+    const labeledItems = await Promise.all(
+      items.map(async (it) => {
+        const pngB64 = it.image_png_base64;
+        const dataUrl = pngB64.startsWith("data:") ? pngB64 : `data:image/png;base64,${pngB64}`;
+
+        if (LABEL_STRATEGY === "none") {
+          return {
+            type: "Khác",
+            category: "Khác",
+            imageDataUrl: dataUrl,
+            image_png_base64: pngB64,
+            meta: it.meta,
+            labelSource: "none" as const,
+          };
+        }
+
+        const auto = it.meta?.autoLabel ?? null;
+        const hintCategory = safeCat(auto?.category) ?? safeCat(it.type);
+        const hintConfidence = typeof auto?.confidence === "number" ? auto.confidence : null;
+
+        let label: SimpleLabel | null = null;
+        let labelSource: "model" | "service" | "none" = "none";
+
+        const shouldCallModel =
+          LABEL_STRATEGY === "openai"
+            ? true
+            : LABEL_STRATEGY === "hybrid"
+            ? hintConfidence === null || hintConfidence < HYBRID_MIN_CONF || !hintCategory
+            : false;
+
+        if (shouldCallModel) {
+          try {
+            label = await labelWardrobeItemSimpleFromPngBase64(pngB64, {
+              categoryHint: hintCategory,
+              confidenceHint: hintConfidence,
+            });
+            labelSource = "model";
+          } catch (e) {
+            console.warn("Label failed, fallback to service hint:", e);
+          }
+        }
+
+        if (!label && hintCategory) labelSource = "service";
+
+        const category = label?.category ?? hintCategory ?? "Khác";
+
+        return {
+          type: category,
+          category,
+          imageDataUrl: dataUrl,
+          image_png_base64: pngB64,
+          meta: it.meta,
+          labelSource,
+        };
+      })
+    );
+
+    return NextResponse.json({ ok: true, items: labeledItems, count: labeledItems.length });
+  } catch (e: any) {
+    console.error(e);
+    return NextResponse.json({ ok: false, message: e?.message || "Parse failed" }, { status: 500 });
+  }
+}
+```
+
+
+---
+# src/app/api/wardrobe/confirm/route.ts
+```text
+// src/app/api/wardrobe/confirm/route.ts
+import { NextResponse } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
+});
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1];
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
+async function optimizeTransparentImage(buffer: Buffer): Promise<Buffer> {
+  const sharp = (await import("sharp")).default;
+
+  return await sharp(buffer)
+    .resize({
+      width: 800,
+      height: 800,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({
+      quality: 85,
+      effort: 4,
+    })
+    .toBuffer();
+}
+
+function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
+  const startMs = Date.now();
+  console.log(`[confirm] starting Cloudinary upload, size=${Math.round(buffer.length / 1024)}KB, folder=${folder}`);
+
+  const task = new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+        format: "webp",
+        timeout: 300000,
+        overwrite: false,
+        unique_filename: true,
+      },
+      (err, result) => {
+        const elapsed = Date.now() - startMs;
+        if (err || !result) {
+          console.error(`[confirm] Cloudinary upload FAILED after ${elapsed}ms:`, err);
+          return reject(err || new Error("Cloudinary upload failed"));
+        }
+        console.log(`[confirm] Cloudinary upload OK in ${elapsed}ms, url=${result.secure_url}`);
+        resolve({
+          secure_url: result.secure_url!,
+          public_id: result.public_id!,
+        });
+      }
+    );
+
+    stream.on("error", (e) => {
+      console.error(`[confirm] Cloudinary stream error after ${Date.now() - startMs}ms:`, e);
+      reject(e);
+    });
+    stream.end(buffer);
+  });
+
+  return withTimeout(task, 310000, "Cloudinary upload timeout");
+}
+
+type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày" | "Khác";
+
+function normalizeCategory(raw: string): CatKey {
+  const s = (raw || "").trim().toLowerCase();
+
+  if (["ao", "áo", "shirt", "top", "tshirt", "tee", "hoodie", "jacket", "coat", "sweater", "blouse"].some((k) => s.includes(k))) {
+    return "Áo";
+  }
+  if (["quan", "quần", "pants", "trousers", "jeans", "shorts"].some((k) => s.includes(k))) {
+    return "Quần";
+  }
+  if (["vay", "váy", "skirt"].some((k) => s.includes(k))) {
+    return "Váy";
+  }
+  if (["dam", "đầm", "dress", "gown", "onepiece"].some((k) => s.includes(k))) {
+    return "Đầm";
+  }
+  if (["giay", "giày", "shoe", "shoes", "sneaker", "boot", "boots", "sandal"].some((k) => s.includes(k))) {
+    return "Giày";
+  }
+  return "Khác";
+}
+
+type InputItem = {
+  type?: string;
+  image_png_base64?: string;
+};
+
+type PreparedUpload = {
+  rawType: string;
+  category: CatKey;
+  imageUrl: string;
+  cloudinaryPublicId: string;
+};
+
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+
+  async function run() {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) break;
+      results[idx] = await worker(items[idx], idx);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
+  return results;
+}
+
+export async function POST(req: Request) {
+  try {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return NextResponse.json({ ok: false, message: "Missing Cloudinary env vars" }, { status: 500 });
+    }
+
+    const admin = getAdmin();
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
+    }
+
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+
+    const body = await req.json().catch(() => ({} as any));
+    const items = Array.isArray(body?.items) ? (body.items as InputItem[]) : [];
+
+    if (items.length === 0) {
+      return NextResponse.json({ ok: false, message: "Missing items" }, { status: 400 });
+    }
+
+    const prepared = await mapLimit(items, 1, async (it, idx) => {
+      const rawType = String(it?.type || "unknown");
+      const category = normalizeCategory(rawType);
+
+      const b64 =
+        typeof it?.image_png_base64 === "string"
+          ? (it.image_png_base64.includes(",") ? it.image_png_base64.split(",")[1] : it.image_png_base64)
+          : "";
+
+      if (!b64) throw new Error(`Missing image_png_base64 at item ${idx}`);
+
+      const originalBuffer = Buffer.from(b64, "base64");
+      const optimizedBuffer = await optimizeTransparentImage(originalBuffer);
+
+      console.log("[confirm] uploading", {
+        idx,
+        category,
+        originalKB: Math.round(originalBuffer.length / 1024),
+        optimizedKB: Math.round(optimizedBuffer.length / 1024),
+      });
+
+      const folder = `wardrobe/${uid}/${category}`;
+      const { secure_url, public_id } = await uploadBufferToCloudinary(optimizedBuffer, folder);
+
+      return {
+        rawType,
+        category,
+        imageUrl: secure_url,
+        cloudinaryPublicId: public_id,
+      } satisfies PreparedUpload;
+    });
+
+    const db = admin.firestore();
+
+    // Limit Check
+    const userDocRef = db.collection("users").doc(uid);
+    const userDoc = await userDocRef.get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+    const isVIP = !!userData?.isVIP;
+    const currentQuantity = typeof userData?.itemQuantity === "number" ? userData.itemQuantity : 0;
+    const limit = isVIP ? 30 : 15;
+
+    if (currentQuantity + items.length > limit) {
+      return NextResponse.json(
+        { ok: false, message: `Vượt quá giới hạn lưu trữ. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} tối đa được lưu ${limit} món đồ.` },
+        { status: 400 }
+      );
+    }
+
+    const batch = db.batch();
+    const saved: any[] = [];
+
+    for (const up of prepared) {
+      const docRef = db.collection("wardrobeItems").doc();
+      const doc = {
+        uid,
+        category: up.category,
+        rawType: up.rawType,
+        imageUrl: up.imageUrl,
+        cloudinaryPublicId: up.cloudinaryPublicId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: "sam+label",
+      };
+
+      batch.set(docRef, doc);
+      saved.push({
+        id: docRef.id,
+        ...doc,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Increment itemQuantity
+    batch.update(userDocRef, {
+      itemQuantity: admin.firestore.FieldValue.increment(saved.length)
+    });
+
+    await withTimeout(batch.commit(), 15000, "Firestore batch commit timeout");
+
+    return NextResponse.json({ ok: true, items: saved, count: saved.length });
+  } catch (e: any) {
+    console.error("[confirm] failed:", {
+      message: e?.message,
+      name: e?.name,
+      http_code: e?.http_code,
+      stack: e?.stack,
+    });
+
+    return NextResponse.json(
+      { ok: false, message: e?.message || "Confirm failed" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/wardrobe/list/route.ts
+```text
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1];
+}
+
+export async function GET(req: Request) {
+  try {
+    const admin = getAdmin();
+    const token = getBearerToken(req);
+    if (!token) return NextResponse.json({ ok: false, message: "Missing token" }, { status: 401 });
+
+    const { uid } = await admin.auth().verifyIdToken(token);
+
+    const snap = await admin
+      .firestore()
+      .collection("wardrobeItems")
+      .where("uid", "==", uid)
+      .get();
+
+    const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return NextResponse.json({ ok: true, items });
+  } catch (e: any) {
+    console.error(e);
+    return NextResponse.json({ ok: false, message: e?.message || "List failed" }, { status: 500 });
+  }
+}
+
+```
+
+
+---
+# src/app/api/wardrobe/upload/route.ts
+```text
+// src/app/api/wardrobe/upload/route.ts
+import { NextResponse } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import { labelWardrobeItemSimpleFromPngBase64 } from "@/lib/ai/labelItem";
+
+export const runtime = "nodejs";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
+});
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1];
+}
+
+function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
+  return new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: "image", format: "png" },
+      (err, result) => {
+        if (err || !result) return reject(err);
+        resolve({ secure_url: result.secure_url!, public_id: result.public_id! });
+      }
+    );
+    stream.end(buffer);
+  });
+}
+
+type AIItem = { type: string; image_png_base64: string; meta?: any };
+type AIResponse = { ok: boolean; items: AIItem[]; message?: string };
+
+export async function POST(req: Request) {
+  try {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return NextResponse.json({ ok: false, message: "Missing Cloudinary env vars" }, { status: 500 });
+    }
+
+    const admin = getAdmin();
+
+    const token = getBearerToken(req);
+    if (!token) return NextResponse.json({ ok: false, message: "Missing Authorization token" }, { status: 401 });
+
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+
+    const form = await req.formData();
+    const file = form.get("file") as File | null;
+    if (!file) return NextResponse.json({ ok: false, message: "Missing file" }, { status: 400 });
+    if (!file.type?.startsWith("image/")) {
+      return NextResponse.json({ ok: false, message: "Only image files are allowed" }, { status: 400 });
+    }
+    const MAX = 8 * 1024 * 1024;
+    if (file.size > MAX) return NextResponse.json({ ok: false, message: "File too large (max 8MB)" }, { status: 400 });
+
+    // 1) Cutout
+    const aiForm = new FormData();
+    aiForm.append("file", file, file.name);
+
+    const aiRes = await fetch(`${AI_SERVICE_URL}/parse`, { method: "POST", body: aiForm });
+
+    if (!aiRes.ok) {
+      const t = await aiRes.text().catch(() => "");
+      return NextResponse.json({ ok: false, message: "AI service failed", detail: t.slice(0, 600) }, { status: 502 });
+    }
+
+    const aiJson = (await aiRes.json()) as AIResponse;
+    if (!aiJson.ok || !Array.isArray(aiJson.items)) {
+      return NextResponse.json({ ok: false, message: aiJson.message || "AI returned invalid response" }, { status: 502 });
+    }
+
+    if (aiJson.items.length === 0) {
+      return NextResponse.json({ ok: true, items: [], message: "No items detected" });
+    }
+
+    // 2) Upload to Cloudinary + save Firestore (with label)
+    const db = admin.firestore();
+    const batch = db.batch();
+
+    const savedItems: any[] = [];
+    const baseFolder = `wardrobe/${uid}`;
+
+    for (const it of aiJson.items) {
+      const rawType = it.type || "unknown";
+      const pngB64 = it.image_png_base64;
+      const pngBuffer = Buffer.from(pngB64, "base64");
+
+      // label best-effort (local model; no OPENAI key needed)
+      let label: any = null;
+      try {
+        label = await labelWardrobeItemSimpleFromPngBase64(pngB64);
+      } catch {
+        label = null;
+      }
+
+      const category = label?.category || rawType || "Khác";
+      const color = label?.color || "Không rõ";
+
+      const folder = `${baseFolder}/${category}`;
+      const { secure_url, public_id } = await uploadBufferToCloudinary(pngBuffer, folder);
+
+      const docRef = db.collection("wardrobeItems").doc();
+      const doc = {
+        uid,
+        imageUrl: secure_url,
+        cloudinaryPublicId: public_id,
+
+        // ✅ label fields
+        category,
+        color,
+        itemName: label?.itemName || null,
+        confidence: typeof label?.confidence === "number" ? label.confidence : null,
+
+        // ✅ debug fields
+        rawType,
+        aiMeta: it.meta ?? null,
+
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: "ai-service",
+      };
+
+      batch.set(docRef, doc);
+      savedItems.push({ id: docRef.id, ...doc, createdAt: new Date().toISOString() });
+    }
+
+    await batch.commit();
+
+    return NextResponse.json({ ok: true, items: savedItems, count: savedItems.length });
+  } catch (err: any) {
+    console.error(err);
+    return NextResponse.json({ ok: false, message: err?.message || "Upload failed" }, { status: 500 });
+  }
+}
+```
+
+
+---
+# src/app/api/wardrobe/label-item/route.ts
+```text
+// src/app/api/wardrobe/label-item/route.ts
+import { NextResponse } from "next/server";
+import { labelWardrobeItemSimpleFromPngBase64 } from "@/lib/ai/labelItem";
+
+export const runtime = "nodejs";
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({} as any));
+
+    const pngBase64 =
+      body?.pngBase64 ||
+      body?.image_png_base64 ||
+      body?.imageBase64 ||
+      body?.image ||
+      "";
+
+    if (!pngBase64 || typeof pngBase64 !== "string") {
+      return NextResponse.json({ ok: false, message: "Missing pngBase64" }, { status: 400 });
+    }
+
+    const label = await labelWardrobeItemSimpleFromPngBase64(pngBase64, {
+      categoryHint: body?.hintCategory,
+      confidenceHint: body?.hintConfidence ?? null,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      label: {
+        category: label.category,
+        confidence: label.confidence ?? null,
+      },
+    });
+  } catch (e: any) {
+    console.error(e);
+    return NextResponse.json({ ok: false, message: e?.message || "Label failed" }, { status: 500 });
+  }
+}
+```
+
+
+---
+# src/app/api/auth/forgot-password/reset/route.ts
+```text
+import { NextResponse } from "next/server";
+import { createHash } from "crypto";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+function hashCode(code: string) {
+  return createHash("sha256").update(code).digest("hex");
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    const username = (body?.username || "").trim().toLowerCase();
+    const code = (body?.code || "").trim();
+    const newPassword = body?.newPassword || "";
+
+    if (!/^[a-z0-9_-]{3,32}$/.test(username)) {
+      return NextResponse.json(
+        { error: "Tên đăng nhập không hợp lệ." },
+        { status: 400 }
+      );
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      return NextResponse.json(
+        { error: "Mã xác nhận phải gồm 6 chữ số." },
+        { status: 400 }
+      );
+    }
+
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
+      return NextResponse.json(
+        { error: "Mật khẩu mới phải có ít nhất 6 ký tự." },
+        { status: 400 }
+      );
+    }
+
+    const admin = getAdmin();
+    const db = admin.firestore();
+    const resetRef = db.collection("passwordResetCodes").doc(username);
+    const resetSnap = await resetRef.get();
+
+    if (!resetSnap.exists) {
+      return NextResponse.json(
+        { error: "Không tìm thấy yêu cầu đặt lại mật khẩu. Hãy gửi mã lại." },
+        { status: 400 }
+      );
+    }
+
+    const data = resetSnap.data() || {};
+    const uid = typeof data.uid === "string" ? data.uid : "";
+    const codeHash = typeof data.codeHash === "string" ? data.codeHash : "";
+    const attempts = typeof data.attempts === "number" ? data.attempts : 0;
+    const expiresAt = data.expiresAt;
+
+    if (!uid || !codeHash || !expiresAt?.toMillis) {
+      await resetRef.delete().catch(() => undefined);
+      return NextResponse.json(
+        { error: "Yêu cầu đặt lại mật khẩu không hợp lệ. Hãy gửi mã lại." },
+        { status: 400 }
+      );
+    }
+
+    if (Date.now() > expiresAt.toMillis()) {
+      await resetRef.delete().catch(() => undefined);
+      return NextResponse.json(
+        { error: "Mã xác nhận đã hết hạn. Hãy gửi mã mới." },
+        { status: 400 }
+      );
+    }
+
+    if (attempts >= 5) {
+      await resetRef.delete().catch(() => undefined);
+      return NextResponse.json(
+        { error: "Bạn đã nhập sai quá nhiều lần. Hãy gửi mã mới." },
+        { status: 400 }
+      );
+    }
+
+    if (hashCode(code) !== codeHash) {
+      await resetRef.update({
+        attempts: attempts + 1,
+      });
+
+      return NextResponse.json(
+        { error: "Mã xác nhận không đúng." },
+        { status: 400 }
+      );
+    }
+
+    await admin.auth().updateUser(uid, {
+      password: newPassword,
+    });
+
+    await resetRef.delete().catch(() => undefined);
+
+    return NextResponse.json({
+      ok: true,
+      message: "Đặt lại mật khẩu thành công.",
+    });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Lỗi máy chủ khi đặt lại mật khẩu." },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/auth/forgot-password/send-code/route.ts
+```text
+import { NextResponse } from "next/server";
+import { createHash, randomInt } from "crypto";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import { sendPasswordResetCodeEmail } from "@/lib/mailer";
+
+export const runtime = "nodejs";
+
+function hashCode(code: string) {
+  return createHash("sha256").update(code).digest("hex");
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const username = (body?.username || "").trim().toLowerCase();
+
+    if (!/^[a-z0-9_-]{3,32}$/.test(username)) {
+      return NextResponse.json(
+        { error: "Tên đăng nhập không hợp lệ." },
+        { status: 400 }
+      );
+    }
+
+    const admin = getAdmin();
+    const db = admin.firestore();
+
+    const resetRef = db.collection("passwordResetCodes").doc(username);
+    const existingSnap = await resetRef.get();
+
+    if (existingSnap.exists) {
+      const lastSentAt = existingSnap.get("lastSentAt");
+      if (lastSentAt?.toMillis && Date.now() - lastSentAt.toMillis() < 60_000) {
+        return NextResponse.json(
+          { error: "Vui lòng chờ 60 giây trước khi gửi lại mã." },
+          { status: 429 }
+        );
+      }
+    }
+
+    const usernameSnap = await db.collection("usernames").doc(username).get();
+
+    const genericOk = NextResponse.json({
+      ok: true,
+      message:
+        "Nếu tài khoản tồn tại và đã có email đăng ký, mã xác nhận đã được gửi.",
+    });
+
+    if (!usernameSnap.exists) {
+      return genericOk;
+    }
+
+    const data = usernameSnap.data() || {};
+    const uid = typeof data.uid === "string" ? data.uid : "";
+    let email =
+      typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+
+    if (!uid) {
+      return genericOk;
+    }
+
+    try {
+      const userRecord = await admin.auth().getUser(uid);
+      if (userRecord.email) {
+        email = userRecord.email.trim().toLowerCase();
+      }
+    } catch (err) {
+      console.error("getUser(uid) failed:", err);
+    }
+
+    if (!email) {
+      return genericOk;
+    }
+
+    const code = String(randomInt(100000, 1000000));
+    const codeHash = hashCode(code);
+    const expiresAt = admin.firestore.Timestamp.fromMillis(
+      Date.now() + 10 * 60 * 1000
+    );
+
+    await resetRef.set(
+      {
+        uid,
+        email,
+        codeHash,
+        attempts: 0,
+        expiresAt,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    try {
+      await sendPasswordResetCodeEmail(email, code);
+    } catch (mailErr: unknown) {
+      console.error("Send mail error:", {
+        message: mailErr instanceof Error ? mailErr.message : String(mailErr),
+        name: mailErr instanceof Error ? mailErr.name : "UnknownError",
+      });
+
+      await resetRef.delete().catch(() => undefined);
+
+      return NextResponse.json(
+        { error: "Không gửi được email xác nhận." },
+        { status: 500 }
+      );
+    }
+
+    return genericOk;
+  } catch (err) {
+    console.error("Forgot password send-code fatal error:", err);
+    return NextResponse.json(
+      { error: "Lỗi máy chủ khi gửi mã xác nhận." },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/auth/sync-email/route.ts
+```text
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const header = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || "";
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isLegacyLocalEmail(email?: string | null) {
+  return typeof email === "string" && email.trim().toLowerCase().endsWith("@adw.local");
+}
+
+export async function POST(req: Request) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing Authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const admin = getAdmin();
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+    const currentAuthEmail = typeof decoded.email === "string" ? decoded.email.trim().toLowerCase() : "";
+
+    if (!uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isLegacyLocalEmail(currentAuthEmail)) {
+      return NextResponse.json({ ok: true, synced: false, reason: "not-legacy" });
+    }
+
+    const userDoc = await admin.firestore().collection("users").doc(uid).get();
+    if (!userDoc.exists) {
+      return NextResponse.json(
+        { error: "Không tìm thấy hồ sơ người dùng." },
+        { status: 404 }
+      );
+    }
+
+    const profile = userDoc.data() || {};
+    const nextEmail =
+      typeof profile.email === "string" ? profile.email.trim().toLowerCase() : "";
+    const nextDisplayName =
+      typeof profile.displayName === "string" ? profile.displayName.trim() : "";
+
+    if (!isValidEmail(nextEmail)) {
+      return NextResponse.json(
+        { error: "Email trong hồ sơ người dùng không hợp lệ." },
+        { status: 400 }
+      );
+    }
+
+    await admin.auth().updateUser(uid, {
+      email: nextEmail,
+      ...(nextDisplayName ? { displayName: nextDisplayName } : {}),
+    });
+
+    return NextResponse.json({ ok: true, synced: true, email: nextEmail });
+  } catch (err: unknown) {
+    const code =
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      typeof (err as { code?: unknown }).code === "string"
+        ? (err as { code: string }).code
+        : "";
+    if (code === "auth/email-already-exists") {
+      return NextResponse.json(
+        { error: "Email thật này đã được dùng cho tài khoản khác." },
+        { status: 409 }
+      );
+    }
+
+    console.error("Sync auth email error:", err);
+    return NextResponse.json(
+      { error: "Không thể đồng bộ email tài khoản." },
+      { status: 500 }
+    );
+  }
+}
+
+```
+
+
+---
+# src/app/api/outfit-suggest/route.ts
+```text
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import { generateVisualGemini } from "@/lib/llm/geminiVisual";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getUserProfile, type UserProfile } from "@/lib/profile";
+
+export const runtime = "nodejs";
+
+interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}
+
+// helper that streams newline-delimited JSON pieces to the client
+function sendStep(controller: ReadableStreamDefaultController, obj: any) {
+  const encoder = new TextEncoder();
+  controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+}
+
+export async function POST(req: Request) {
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const admin = getAdmin();
+        const adminDb = admin.firestore();
+        const body = await req.json();
+
+        const message: string = String(body?.message ?? "").trim();
+        const selectedItemIds: string[] = Array.isArray(body?.selectedItemIds) ? body.selectedItemIds : [];
+        const rawHistory = Array.isArray(body?.history) ? body.history : [];
+        const uid = String(body?.idUser ?? "").trim();
+
+        if (!message) {
+          sendStep(controller, { ok: false, message: "Empty message" });
+          controller.close();
+          return;
+        }
+
+        sendStep(controller, { stage: "thinking" });
+
+        const userDoc = await adminDb.collection("users").doc(uid).get();
+        const userProfile = userDoc.exists ? (userDoc.data() as UserProfile) : null;
+
+        const systemPrompt = `
+      Bạn là chuyên viên thời trang của AI-DIGITAL-WARDROBE.
+      - Nếu tin nhắn yêu cầu phối đồ/outfit cho dịp/thời tiết/style/điểm đến cụ thể: TRẢ LỜI DUY NHẤT CHỮ 'EVENT'.
+      - Nếu là chào hỏi/tư vấn chung: Trả lời thân thiện.
+      - Nếu người dùng yêu cầu tạo/gợi ý outfit mà không cung cấp đủ thông tin về dịp/thời tiết/style/điểm đến, hãy hỏi lại để lấy thêm thông tin.
+      - Luôn ưu tiên hiểu ý định của người dùng dựa trên nội dung tin nhắn, không chỉ dựa vào từ khóa đơn lẻ.
+      - Nếu người dùng cần tư vấn về thời trang thì tư vấn thân thiện.
+      Ví dụ:
+      + "Tôi muốn một outfit cho buổi hẹn hò tối nay ở nhà hàng sang trọng" => "EVENT"
+      + "Tôi nên mặc gì hôm nay?" => "hỏi thêm về sự kiện/thời tiết/điểm đến cụ thể"
+      + "Tôi muốn phối đồ đi biển" => "EVENT"
+      + "Xin chào, bạn có thể giúp tôi phối đồ không?" => Trả lời thân thiện, không phải "EVENT"
+      + "đi biển" => "EVENT"
+      + "đi chợ nên chọn phong cách nào?" => trả lời thân thiện, tư vấn cho người dùng, không phải "EVENT"
+      + "đi/tham gia  điểm đến/sự kiện nên mặc ... hay ... ? " => tư vấn thân thiện, không phải "EVENT"
+      + "Gợi ý outfit đi học (gọn gàng, dễ thương)" => "EVENT"
+
+      Thông tin vóc dáng người dùng: ${JSON.stringify(userProfile || "Chưa có")}.
+    `.trim();
+
+        let historyForAI = rawHistory
+          .map((msg: any) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: String(msg.content || "") }],
+          })) as any[];
+
+        if (historyForAI.length > 0 && historyForAI[0].role === 'model') {
+          historyForAI.shift();
+        }
+
+        const geminiKeys = [
+          process.env.GEMINI_API_KEY_KT!,
+          process.env.GEMINI_API_KEY!,
+        ].filter(Boolean);
+
+        let aiText = "";
+        let lastError: any = null;
+
+        for (const apiKey of geminiKeys) {
+          try {
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({
+              model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
+              systemInstruction: systemPrompt,
+            });
+            const chat = model.startChat({ history: historyForAI });
+            const result = await chat.sendMessage(message);
+            aiText = result.response.text();
+            lastError = null;
+            break;
+          } catch (err: any) {
+            lastError = err;
+            console.warn("Gemini API key failed, trying next:", err.message?.slice(0, 120));
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+
+        if (lastError) {
+          throw lastError;
+        }
+
+        const isEvent = aiText === "EVENT";
+
+        if (isEvent) {
+          // --- VIP & QUOTA CHECK ---
+          const isVIP = !!userProfile?.isVIP;
+          const limit = isVIP ? 5 : 1;
+          const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+          
+          let currentGenerations = userProfile?.outfitGenerationsToday || 0;
+          let lastGenerationDate = userProfile?.outfitGenerationDate || "";
+
+          // Reset quota if a new day
+          if (lastGenerationDate !== today) {
+            currentGenerations = 0;
+            lastGenerationDate = today;
+          }
+
+          if (currentGenerations >= limit) {
+             sendStep(controller, { 
+               ok: false, 
+               message: `Bạn đã sử dụng hết lượt gợi ý trang phục hôm nay. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} có tối đa ${limit} lượt/ngày.` 
+             });
+             controller.close();
+             return;
+          }
+          // --------------------------------
+
+          let items: any[] = [];
+          if (selectedItemIds.length === 0) {
+            const snap = await adminDb.collection("wardrobeItems")
+              .where("uid", "==", uid)
+              .get();
+            items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          } else {
+            const docRefs = selectedItemIds.map(id => adminDb.collection("wardrobeItems").doc(id));
+            const docs = await adminDb.getAll(...docRefs);
+            items = docs.filter((d) => d.exists).map((d) => ({ id: d.id, ...d.data() }));
+          }
+
+          if (items.length === 0) {
+            sendStep(controller, { ok: false, message: "Bạn chưa có đồ trong tủ đồ. Vui lòng thêm đồ vào tủ đồ trước khi yêu cầu gợi ý outfit." });
+            controller.close();
+            return;
+          }
+
+          const hasTop = items.some(item => item.category === "Áo");
+          const hasBottom = items.some(item => item.category === "Quần");
+
+          if (!hasTop || !hasBottom) {
+            sendStep(controller, { ok: false, message: "Bạn cần có ít nhất 1 áo và 1 quần trong tủ đồ để tạo outfit." });
+            controller.close();
+            return;
+          }
+
+          if (items.length > 20) {
+            console.log(`Too many items (${items.length}), limiting to 20 for performance.`);
+            items = items.slice(0, 20);
+          }
+
+          console.time("download_images");
+          const validImages = (await Promise.all(items.map(async (it: any) => {
+            try {
+              const r = await fetch(it.imageUrl);
+              if (!r.ok) return null;
+              const buf = await r.arrayBuffer();
+              return { id: it.id, url: it.imageUrl, png_base64: Buffer.from(buf).toString("base64") };
+            } catch (e) { return null; }
+          }))).filter((img): img is { id: string; url: string; png_base64: string } => img !== null);
+          console.timeEnd("download_images");
+
+          if (validImages.length === 0) {
+            sendStep(controller, { ok: false, message: "Không thể tải được hình ảnh từ tủ đồ của bạn." });
+            controller.close();
+            return;
+          }
+
+          sendStep(controller, { stage: "analyzing_clothes" });
+          console.time("gemini_visual");
+          const out = await generateVisualGemini({
+            userMessage: message,
+            profile: userProfile,
+            images: validImages,
+          });
+          console.timeEnd("gemini_visual");
+
+          sendStep(controller, { stage: "generating_outfit" });
+          console.log("Generating image with Gemini Imagen for:", out.outfit);
+          console.time("imagen_gen");
+
+          let imageUrl = "";
+          try {
+            const { GoogleGenAI } = await import("@google/genai");
+            const imagenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+
+            const imagenResponse = await imagenAI.models.generateImages({
+              model: "imagen-3.0-generate-002",
+              prompt: out.imagen_prompt,
+              config: { numberOfImages: 1 },
+            });
+
+            const imgData = imagenResponse.generatedImages?.[0]?.image?.imageBytes;
+            if (imgData) {
+              const { v2: cloudinary } = await import("cloudinary");
+              cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET,
+              });
+
+              const uploadResult: any = await new Promise((resolve, reject) => {
+                cloudinary.uploader.upload(
+                  `data:image/png;base64,${imgData}`,
+                  { folder: "outfit-suggestions", format: "webp", quality: "auto" },
+                  (err: any, result: any) => (err ? reject(err) : resolve(result))
+                );
+              });
+              imageUrl = uploadResult?.secure_url || "";
+              console.log("Imagen + Cloudinary OK, url:", imageUrl);
+            }
+          } catch (imgErr: any) {
+            console.error("Imagen Error (Fallback to text):", imgErr.message || imgErr);
+          }
+          console.timeEnd("imagen_gen");
+
+          // --- UPDATE USER QUOTA ---
+          await adminDb.collection("users").doc(uid).update({
+            outfitGenerationsToday: currentGenerations + 1,
+            outfitGenerationDate: lastGenerationDate
+          });
+          // --------------------------------
+
+          sendStep(controller, {
+            ok: true,
+            reply: {
+              note: out.note,
+              outfit: out.outfit,
+              images: imageUrl ? [{ url: imageUrl }] : [],
+              stage: "outfit_generated",
+            },
+          });
+        } else {
+          sendStep(controller, {
+            ok: true,
+            reply: {
+              note: aiText,
+              intent: "CHAT",
+              stage: "chat_only",
+            },
+          });
+        }
+
+        controller.close();
+      } catch (e: any) {
+        console.error("API Route Error:", e);
+        let statusCode = 500;
+        let errorMessage = "Server error";
+        if (e?.message?.includes("503") || e?.code === 503) {
+          statusCode = 503;
+          errorMessage = "Service Unavailable";
+        } else if (e?.message?.includes("quota") || e?.message?.includes("429") || e?.message?.includes("rate limit")) {
+          statusCode = 429;
+          errorMessage = "Quota Exceeded";
+        }
+        sendStep(controller, { ok: false, message: errorMessage });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, { headers: { "Content-Type": "application/json; charset=utf-8" } });
+}
+```
+
+
+---
+# src/app/services/page.tsx
+```text
+import Header from "@/components/Header";
+import Link from "next/link";
+
+export default function Services() {
+    return (
+        <main>
+            <Header />
+            <div className="wrap">
+                <section className="text-center py-10   ">
+                    <h1 className="text-5xl font-bold grad-text mb-4">
+                        Gói Dịch Vụ
+                    </h1>
+                    <p className="text-xl text-gray-300 mb-12">
+                        Chọn gói dịch vụ phù hợp nhất với nhu cầu quản lý tủ đồ của bạn
+                    </p>
+
+                    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        {/* Tài khoản thường */}
+                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-3xl p-8 flex flex-col text-left shadow-lg">
+                            <h2 className="text-2xl font-bold text-white mb-2">Tài khoản Thường</h2>
+                            <div className="text-4xl font-bold text-white mb-6">Miễn phí</div>
+                            <p className="text-gray-300 mb-8 flex-1">
+                                Trải nghiệm các tính năng cơ bản của AI Digital Wardrobe để bắt đầu hành trình quản lý thời trang cá nhân.
+                            </p>
+
+                            <ul className="space-y-4 mb-8">
+                                <li className="flex items-start text-gray-300">
+                                    <svg className="w-6 h-6 text-green-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Lưu trữ tối đa 15 món đồ
+                                </li>
+                                <li className="flex items-start text-gray-300">
+                                    <svg className="w-6 h-6 text-green-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Phân loại đồ bằng AI (cơ bản)
+                                </li>
+                                <li className="flex items-start text-gray-300">
+                                    <svg className="w-6 h-6 text-green-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Số lượt gợi ý trang phục: 1 lần/ ngày
+                                </li>
+                            </ul>
+
+                            <Link href="/auth/register" className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
+                                Đăng ký ngay
+                            </Link>
+                        </div>
+
+                        {/* Tài khoản VIP */}
+                        <div className="relative bg-gradient-to-b from-blue-900/40 to-pink-900/20 border border-blue-500/30 backdrop-blur-lg hover:border-blue-400/50 transition-all rounded-3xl p-8 flex flex-col text-left shadow-[0_0_40px_rgba(59,130,246,0.15)] transform md:-translate-y-4">
+                            <div className="absolute top-0 right-8 transform -translate-y-1/2">
+                                <span className="bg-gradient-to-r from-blue-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                                    Phổ biến nhất
+                                </span>
+                            </div>
+
+                            <h2 className="text-2xl font-bold text-white mb-2">Tài khoản VIP</h2>
+                            <div className="flex items-baseline mb-6">
+                                <span className="text-4xl font-bold grad-text">25.000đ</span>
+                                <span className="text-gray-400 ml-2">/ tháng</span>
+                            </div>
+                            <p className="text-gray-300 mb-8 flex-1">
+                                Mở khóa sức mạnh tối đa của AI với không gian mở rộng và gợi ý chuyên sâu.
+                            </p>
+
+                            <ul className="space-y-4 mb-8">
+                                <li className="flex items-start text-white/90">
+                                    <svg className="w-6 h-6 text-pink-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Lưu trữ lên tới 30 món đồ
+                                </li>
+                                <li className="flex items-start text-white/90">
+                                    <svg className="w-6 h-6 text-pink-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Phân tích phong cách nâng cao
+                                </li>
+                                <li className="flex items-start text-white/90">
+                                    <svg className="w-6 h-6 text-pink-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Gợi ý trang phục ấn tượng với stylist được nâng cấp
+                                </li>
+                                <li className="flex items-start text-white/90">
+                                    <svg className="w-6 h-6 text-pink-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Số lượt gợi ý trang phục: 5 lần/ ngày
+                                </li>
+                            </ul>
+
+                            <button className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl">
+                                Nâng cấp VIP
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    );
+}
+
+```
+
+
+---
+# src/app/onboarding/page.tsx
+```text
+"use client";
+
+import { useAuth } from "@/lib/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getUserAccount,
+  getUserProfile,
+  type UserAccount,
+  upsertUserProfile,
+} from "@/lib/profile";
+
+function emailPrefix(email?: string | null) {
+  return (email || "").split("@")[0] || "";
+}
+
+type Gender = "male" | "female";
+
+function MetricCard({
+  code,
+  title,
+  range,
+  unit,
+  value,
+  onChange,
+  required,
+}: {
+  code: string;
+  title: string;
+  range: string;
+  unit: string;
+  value: number | "";
+  onChange: (v: number | "") => void;
+  required?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
+      <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
+        <div className="pointer-events-none absolute -inset-24 opacity-40 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.35),transparent_60%)]" />
+
+        <div className="relative flex items-start justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-2">
+              <span className="text-[11px] tracking-[0.22em] text-white/55">{code}</span>
+              {required ? (
+                <span className="text-[11px] text-white/70 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
+                  REQUIRED
+                </span>
+              ) : (
+                <span className="text-[11px] text-white/55 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
+                  OPTIONAL
+                </span>
+              )}
+            </div>
+            <div className="mt-2 text-white/90 font-semibold">{title}</div>
+          </div>
+
+          <div className="text-[11px] text-white/50 px-2 py-1 rounded-full border border-white/10 bg-white/5">
+            {range}
+          </div>
+        </div>
+
+        <div className="relative mt-4 flex items-end gap-3">
+          <input
+            className="cy-num w-full bg-transparent outline-none border-0 text-[40px] leading-none font-semibold text-white tracking-wide tabular-nums
+                       focus:drop-shadow-[0_0_16px_rgba(56,189,248,.35)]"
+            type="number"
+            inputMode="numeric"
+            value={value}
+            onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+          />
+          <span className="mb-[6px] text-xs font-semibold text-white/70 px-3 py-1 rounded-full border border-white/10 bg-white/5">
+            {unit}
+          </span>
+        </div>
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-2xl opacity-70
+          [background:
+          linear-gradient(to_right,rgba(34,211,238,.55),transparent_35%)_top_left/28px_1px_no-repeat,
+          linear-gradient(to_bottom,rgba(34,211,238,.55),transparent_35%)_top_left/1px_28px_no-repeat,
+          linear-gradient(to_left,rgba(168,85,247,.55),transparent_35%)_top_right/28px_1px_no-repeat,
+          linear-gradient(to_bottom,rgba(168,85,247,.55),transparent_35%)_top_right/1px_28px_no-repeat,
+          linear-gradient(to_right,rgba(34,211,238,.28),transparent_35%)_bottom_left/28px_1px_no-repeat,
+          linear-gradient(to_top,rgba(34,211,238,.28),transparent_35%)_bottom_left/1px_28px_no-repeat,
+          linear-gradient(to_left,rgba(236,72,153,.28),transparent_35%)_bottom_right/28px_1px_no-repeat,
+          linear-gradient(to_top,rgba(236,72,153,.28),transparent_35%)_bottom_right/1px_28px_no-repeat]"
+        />
+      </div>
+    </div>
+  );
+}
+
+function GenderToggle({
+  value,
+  onChange,
+}: {
+  value: Gender;
+  onChange: (v: Gender) => void;
+}) {
+  return (
+    <div className="max-w-md mt-15">
+      <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
+        <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
+          <div className="pointer-events-none absolute -inset-24 opacity-30 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.30),transparent_60%)]" />
+
+          <div className="relative flex items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2">
+                <span className="text-[11px] tracking-[0.22em] text-white/55">GENDER</span>
+                <span className="text-[11px] text-white/70 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
+                  REQUIRED
+                </span>
+              </div>
+              <div className="mt-2 text-white/90 font-semibold">Giới tính</div>
+            </div>
+
+            <div className="text-[11px] text-white/50 px-2 py-1 rounded-full border border-white/10 bg-white/5">
+              select
+            </div>
+          </div>
+
+          <div className="relative mt-4">
+            <div className="inline-flex w-full rounded-xl border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => onChange("male")}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === "male"
+                  ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
+                  : "text-white/60 hover:text-white/80"
+                  }`}
+              >
+                Nam
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChange("female")}
+                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === "female"
+                  ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
+                  : "text-white/60 hover:text-white/80"
+                  }`}
+              >
+                Nữ
+              </button>
+            </div>
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-2xl opacity-70
+            [background:
+            linear-gradient(to_right,rgba(34,211,238,.55),transparent_35%)_top_left/28px_1px_no-repeat,
+            linear-gradient(to_bottom,rgba(34,211,238,.55),transparent_35%)_top_left/1px_28px_no-repeat,
+            linear-gradient(to_left,rgba(168,85,247,.55),transparent_35%)_top_right/28px_1px_no-repeat,
+            linear-gradient(to_bottom,rgba(168,85,247,.55),transparent_35%)_top_right/1px_28px_no-repeat]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function OnboardingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const [checking, setChecking] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [account, setAccount] = useState<UserAccount | null>(null);
+
+  const [gender, setGender] = useState<Gender>("male");
+  const [age, setAge] = useState<number>(18);
+  const [heightCm, setHeightCm] = useState<number>(165);
+  const [weightKg, setWeightKg] = useState<number>(55);
+
+  const [bustCm, setBustCm] = useState<number | "">("");
+  const [waistCm, setWaistCm] = useState<number | "">("");
+  const [hipCm, setHipCm] = useState<number | "">("");
+
+  useEffect(() => {
+    if (!loading && !user) {
+      console.log("dong 180");
+      router.replace("/");
+    }
+  }, [loading, user, router]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!user) return;
+
+      try {
+        const [accountDoc, p] = await Promise.all([
+          getUserAccount(user.uid),
+          getUserProfile(user.uid),
+        ]);
+
+        setAccount(accountDoc);
+
+        if (p) {
+          setGender(p.gender || "male");
+          setAge(p.age || 18);
+          setHeightCm(p.heightCm || 165);
+          setWeightKg(p.weightKg || 55);
+
+          if (p.bustCm) setBustCm(p.bustCm);
+          if (p.waistCm) setWaistCm(p.waistCm);
+          if (p.hipCm) setHipCm(p.hipCm);
+
+
+        }
+      } catch (e) {
+        console.error("Lỗi lấy profile:", e);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    if (!loading && user) run();
+  }, [loading, user]);
+
+  const uname = account?.username || emailPrefix(account?.email || user?.email);
+
+  const ready = useMemo(() => {
+    return age >= 10 && age <= 100 && heightCm >= 100 && heightCm <= 230 && weightKg >= 25 && weightKg <= 200;
+  }, [age, heightCm, weightKg]);
+
+  const validate = () => {
+    if (gender !== "male" && gender !== "female") return "Giới tính không hợp lệ.";
+    if (age < 10 || age > 100) return "Tuổi không hợp lệ.";
+    if (heightCm < 100 || heightCm > 230) return "Chiều cao không hợp lệ.";
+    if (weightKg < 25 || weightKg > 200) return "Cân nặng không hợp lệ.";
+    const nums = [bustCm, waistCm, hipCm].filter((x) => x !== "") as number[];
+    if (nums.some((n) => n < 30 || n > 200)) return "Số đo 3 vòng không hợp lệ.";
+    return null;
+  };
+
+  const onSave = async () => {
+    if (!user) return;
+    const err = validate();
+    if (err) return alert(err);
+
+    setSaving(true);
+    try {
+      await upsertUserProfile(user.uid, {
+        gender,
+        age,
+        heightCm,
+        weightKg,
+        bustCm: bustCm === "" ? 0 : bustCm,
+        waistCm: waistCm === "" ? 0 : waistCm,
+        hipCm: hipCm === "" ? 0 : hipCm,
+      });
+      router.replace("/dashboard");
+    } catch (e) {
+      console.error(e);
+      alert("Lưu thông tin thất bại.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || checking) return <div className="p-6 text-white/70">Loading...</div>;
+  if (!user) return null;
+
+  return (
+    <div className="min-h-screen relative text-white overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#0b1020] via-[#0a0f18] to-[#12061a]" />
+      <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,.25),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_85%_30%,rgba(168,85,247,.22),transparent_60%)]" />
+      <div className="absolute inset-0 -z-10 opacity-50 bg-[radial-gradient(circle_at_60%_85%,rgba(236,72,153,.16),transparent_60%)]" />
+      <div className="absolute inset-0 -z-10 opacity-[0.10] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
+
+      <header className="mx-auto w-full max-w-6xl px-6 pt-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-semibold leading-tight">
+              <span className="bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
+                AI Digital Wardrobe
+              </span>
+              <div className="mt-1 text-white/80 text-lg md:text-xl font-medium">
+                {checking ? "Loading..." : (age ? "Update Profile" : "Profile Init Console")}
+              </div>
+            </h1>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/55">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,.8)]" />
+                Secure session
+              </span>
+
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                UID: {user.uid.slice(0, 6)}…{user.uid.slice(-4)}
+              </span>
+
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${ready
+                  ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"
+                  : "border-amber-300/20 bg-amber-400/10 text-amber-200"
+                  }`}
+              >
+                {ready ? "READY" : "CHECK"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex flex-col items-end">
+              <div className="text-white/90 font-semibold">
+                Xin chào {account?.displayName || user.displayName || uname}
+              </div>
+              <div className="text-white/50 text-sm">@{uname}</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl px-6 pt-8 pb-10">
+        <div className="cy-hud-panel rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,.45)] overflow-hidden">
+          <div className="px-7 py-6 border-b border-white/10">
+            <div className="inline-flex items-center gap-2 text-xs tracking-[0.18em] text-white/60">
+              SYSTEM / PROFILE
+              <span className="px-2 py-[2px] rounded-full border border-white/10 bg-white/5 text-[11px] tracking-normal">
+                CORE REQUIRED
+              </span>
+            </div>
+            <div className="mt-3 text-2xl md:text-3xl font-semibold text-white">Nhập tất cả thông tin của bạn vào đây</div>
+
+          </div>
+
+          <div className="px-7">
+            <div className="mb-4">
+              <GenderToggle value={gender} onChange={setGender} />
+            </div>
+
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+              <MetricCard
+                code="AGE"
+                title="Tuổi"
+                range="10–100"
+                unit="years"
+                value={age}
+                onChange={(v) => setAge(v === "" ? 18 : v)}
+                required
+              />
+              <MetricCard
+                code="HEIGHT"
+                title="Chiều cao"
+                range="100–230"
+                unit="cm"
+                value={heightCm}
+                onChange={(v) => setHeightCm(v === "" ? 165 : v)}
+                required
+              />
+              <MetricCard
+                code="WEIGHT"
+                title="Cân nặng"
+                range="25–200"
+                unit="kg"
+                value={weightKg}
+                onChange={(v) => setWeightKg(v === "" ? 55 : v)}
+                required
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((s) => !s)}
+              className="mt-5 w-full flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 font-semibold hover:bg-white/10 transition"
+            >
+              <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,.7)]" />
+              Measurements (tuỳ chọn) • Mở số đo 3 vòng
+              <span className="ml-auto text-white/50">{advancedOpen ? "▾" : "▸"}</span>
+            </button>
+
+            {advancedOpen ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <MetricCard code="BUST" title="Vòng 1" range="30–200" unit="cm" value={bustCm} onChange={setBustCm} />
+                <MetricCard code="WAIST" title="Vòng 2" range="30–200" unit="cm" value={waistCm} onChange={setWaistCm} />
+                <MetricCard code="HIP" title="Vòng 3" range="30–200" unit="cm" value={hipCm} onChange={setHipCm} />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="sticky bottom-0 mt-6 border-t border-white/10 bg-[linear-gradient(to_top,rgba(9,12,20,.75),rgba(9,12,20,.25))] backdrop-blur-xl">
+            <div className="px-7 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+              <div className="text-xs text-white/55 leading-relaxed">
+                {ready ? (
+                  <span>
+                    <span className="text-emerald-200 font-semibold">OK</span> • Lưu lại để AI bắt đầu gợi ý outfit.
+                  </span>
+                ) : (
+                  <span>
+                    <span className="text-amber-200 font-semibold">Chưa đủ</span> • Hãy nhập core metrics hợp lệ để tiếp tục.
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={onSave}
+                disabled={saving || !ready}
+                className="relative w-full sm:w-auto rounded-2xl px-5 py-3 font-semibold
+                           border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20
+                           hover:border-cyan-300/40 hover:shadow-[0_18px_60px_rgba(0,0,0,.45)]
+                           transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {saving ? "Đang lưu..." : "Lưu & Tiếp tục"}
+              </button>
+            </div>
+          </div>
+
+          <div className="px-7 pb-6 pt-3 text-[11px] text-white/40">
+            Tip: mày có thể để Measurements trống để demo nhanh, vẫn đủ “cyber vibe”.
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+```
+
+
+---
+# src/components/ConfirmModal.tsx
+```text
+"use client";
+
+import React from "react";
+
+export default function ConfirmModal({
+    open,
+    title = "Xác nhận",
+    message,
+    onConfirm,
+    onCancel,
+    loading = false,
+}: {
+    open: boolean;
+    title?: string;
+    message: React.ReactNode;
+    onConfirm: () => void;
+    onCancel: () => void;
+    loading?: boolean;
+}) {
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+
+            <div className="relative max-w-lg w-full bg-[#121212] rounded-2xl shadow-2xl p-6 border border-white/10 m-4">
+                <h3 className="text-xl font-semibold mb-3 text-white/90">{title}</h3>
+                <div className="text-white/70 leading-relaxed mb-6">{message}</div>
+
+                <div className="flex justify-end gap-3 mt-2">
+                    <button
+                        onClick={onCancel}
+                        disabled={loading}
+                        className="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition disabled:opacity-50"
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="px-5 py-2.5 rounded-xl font-semibold bg-red-500/80 border border-red-500/50 text-white hover:bg-red-500 transition shadow-[0_0_15px_rgba(239,68,68,0.2)] disabled:opacity-50"
+                    >
+                        {loading ? "Đang xử lý..." : "Xác nhận"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+```
+
+
+---
+# src/components/Footer.tsx
+```text
+export default function Footer() {
+    return (
+        <footer className="bg-gray-800 text-white mt-auto py-6">
+            <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 ml-25">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">AI Digital Wardrobe</h3>
+                        <p className="text-gray-400">
+                            Nền tảng trợ lý thời trang thông minh
+                        </p>
+                    </div>
+                    <div className="pl-10">
+                        <h4 className="text-lg font-semibold mb-4">Liên kết</h4>
+                        <ul className="space-y-2 text-gray-400">
+                            <li>
+                                <a href="/dashboard" className="hover:text-white transition">
+                                    Bảng điều khiển
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/wardrobe" className="hover:text-white transition">
+                                    Tủ quần áo
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/outfit-suggest" className="hover:text-white transition">
+                                    Gợi ý trang phục
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="text-lg font-semibold mb-4">Theo dõi chúng tôi</h4>
+                        <ul className="space-y-2 text-gray-400">
+                            <li>
+                                <a href="https://www.facebook.com/acanhpham.2025/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+                                    Anh Phạm
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.facebook.com/katodeptraihathay" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+                                    Chí Thành
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div className="border-t border-gray-700 pt-8 text-center text-gray-400">
+                <p>
+                    &copy; {new Date().getFullYear()} AI Digital Wardrobe.
+                </p>
+            </div>
+
+        </footer >
+    );
+}
+
+```
+
+
+---
+# src/components/GoogleLoginButton.tsx
+```text
+"use client";
+
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
+import { FcGoogle } from "react-icons/fc";
+
+export default function GoogleLoginButton() {
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    if (!auth) {
+      alert("Firebase chưa được khởi tạo!");
+      return;
+    }
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    router.push("/dashboard");
+  };
+
+  return (
+    <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 border border-gray-300  bg-gray-700 py-1 px-3 hover:bg-gray-800 transition-all mb-2">
+      <FcGoogle className="text-2xl" />
+      <span className="text-white font-medium">Tiếp tục với Google</span>
+    </button>
+  );
+}
+
+```
+
+
+---
+# src/components/Header.tsx
+```text
+"use client";
+import Link from "next/link";
+import { useAuth } from "@/lib/AuthContext";
+import ProfileDrawer from "./ProfileDrawer";
+import { useState, useEffect } from "react";
+import {
+    getUserAccount,
+    getUserProfile,
+    type UserAccount,
+    type UserProfile,
+} from "@/lib/profile";
+
+function emailPrefix(email?: string | null) {
+    return (email || "").split("@")[0] || "";
+}
+
+function initialsFrom(name?: string | null, email?: string | null) {
+    const base = (name || "").trim() || emailPrefix(email) || "U";
+    const parts = base.split(/\s+/).filter(Boolean);
+    const a = (parts[0]?.[0] || "U").toUpperCase();
+    const b = (parts[1]?.[0] || "").toUpperCase();
+    return (a + b) || "U";
+}
+
+export default function Header() {
+    const { user } = useAuth();
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [account, setAccount] = useState<UserAccount | null>(null);
+
+    const resolvedEmail = account?.email || user?.email;
+    const resolvedDisplayName = account?.displayName || user?.displayName;
+    const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
+
+    useEffect(() => {
+        if (!user) return;
+
+        Promise.all([
+            getUserProfile(user.uid),
+            getUserAccount(user.uid),
+        ])
+            .then(([nextProfile, nextAccount]) => {
+                setProfile(nextProfile);
+                setAccount(nextAccount);
+            })
+            .catch(() => { });
+    }, [user]);
+
+    return (
+        <>
+            <header className="sticky top-0 z-40 bg-white/5 backdrop-blur-md border-b border-white/10 shadow-lg">
+                <div className="flex justify-between items-center py-4 px-6 relative max-w-[1400px] mx-auto">
+                    {/* Tên trang web bên trái */}
+                    <div className="text-2xl font-bold grad-text z-10">
+                        <Link href="/">AI Digital Wardrobe</Link>
+                    </div>
+
+                    {/* Menu ở giữa */}
+                    <nav className="hidden md:flex absolute inset-0 items-center justify-center space-x-8 pointer-events-none">
+                        <Link href="/" className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium">
+                            Trang chủ
+                        </Link>
+                        <Link
+                            href="/dashboard"
+                            className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium"
+                            onClick={(e) => {
+                                if (!user) {
+                                    e.preventDefault();
+                                    alert("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
+                                }
+                            }}
+                        >
+                            Tủ đồ thông minh
+                        </Link>
+                        <Link href="/services" className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium">
+                            Dịch vụ
+                        </Link>
+                        <Link href="/about" className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium">
+                            Về chúng tôi
+                        </Link>
+                    </nav>
+
+                    {/* Menu mobile (hiện ở màn hình nhỏ) */}
+                    <nav className="md:hidden flex space-x-4">
+                        <Link href="/" className="text-white/80 hover:text-white text-sm">
+                            Trang chủ
+                        </Link>
+                        {/* Ẩn bớt trên mobile cho gọn hoặc thêm menu dropdown */}
+                    </nav>
+
+                    {/* Bên phải: Nút Bắt đầu hoặc avatar */}
+                    <div className="text-white z-10 flex items-center justify-end gap-3">
+                        {user ? (
+                            <>
+                                {(account || profile) && (
+
+                                    <div className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${(account?.isVIP ?? profile?.isVIP) ? 'bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-white/10 text-white/80 border-white/20'}`}>
+                                        {(account?.isVIP ?? profile?.isVIP) ? (
+                                            <>
+                                                <span className="text-base leading-none">♛</span> VIP
+                                            </>
+                                        ) : 'Thường'}
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => setProfileOpen(true)}
+                                    className="w-11 h-11 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 overflow-hidden flex items-center justify-center"
+                                    aria-label="Open profile"
+                                    title="Xem profile"
+                                >
+                                    {user.photoURL ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-sm font-semibold text-white/90">{initials}</span>
+                                    )}
+                                </button>
+                            </>
+                        ) : (
+                            <Link
+                                href="/auth/login"
+                                className="bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-pink-600 transition-colors"
+                            >
+                                Bắt đầu
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </header>
+
+            {/* ProfileDrawer */}
+            <ProfileDrawer
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
+                user={{
+                    email: resolvedEmail,
+                    displayName: resolvedDisplayName,
+                    photoURL: user?.photoURL,
+                    username: account?.username,
+                }}
+                account={user ? account : null}
+                profile={user ? profile : null}
+            />
+        </>
+    );
+}
+
+```
+
+
+---
+# src/components/LogoutButton.tsx
+```text
+
+"use client";
+
+import { useAuth } from "@/lib/AuthContext";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
+
+export default function LogoutButton({ onClose }: { onClose?: () => void }) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      if (onClose) onClose();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleLogout}
+      className="w-full justify-center"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "14px 16px",
+        borderRadius: "14px",
+        border: "1px solid rgba(239, 68, 68, 0.3)", // red-500/30
+        background: "rgba(239, 68, 68, 0.15)", // red-500/15
+        color: "rgba(248, 113, 113, 1)", // red-400
+        textDecoration: "none",
+        transition: "transform .14s ease, background .14s ease, border-color .14s ease",
+        fontWeight: 600,
+        fontSize: "14px",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-1px)";
+        e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.4)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "none";
+        e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+        e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.3)";
+      }}
+    >
+      Đăng xuất
+    </button>
+  );
+}
+```
+
+
+---
+# src/components/ProfileDrawer.tsx
+```text
+"use client";
+
+import { useEffect } from "react";
+import type { UserAccount, UserProfile } from "@/lib/profile";
+import LogoutButton from "./LogoutButton";
+
+function emailPrefix(email?: string | null) {
+  return (email || "").split("@")[0] || "";
+}
+
+function initialsFrom(name?: string | null, email?: string | null) {
+  const base = (name || "").trim() || emailPrefix(email) || "U";
+  const parts = base.split(/\s+/).filter(Boolean);
+  const a = (parts[0]?.[0] || "U").toUpperCase();
+  const b = (parts[1]?.[0] || "").toUpperCase();
+  return (a + b) || "U";
+}
+
+function genderLabel(g: UserProfile["gender"] | undefined) {
+  if (g === "male") return "Nam";
+  if (g === "female") return "Nữ";
+  return "—";
+}
+
+function Row({ label, value }: { label: string; value?: unknown }) {
+  const display = value === undefined || value === null || value === "" ? "—" : String(value);
+  return (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-white/10 last:border-b-0">
+      <div className="text-sm text-white/60">{label}</div>
+      <div className="text-sm text-white/90 text-right max-w-[60%] break-words">{display}</div>
+    </div>
+  );
+}
+
+export default function ProfileDrawer({
+  open,
+  onClose,
+  user,
+  account,
+  profile,
+}: {
+  open: boolean;
+  onClose: () => void;
+  user: {
+    email?: string | null;
+    displayName?: string | null;
+    photoURL?: string | null;
+    username?: string | null;
+  } | null;
+  account?: UserAccount | null;
+  profile: UserProfile | null;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  const resolvedEmail = account?.email || profile?.email || user?.email || "";
+  const uname =
+    account?.username ||
+    profile?.username ||
+    user?.username ||
+    emailPrefix(resolvedEmail);
+  const resolvedDisplayName =
+    account?.displayName || profile?.displayName || user?.displayName || uname;
+  const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
+
+  return (
+    <div className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
+      <div
+        onClick={onClose}
+        className={`absolute inset-0 bg-black/55 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+      />
+
+      <div
+        className={`absolute right-0 top-0 h-full w-[380px] max-w-[92vw] bg-neutral-950 border-l border-white/10
+        transition-transform duration-200 ${open ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-white/10 border border-white/10 overflow-hidden flex items-center justify-center">
+              {user?.photoURL ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-sm font-semibold text-white/90">{initials}</span>
+              )}
+            </div>
+
+            <div className="leading-tight">
+              <div className="text-white font-semibold">{resolvedDisplayName || "Tài khoản"}</div>
+              <div className="text-xs text-white/60">{resolvedEmail || "—"}</div>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white/80"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 overflow-y-auto h-[calc(100%-80px)]">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-sm font-semibold text-white/90 mb-2">Tài khoản</div>
+            <Row label="Tên hiển thị" value={resolvedDisplayName} />
+            <Row label="Email" value={resolvedEmail} />
+            <Row label="Tên đăng nhập" value={uname ? `${uname}` : "—"} />
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-sm font-semibold text-white/90 mb-2">Thông tin cá nhân</div>
+
+            <Row label="Giới tính" value={genderLabel(profile?.gender)} />
+            <Row label="Tuổi" value={profile?.age} />
+            <Row label="Chiều cao (cm)" value={profile?.heightCm} />
+            <Row label="Cân nặng (kg)" value={profile?.weightKg} />
+            <Row label="Vòng 1 (cm)" value={profile?.bustCm} />
+            <Row label="Vòng 2 (cm)" value={profile?.waistCm} />
+            <Row label="Vòng 3 (cm)" value={profile?.hipCm} />
+          </div>
+
+
+          <a
+            href="/onboarding"
+            className="block w-full px-4 py-3 rounded-lg border border-white/10 bg-blue-600 hover:bg-blue-700 text-white text-center font-medium transition-colors"
+          >
+            Tùy chỉnh thông tin
+          </a>
+
+          <div className="pt-4 border-t border-white/10">
+            <LogoutButton onClose={onClose} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+
+---
+# src/components/WardrobeStylistChat.tsx
+```text
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/lib/AuthContext";
+import { UserProfile } from "firebase/auth";
+import { he } from "zod/locales";
+
+type Role = "user" | "assistant";
+type Msg = { id: string; role: Role; content: string; ts: number; images?: string[] };
+
+function uid() {
+  return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+
+function cls(...s: Array<string | false | undefined | null>) {
+  return s.filter(Boolean).join(" ");
+}
+
+export default function WardrobeStylistChat({
+  mode = "page",
+  open = true,
+  idUser,
+  onClose,
+}: {
+  mode?: "page" | "drawer";
+  open?: boolean;
+  idUser: string;
+  onClose?: () => void;
+}) {
+  const { user } = useAuth();
+
+  const [messages, setMessages] = useState<Msg[]>(() => [
+    {
+      id: uid(),
+      role: "assistant",
+      ts: Date.now(),
+      content:
+        "Xin chào! Mình là stylist AI 👗✨\nBạn muốn phối đồ cho dịp nào? (đi học / đi chơi / đi làm / hẹn hò / đi sự kiện…)\nGợi ý: nói thêm thời tiết, địa điểm, phong cách bạn thích.",
+    },
+  ]);
+
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<"thinking" | "analyzing_clothes" | "generating_outfit" | null>(null);
+  const [showWardrobeSelector, setShowWardrobeSelector] = useState(false);
+  const [wardrobeItems, setWardrobeItems] = useState<Array<any>>([]);
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [showAllSelectedItemsModal, setShowAllSelectedItemsModal] = useState(false);
+  const [modalImages, setModalImages] = useState<string[] | null>(null);
+
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const quickChips = useMemo(
+    () => [
+      "Gợi ý outfit đi học (gọn gàng, dễ thương)",
+      "Hôm nay trời nóng, mặc gì cho mát?",
+      "Đi chơi tối, style ngầu nhẹ",
+      "Trời mưa, phối đồ không bẩn giày",
+      "Phối đồ trắng/đen tối giản",
+    ],
+    []
+  );
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, sending, loadingStage]);
+
+  useEffect(() => {
+    if (mode === "drawer" && !open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 120);
+    return () => clearTimeout(t);
+  }, [mode, open]);
+
+  async function send(text: string) {
+    const content = text.trim();
+    if (!content || sending) return;
+
+    // Get selected images from wardrobe items
+    const selectedItemIds = Object.keys(selectedIds).filter((k) => selectedIds[k]);
+    const selectedImages = selectedItemIds
+      .map((id) => {
+        const item = wardrobeItems.find((w) => w.id === id);
+        return item?.imageUrl;
+      })
+      .filter(Boolean) as string[];
+
+    const userMsg: Msg = {
+      id: uid(),
+      role: "user",
+      content,
+      ts: Date.now(),
+      images: selectedImages.length > 0 ? selectedImages : undefined
+    };
+    setMessages((m) => [...m, userMsg]);
+    setInput("");
+    setSelectedIds({}); // Clear selected items
+    setSending(true);
+    setLoadingStage("thinking");
+
+    try {
+      const token = await user?.getIdToken?.();
+      const res = await fetch("/api/outfit-suggest", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          message: content,
+          history: messages.slice(-10).map((x) => ({ role: x.role, content: x.content })),
+          selectedItemIds: Object.keys(selectedIds).filter((k) => selectedIds[k]),
+          idUser: idUser,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        const err = new Error(text || "Network error");
+        (err as any).status = res.status;
+        throw err;
+      }
+
+      // read the streamed chunks, updating loadingStage as stage messages arrive
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalData: any = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let obj: any;
+            try {
+              obj = JSON.parse(line);
+            } catch (parseErr) {
+              console.error("failed to parse chunk", parseErr, line);
+              continue;
+            }
+            if (obj.stage) {
+              setLoadingStage(obj.stage);
+            }
+            // detect final payload: we know it contains ok or reply
+            if (obj.hasOwnProperty("ok") || obj.reply) {
+              finalData = obj;
+            }
+          }
+        }
+        if (done) break;
+      }
+      const data = finalData || { ok: false, message: "No data" };
+      if (!data.ok) {
+        const error = new Error(data?.message || "Request failed");
+        (error as any).status = res.status;
+        throw error;
+      }
+
+      // process final response (same as before)
+      if (data?.reply?.images && Array.isArray(data.reply.images)) {
+        const imgs = data.reply.images
+          .map((it: any) => {
+            if (it.url) return it.url;
+            return null;
+          })
+          .filter(Boolean);
+
+        const botMsg: Msg = {
+          id: uid(),
+          role: "assistant",
+          content: (data.reply?.note as string) || "Mình đã tạo ảnh outfit cho bạn.",
+          images: imgs,
+          ts: Date.now(),
+        };
+        setMessages((m) => [...m, botMsg]);
+      } else {
+        const botMsg: Msg = {
+          id: uid(),
+          role: "assistant",
+          content: typeof data.reply === 'object' ? (data.reply.note || "") : String(data.reply),
+          ts: Date.now(),
+        };
+        setMessages((m) => [...m, botMsg]);
+      }
+    } catch (e: any) {
+      let errorMessage = "";
+      let errorIcon = "😥";
+
+      // Kiểm tra mã lỗi từ response hoặc error code
+      if (e?.code === 503 || e?.status === 503) {
+        // Service Unavailable
+        errorMessage = "Hiện có nhiều người cùng sử dụng, hãy thử lại sau nhé";
+        errorIcon = "⏳";
+      } else if (e?.code === 429 || e?.status === 429 || e?.message?.includes("quota") || e?.message?.includes("hết lượt")) {
+        // Rate limit / Quota exceeded
+        errorMessage = "Hiện đã hết lượt sử dụng, vui lòng quay lại khi khác";
+        errorIcon = "🔒";
+      } else {
+        // Other errors
+        errorMessage = `Mình gặp lỗi: ${e?.message || "unknown error"}`;
+        errorIcon = "😥";
+      }
+
+      setMessages((m) => [
+        ...m,
+        {
+          id: uid(),
+          role: "assistant",
+          ts: Date.now(),
+          content: `${errorIcon}\n${errorMessage}`
+        },
+      ]);
+      console.error(e);
+    } finally {
+      setSending(false);
+      setLoadingStage(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send(input);
+    }
+  }
+
+
+  /*
+
+  
+  */
+
+  const shell = (
+    <div className="relative h-full flex flex-col rounded-3xl  border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_22px_70px_rgba(0,0,0,.55)] overflow-hidden">
+      {/* grid + scanline */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
+      <div className="cy-scanline pointer-events-none absolute inset-0" />
+
+      {/* header */}
+      <div className="flex items-center justify-left gap-3 px-5 py-4 border-b border-white/10">
+        <button
+          onClick={() => {
+            if (onClose) return onClose();
+            if (typeof window !== 'undefined') window.history.back();
+          }}
+          className="text-white/80 hover:text-white transition"
+          title="Quay lại"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
+            <span className="text-sm font-semibold text-white/90">AI</span>
+          </div>
+          <div>
+            <div className="font-semibold text-white/90">Wardrobe Stylist</div>
+            <div className="text-xs text-white/50">Gemini-style chat • outfit • weather • style</div>
+          </div>
+        </div>
+
+        {mode === "drawer" ? (
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition"
+          >
+            Đóng
+          </button>
+        ) : null}
+      </div>
+
+      {/* messages */}
+      <div ref={listRef} className="px-5 py-5 flex-1 min-h-0 overflow-y-auto space-y-3">
+        {messages.map((m) => (
+          <div key={m.id} className={cls("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+            <div
+              className={cls(
+                "max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap",
+                m.role === "user"
+                  ? "bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 border border-white/10 text-white/92 shadow-[0_14px_40px_rgba(0,0,0,.35)]"
+                  : "bg-black/30 border border-white/10 text-white/80"
+              )}
+            >
+              {m.content}
+              {m.images && m.images.length ? (
+                <div className="mt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  {(() => {
+                    const maxDisplay = 3;
+                    const displayedImgs = m.images.slice(0, maxDisplay);
+                    const remainingCount = m.images.length - maxDisplay;
+
+                    return (
+                      <>
+                        {displayedImgs.map((src, i) => (
+                          <div key={i} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10">
+                            <img
+                              key={i}
+                              src={src}
+                              alt={`outfit-${i}`}
+                              className="w-12 h-12 object-contain rounded"
+                              onError={(e) => {
+                                console.error("Lỗi tải ảnh từ URL:", src);
+                                e.currentTarget.style.display = 'none'; // Ẩn ảnh nếu lỗi
+                              }}
+                            />
+                          </div>
+                        ))}
+
+                        {remainingCount > 0 && (
+                          <button
+                            onClick={() => setModalImages(m.images!)}
+                            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition"
+                            title={`Xem thêm ${remainingCount} ảnh`}
+                          >
+                            +{remainingCount}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ))}
+
+        {sending ? (
+          <div className="flex justify-start">
+            <div className="rounded-2xl px-4 py-3 text-sm bg-black/30 border border-white/10 text-white/70">
+              <span className="inline-flex gap-1 items-center">
+                <span className="dotty" />
+                <span className="dotty delay-150" />
+                <span className="dotty delay-300" />
+              </span>
+              <span className="ml-2">
+                {loadingStage === "thinking" && "AI đang suy nghĩ…"}
+                {loadingStage === "analyzing_clothes" && "AI đang phân tích đồ của bạn…"}
+                {loadingStage === "generating_outfit" && "AI đang tạo outfit…"}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* chips */}
+      <div className="px-5 pb-3">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
+          {quickChips.map((c) => (
+            <button
+              key={c}
+              onClick={() => send(c)}
+              className="shrink-0 text-xs px-3 py-2 rounded-full border border-white/10 bg-white/5 text-white/75 hover:bg-white/10 transition"
+              title={c}
+            >
+              {c}
+            </button>
+          ))}
+
+        </div>
+      </div>
+
+      {/* Selected items row (Max 3 thumbnails + N more button) */}
+      <div className="px-5 pb-3">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {(() => {
+            const selectedArr = Object.keys(selectedIds).filter((k) => selectedIds[k]);
+            if (selectedArr.length === 0) return null;
+
+            const maxDisplay = 3;
+            const displayedIds = selectedArr.slice(0, maxDisplay);
+            const remainingCount = selectedArr.length - maxDisplay;
+
+            return (
+              <>
+                {displayedIds.map((id) => {
+                  const it = wardrobeItems.find((w) => w.id === id);
+                  return (
+                    <div key={id} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10 group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={it?.imageUrl} alt={it?.category || "item"} className="w-12 h-12 object-contain rounded" />
+                      <button
+                        onClick={() => toggleSelect(id)}
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] opacity-100 transition-opacity shadow-sm"
+                        title="Bỏ chọn"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {remainingCount > 0 && (
+                  <button
+                    onClick={() => setShowAllSelectedItemsModal(true)}
+                    className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition"
+                    title={`Xem thêm ${remainingCount} món đồ đã chọn`}
+                  >
+                    +{remainingCount}
+                  </button>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* composer */}
+      <div className="px-5 py-4 border-t border-white/10 bg-[linear-gradient(to_top,rgba(8,10,18,.78),rgba(8,10,18,.22))] backdrop-blur-xl">
+
+        <div className="flex gap-3 items-end">
+          <button
+            onClick={() => openWardrobeSelector()}
+            title="Chọn đồ"
+            className="h-10 w-10 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 7h18v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M7 7V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Nhập yêu cầu… (Enter để gửi, Shift+Enter xuống dòng)"
+            className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/90 outline-none focus:border-cyan-300/35 focus:shadow-[0_0_0_4px_rgba(34,211,238,.10)]"
+            rows={2}
+          />
+          <button
+            disabled={sending || !input.trim()}
+            onClick={() => send(input)}
+            className="rounded-2xl px-4 py-3 font-semibold border border-cyan-300/25
+                       bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20
+                       hover:border-cyan-300/40 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Gửi
+          </button>
+        </div>
+        <div className="mt-2 text-[11px] text-white/45">
+          Tip: nói rõ “đi đâu + thời tiết + style + màu muốn tránh” để AI ra outfit chuẩn.
+        </div>
+      </div>
+    </div>
+  );
+
+  // Wardrobe selector modal (simple)
+  async function openWardrobeSelector() {
+    setShowWardrobeSelector(true);
+    try {
+      const token = await user?.getIdToken?.();
+      const res = await fetch("/api/wardrobe/list", {
+        headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      });
+      const j = await res.json();
+      if (res.ok && j?.ok && Array.isArray(j.items)) {
+        setWardrobeItems(j.items);
+      } else if (res.ok && j?.items) {
+        setWardrobeItems(j.items);
+      } else {
+        setWardrobeItems([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setWardrobeItems([]);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((s) => ({ ...s, [id]: !s[id] }));
+  }
+
+  // Multi-selector expanded modal
+  const allSelectedModal = showAllSelectedItemsModal ? (
+    <div className="fixed inset-0 z-[100]">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAllSelectedItemsModal(false)} />
+      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-5 bg-[#121212] border border-white/10 rounded-2xl shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-white font-semibold text-lg">Đồ đã chọn ({Object.keys(selectedIds).filter(k => selectedIds[k]).length})</div>
+          <button onClick={() => setShowAllSelectedItemsModal(false)} className="text-white/50 hover:text-white transition">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-auto pb-3 no-scrollbar">
+          {Object.keys(selectedIds)
+            .filter((k) => selectedIds[k])
+            .map((id) => {
+              const it = wardrobeItems.find((w) => w.id === id);
+              if (!it) return null;
+              return (
+                <div key={id} className="relative bg-white/5 rounded-xl border border-white/10 p-2 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageUrl} alt={it.category || "item"} className="w-full h-20 object-contain" />
+                  <button
+                    onClick={() => toggleSelect(id)}
+                    className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 border-2 border-[#121212] text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    title="Bỏ chọn"
+                  >
+                    ×
+                  </button>
+                  <div className="mt-1 text-center text-[10px] text-white/70 truncate">{it.category || "Item"}</div>
+                </div>
+              );
+            })}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+          <button
+            onClick={() => setShowAllSelectedItemsModal(false)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium hover:opacity-90 transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const messageImagesModal = modalImages && modalImages.length > 0 ? (
+    <div className="fixed inset-0 z-[100]">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModalImages(null)} />
+      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-5 bg-[#121212] border border-white/10 rounded-2xl shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-white font-semibold text-lg">Ảnh trong tin nhắn ({modalImages.length})</div>
+          <button onClick={() => setModalImages(null)} className="text-white/50 hover:text-white transition">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[50vh] overflow-auto pb-3 no-scrollbar">
+          {modalImages.map((src, i) => (
+            <div key={i} className="relative bg-white/5 rounded-xl border border-white/10 p-2">
+              <img src={src} alt="item" className="w-full h-32 object-contain" />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+          <button
+            onClick={() => setModalImages(null)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium hover:opacity-90 transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  if (mode === "drawer") {
+    if (!open) return null;
+    return (
+      <div className="fixed inset-0 z-[80]">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
+        <div className="absolute right-0 top-0 h-full w-full max-w-[560px] p-4 md:p-6">{shell}</div>
+
+        {allSelectedModal}
+        {messageImagesModal}
+
+        {showWardrobeSelector ? (
+          <div className="fixed inset-0 z-90">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />
+            <div className="absolute left-1/2 top-1/2 w-[720px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-4 bg-neutral-900 border border-white/10 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-white font-semibold">Chọn đồ từ tủ</div>
+                <div className="text-sm text-white/60">Chọn nhiều mục</div>
+              </div>
+              <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
+                {wardrobeItems.map((it) => {
+                  const isSelected = !!selectedIds[it.id];
+                  return (
+                    <div 
+                      key={it.id} 
+                      onClick={() => toggleSelect(it.id)}
+                      className={`p-2 rounded cursor-pointer border transition-all duration-200 ${
+                        isSelected 
+                          ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-md">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-center">
+                        <label className="text-xs font-medium text-white/90 pointer-events-none">{it.category || "item"}</label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">Huỷ</button>
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-90 transition shadow-[0_0_15px_rgba(56,189,248,0.2)]">Xong</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  // page mode: full screen, không padding gây scroll w-full
+  return (
+    <div className="w-full h-[100svh] overflow-hidden p-4 md:p-6">{shell}
+      {allSelectedModal}
+      {messageImagesModal}
+      {showWardrobeSelector ? (
+        <div className="fixed inset-0 z-90">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />
+          <div className="absolute left-1/2 top-1/2 w-[720px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-4 bg-neutral-900 border border-white/10 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-white font-semibold">Chọn đồ từ tủ</div>
+              <div className="text-sm text-white/60">Chọn nhiều mục</div>
+            </div>
+              <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
+                {wardrobeItems.map((it) => {
+                  const isSelected = !!selectedIds[it.id];
+                  return (
+                    <div 
+                      key={it.id} 
+                      onClick={() => toggleSelect(it.id)}
+                      className={`p-2 rounded cursor-pointer border transition-all duration-200 ${
+                        isSelected 
+                          ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-md">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 text-center">
+                        <label className="text-xs font-medium text-white/90 pointer-events-none">{it.category || "item"}</label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">Huỷ</button>
+                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-90 transition shadow-[0_0_15px_rgba(56,189,248,0.2)]">Xong</button>
+              </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+
+```
+
+
+---
+# src/components/WardrobeUploader.tsx
+```text
+"use client";
+
+import { useAuth } from "@/lib/AuthContext";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+
+type ParsedItem = {
+  type: string;
+  imageDataUrl: string;
+  image_png_base64: string;
+  sourceFileIndex: number;
+};
+
+const TYPE_OPTIONS = ["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"] as const;
+
+function clamp01(v: number) {
+  return Math.max(0, Math.min(1, v));
+}
+
+export default function WardrobeUploader({
+  onUploadingChange,
+  onUploadSuccess,
+}: {
+  onUploadingChange?: (v: boolean) => void;
+  onUploadSuccess?: () => void;
+}) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [parsing, setParsing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
+  const [selected, setSelected] = useState<Record<number, boolean>>({});
+
+  // click-point per source file
+  const [points, setPoints] = useState<Record<number, { x: number; y: number }>>({});
+
+  const previewUrls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+
+  useEffect(() => {
+    if (!loading && !user) router.replace("/");
+  }, [loading, user, router]);
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [previewUrls]);
+
+  const onAddFiles = (newFiles: File[]) => {
+    const imgs = newFiles.filter((f) => f.type.startsWith("image/"));
+    setFiles((s) => [...s, ...imgs]);
+    setParsedItems([]);
+    setSelected({});
+  };
+
+  const onRemoveFile = (idx: number) => {
+    setFiles((s) => s.filter((_, i) => i !== idx));
+    setParsedItems([]);
+    setSelected({});
+    setPoints((p) => {
+      const next: Record<number, { x: number; y: number }> = {};
+      Object.entries(p).forEach(([k, v]) => {
+        const i = Number(k);
+        if (i < idx) next[i] = v;
+        else if (i > idx) next[i - 1] = v;
+      });
+      return next;
+    });
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    if (list.length) onAddFiles(list);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrop = (ev: React.DragEvent) => {
+    ev.preventDefault();
+    const list = ev.dataTransfer.files
+      ? Array.from(ev.dataTransfer.files).filter((f) => f.type.startsWith("image/"))
+      : [];
+    if (list.length) onAddFiles(list);
+  };
+
+  const handleDragOver = (ev: React.DragEvent) => ev.preventDefault();
+
+  const pickPointForIndex = (ev: React.MouseEvent<HTMLDivElement>, idx: number) => {
+    const rect = ev.currentTarget.getBoundingClientRect();
+    const x = clamp01((ev.clientX - rect.left) / rect.width);
+    const y = clamp01((ev.clientY - rect.top) / rect.height);
+    setPoints((p) => ({ ...p, [idx]: { x, y } }));
+  };
+
+  const clearPointForIndex = (idx: number) => {
+    setPoints((p) => {
+      const next = { ...p };
+      delete next[idx];
+      return next;
+    });
+  };
+
+  const labelOne = async (idToken: string, item: ParsedItem) => {
+    try {
+      const res = await fetch("/api/wardrobe/label-item", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image_png_base64: item.image_png_base64 }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return item;
+
+      const category = data?.label?.category;
+      return {
+        ...item,
+        type: category || item.type,
+      };
+    } catch {
+      return item;
+    }
+  };
+
+  const onParse = async (index?: number) => {
+    if (!user) return;
+
+    const indices = typeof index === "number" ? [index] : files.map((_, i) => i);
+    if (indices.length === 0) return alert("Không có ảnh để tách.");
+
+    setParsing(true);
+    onUploadingChange?.(true);
+
+    const errors: Array<{ idx: number; status: number; msg: string; raw?: any }> = [];
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // VPS nhỏ: chạy tuần tự để tránh dồn RAM khi MobileSAM + OpenCV + PNG cùng lúc
+      const PARSE_CONCURRENCY = 1;
+      const resultsByFileIndex: Record<number, ParsedItem[]> = {};
+      let cursor = 0;
+
+      const parseOne = async (idx: number) => {
+        const fileToParse = files[idx];
+        const formData = new FormData();
+        formData.append("file", fileToParse, fileToParse.name);
+
+        const pt = points[idx];
+        if (pt) {
+          formData.append("x", String(pt.x));
+          formData.append("y", String(pt.y));
+        }
+
+        const res = await fetch("/api/wardrobe/parse", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${idToken}` },
+          body: formData,
+        });
+
+        const raw = await res.json().catch(async () => ({ message: await res.text().catch(() => "") }));
+        if (!res.ok || !raw?.ok) {
+          errors.push({
+            idx,
+            status: res.status,
+            msg: raw?.message || "Parse failed",
+            raw,
+          });
+          return;
+        }
+
+        const items = Array.isArray(raw?.items) ? raw.items : [];
+        resultsByFileIndex[idx] = items.map((it: any) => ({
+          type: it.type || "Khác",
+          imageDataUrl:
+            typeof it.imageDataUrl === "string"
+              ? it.imageDataUrl
+              : `data:image/png;base64,${it.image_png_base64}`,
+          image_png_base64: it.image_png_base64,
+          sourceFileIndex: idx,
+        }));
+      };
+
+      const workers = Array.from({ length: Math.min(PARSE_CONCURRENCY, indices.length) }, async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= indices.length) break;
+          await parseOne(indices[i]);
+        }
+      });
+
+      await Promise.all(workers);
+
+      const allItems = indices.flatMap((idx) => resultsByFileIndex[idx] || []);
+      setParsedItems(allItems);
+      setSelected(
+        Object.fromEntries(allItems.map((_, idx) => [idx, true])) as Record<number, boolean>
+      );
+
+      if (errors.length > 0) {
+        console.error("PARSE ERRORS:", errors);
+      }
+
+      // Auto-label chạy tuần tự để giảm tải VPS
+      void (async () => {
+        const shouldLabel = (t?: string) => !t || t === "item" || t === "Khác";
+
+        const concurrency = 1;
+        let c = 0;
+
+        const workers = Array.from({ length: concurrency }, async () => {
+          while (true) {
+            const i = c++;
+            if (i >= allItems.length) break;
+            if (!shouldLabel(allItems[i].type)) continue;
+
+            const labeled = await labelOne(idToken, allItems[i]);
+
+            setParsedItems((prev) => {
+              if (i < 0 || i >= prev.length) return prev;
+              const next = prev.slice();
+              next[i] = labeled;
+              return next;
+            });
+          }
+        });
+
+        await Promise.all(workers);
+      })();
+    } catch (e) {
+      console.error(e);
+      alert("Tách đồ thất bại (lỗi mạng hoặc API).");
+    } finally {
+      setParsing(false);
+      onUploadingChange?.(false);
+    }
+  };
+
+  const updateItem = (idx: number, patch: Partial<ParsedItem>) => {
+    setParsedItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  };
+
+  const onUploadSelected = async () => {
+    if (!user) return;
+    if (parsedItems.length === 0) return alert("Bạn cần tách đồ trước khi upload.");
+
+    const picked = parsedItems
+      .map((it, idx) => ({ it, idx }))
+      .filter(({ idx }) => !!selected[idx])
+      .map(({ it }) => ({
+        type: it.type,
+        image_png_base64: it.image_png_base64?.includes(",")
+          ? it.image_png_base64.split(",")[1]
+          : it.image_png_base64,
+      }));
+
+    if (picked.length === 0) return alert("Bạn chưa chọn item nào để thêm vào tủ.");
+
+    setUploading(true);
+    onUploadingChange?.(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/wardrobe/confirm", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items: picked }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.message || "Thêm vào tủ thất bại.");
+        console.error("CONFIRM FAIL:", data);
+        return;
+      }
+
+      setFiles([]);
+      setParsedItems([]);
+      setSelected({});
+      setPoints({});
+      onUploadSuccess?.();
+    } catch (e) {
+      console.error(e);
+      alert("Thêm vào tủ thất bại (lỗi mạng hoặc API).");
+    } finally {
+      setUploading(false);
+      onUploadingChange?.(false);
+    }
+  };
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!user) return null;
+
+  return (
+    <div className="max-w-5xl space-y-4 relative">
+      {(parsing || uploading) && (
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center">
+          <div className="text-white">{parsing ? "Đang tách..." : "Đang xử lý..."}</div>
+        </div>
+      )}
+
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className="border-dashed border-2 border-white/10 rounded-lg p-6 text-center cursor-pointer text-white/80 hover:bg-white/5"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onInputChange}
+          className="hidden"
+        />
+        Kéo thả hình vào đây hoặc nhấn để chọn nhiều file
+      </div>
+
+      {files.length > 0 && (
+        <div className="space-y-2">
+          <div className="font-medium text-white/90">Ảnh sắp tách ({files.length})</div>
+          <div className="text-xs text-white/50">
+            Mỗi ảnh có clickpoint riêng. Bạn có thể chấm tất cả ảnh trước rồi bấm <b>Tách tất cả</b>.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {files.map((f, idx) => {
+              const pt = points[idx];
+
+              return (
+                <div key={`${f.name}-${idx}`} className="border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-white/70">
+                    <div className="truncate">{f.name}</div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveFile(idx);
+                      }}
+                      disabled={parsing || uploading}
+                      className="rounded-full px-2 py-1 bg-black/40 text-white"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div
+                    className="relative border-t border-white/10 cursor-crosshair bg-white/5"
+                    onClick={(e) => pickPointForIndex(e, idx)}
+                    title="Click để chọn điểm thuộc món đồ bạn muốn tách"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrls[idx]}
+                      alt={f.name}
+                      className="w-full h-56 object-contain pointer-events-none"
+                    />
+
+                    {pt && (
+                      <div
+                        className="absolute w-3 h-3 rounded-full border border-white bg-indigo-500/80"
+                        style={{
+                          left: `${pt.x * 100}%`,
+                          top: `${pt.y * 100}%`,
+                          transform: "translate(-50%,-50%)",
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 p-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearPointForIndex(idx);
+                      }}
+                      disabled={!pt || parsing || uploading}
+                      className="px-2 py-1 rounded border border-white/10 hover:bg-white/10 text-xs text-white/80 disabled:opacity-50"
+                    >
+                      Xoá điểm
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onParse(idx);
+                      }}
+                      disabled={parsing || uploading}
+                      className="ml-auto px-2 py-1 rounded border border-white/10 hover:bg-white/10 text-xs text-white/80 disabled:opacity-50"
+                    >
+                      Tách ảnh này
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-xs text-white/50">
+            * Nếu muốn tách chuẩn đúng món, hãy click đúng lên món đồ trong từng ảnh trước khi bấm Tách.
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => void onParse()}
+          disabled={files.length === 0 || parsing || uploading}
+          className="px-4 py-2 rounded-xl border font-semibold border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition disabled:opacity-50"
+        >
+          {parsing ? "Đang tách..." : "Tách tất cả"}
+        </button>
+
+        <button
+          onClick={onUploadSelected}
+          disabled={parsedItems.length === 0 || uploading || parsing || Object.values(selected).every((v) => !v)}
+          className="ml-auto px-4 py-2 rounded-xl font-semibold border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white hover:border-cyan-300/40 transition disabled:opacity-50 shadow-[0_0_15px_rgba(56,189,248,0.15)]"
+        >
+          {uploading ? "Đang thêm vào tủ..." : "Thêm vào tủ đồ"}
+        </button>
+      </div>
+
+      {parsedItems.length > 0 && (
+        <div className="space-y-2">
+          <div className="font-medium text-white/90">Kết quả tách ({parsedItems.length})</div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {parsedItems.map((it, idx) => (
+              <div key={idx} className="border border-white/10 rounded-lg overflow-hidden bg-white/5">
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageDataUrl} alt={`parsed-${idx}`} className="w-full h-56 object-contain bg-white/5" />
+                  <label className="absolute top-2 left-2 flex items-center gap-2 rounded bg-black/50 px-2 py-1 text-xs text-white">
+                    <input
+                      type="checkbox"
+                      checked={!!selected[idx]}
+                      onChange={(e) => setSelected((s) => ({ ...s, [idx]: e.target.checked }))}
+                    />
+                    Chọn
+                  </label>
+                </div>
+
+                <div className="p-3 space-y-2">
+                  <div className="text-xs text-white/50">Ảnh nguồn #{it.sourceFileIndex + 1}</div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/60 w-10">Loại</span>
+                    <select
+                      value={it.type}
+                      onChange={(e) => updateItem(idx, { type: e.target.value })}
+                      className="flex-1 rounded bg-black/30 border border-white/10 px-2 py-2 text-sm text-white"
+                    >
+                      {TYPE_OPTIONS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+
+---
+# src/lib/AuthContext.tsx
+```text
+"use client";
+
+import { onAuthStateChanged, User } from "firebase/auth";
+import { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "./firebase";
+
+type AuthState = {
+  user: User | null;
+  loading: boolean;
+};
+
+const AuthContext = createContext<AuthState>({ user: null, loading: true });
+
+function isLegacyLocalEmail(email?: string | null) {
+  return typeof email === "string" && email.trim().toLowerCase().endsWith("@adw.local");
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(Boolean(auth));
+
+  useEffect(() => {
+    if (!auth) {
+      return;
+    }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!user || !auth || !isLegacyLocalEmail(user.email)) {
+      return;
+    }
+
+    let active = true;
+
+    const syncLegacyEmail = async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/auth/sync-email", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        await user.reload();
+        if (active) {
+          setUser(auth.currentUser);
+        }
+      } catch (err) {
+        console.error("Sync legacy auth email failed:", err);
+      }
+    };
+
+    void syncLegacyEmail();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  return (
+    <AuthContext.Provider value={{ user, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);
+
+```
+
+
+---
+# src/lib/firebase.ts
+```text
+import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
+import { Auth, getAuth } from "firebase/auth";
+import { Firestore, getFirestore } from "firebase/firestore";
+import { FirebaseStorage, getStorage } from "firebase/storage";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+};
+
+const isFirebaseConfigured = Object.values(firebaseConfig).every(
+  (value) => typeof value === "string" && value.trim() !== ""
+);
+
+const app: FirebaseApp | null = isFirebaseConfigured
+  ? getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig)
+  : null;
+
+export const auth: Auth | null = app ? getAuth(app) : null;
+export const db: Firestore | null = app ? getFirestore(app) : null;
+export const storage: FirebaseStorage | null = app ? getStorage(app) : null;
+
+export { app, isFirebaseConfigured };
+```
+
+
+---
+# src/lib/firebaseAdmin.ts
+```text
+import admin from "firebase-admin";
+
+function fixPrivateKey(key?: string) {
+  return key?.replace(/\\n/g, "\n");
+}
+
+export function getAdmin() {
+  if (admin.apps.length) return admin;
+
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = fixPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error("Missing FIREBASE admin env vars");
+  }
+
+  admin.initializeApp({
+    credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+  });
+
+  return admin;
+}
+
+```
+
+
+---
+# src/lib/mailer.ts
+```text
+import nodemailer from "nodemailer";
+
+let transporter: nodemailer.Transporter | null = null;
+
+function requireEnv(name: string) {
+  const value = process.env[name];
+  if (!value || !value.trim()) {
+    throw new Error(`Missing environment variable: ${name}`);
+  }
+  return value.trim();
+}
+
+function getTransporter() {
+  if (transporter) return transporter;
+
+  const user = requireEnv("EMAIL_USER");
+  const pass = requireEnv("EMAIL_APP_PASSWORD");
+
+  const host = process.env.EMAIL_HOST?.trim() || "smtp.gmail.com";
+  const port = Number(process.env.EMAIL_PORT || 465);
+  const secure = String(process.env.EMAIL_SECURE || "true") === "true";
+
+  transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: {
+      user,
+      pass,
+    },
+  });
+
+  return transporter;
+}
+
+export async function sendPasswordResetCodeEmail(to: string, code: string) {
+  const user = requireEnv("EMAIL_USER");
+  const from = process.env.EMAIL_FROM?.trim() || `AI Digital Wardrobe <${user}>`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+      <h2 style="margin-bottom: 12px;">Đặt lại mật khẩu</h2>
+      <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản AI Digital Wardrobe.</p>
+      <p>Mã xác nhận của bạn là:</p>
+      <div style="
+        display: inline-block;
+        padding: 12px 20px;
+        font-size: 28px;
+        font-weight: bold;
+        letter-spacing: 6px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        color: #1d4ed8;
+        margin: 12px 0;
+      ">
+        ${code}
+      </div>
+      <p>Mã có hiệu lực trong <strong>10 phút</strong>.</p>
+      <p>Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email này.</p>
+    </div>
+  `;
+
+  const text = `Ma xac nhan dat lai mat khau cua ban la: ${code}. Ma co hieu luc trong 10 phut.`;
+
+  const tx = getTransporter();
+
+  if (process.env.NODE_ENV !== "production") {
+    await tx.verify();
+  }
+
+  await tx.sendMail({
+    from,
+    to,
+    subject: "Ma xac nhan dat lai mat khau - AI Digital Wardrobe",
+    text,
+    html,
+  });
+}
+```
+
+
+---
+# src/lib/outfitSchema.ts
+```text
+import { z } from "zod";
+
+export const OutfitSlot = z.enum([
+  "top",
+  "bottom",
+  "dress",
+  "outerwear",
+  "shoes",
+  "bag",
+  "accessory",
+]);
+
+export const OutfitPiece = z.object({
+  slot: OutfitSlot,
+  source: z.enum(["wardrobe", "suggested"]),
+  wardrobeItemId: z.string().nullable().default(null),
+  name: z.string(),
+  note: z.string().default(""),
+});
+
+export const OutfitOption = z.object({
+  title: z.string(),
+  pieces: z.array(OutfitPiece).default([]),
+  why: z.string().default(""),
+  do: z.array(z.string()).default([]),
+  dont: z.array(z.string()).default([]),
+});
+
+export const WeatherSchema = z.object({
+  tempC: z.number(),
+  feelsLikeC: z.number(),
+  condition: z.string(),
+  rainMm: z.number(),
+  windKmh: z.number(),
+});
+
+export const OutfitResponseSchema = z.object({
+  needMoreInfo: z.boolean().default(false),
+
+  question: z.string().nullable().optional().transform((v) => v ?? ""),
+
+  weather: WeatherSchema,
+
+  options: z.array(OutfitOption).default([]),
+  tips: z.array(z.string()).default([]),
+  missingItems: z.array(z.string()).default([]),
+});
+
+export type OutfitResponse = z.infer<typeof OutfitResponseSchema>;
+
+```
+
+
+---
+# src/lib/profile.ts
+```text
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+export type Gender = "male" | "female";
+
+export type UserAccount = {
+  username?: string;
+  displayName?: string | null;
+  email?: string | null;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  isVIP?: boolean;
+  itemQuantity?: number;
+  outfitGenerationsToday?: number;
+  outfitGenerationDate?: string;
+};
+
+export type UserMetrics = {
+  gender: Gender;
+  age: number;
+  heightCm: number;
+  weightKg: number;
+  bustCm?: number;
+  waistCm?: number;
+  hipCm?: number;
+};
+
+export type UserProfile = UserAccount & UserMetrics;
+
+type UserDoc = UserAccount & Partial<UserMetrics>;
+
+function isValidGender(x: unknown): x is Gender {
+  return x === "male" || x === "female";
+}
+
+export async function getUserAccount(uid: string) {
+  if (!db) return null;
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+
+  return snap.data() as UserDoc;
+}
+
+export async function getUserProfile(uid: string) {
+  const data = await getUserAccount(uid);
+  if (!data) return null;
+
+  const ok =
+    isValidGender(data.gender) &&
+    typeof data.age === "number" &&
+    typeof data.heightCm === "number" &&
+    typeof data.weightKg === "number" &&
+    data.age > 0 &&
+    data.heightCm > 0 &&
+    data.weightKg > 0;
+
+  return ok ? (data as UserProfile) : null;
+}
+
+export async function upsertUserProfile(uid: string, profile: UserProfile) {
+  if (!db) return;
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  const existingData = snap.exists() ? (snap.data() as UserDoc) : null;
+
+  await setDoc(
+    ref,
+    {
+      ...profile,
+      updatedAt: serverTimestamp(),
+      createdAt: existingData?.createdAt ?? serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+```
+
+
+---
+# src/lib/weather.ts
+```text
+export type WeatherNow = {
+  tempC: number;
+  feelsLikeC: number;
+  condition: string;
+  rainMm: number;
+  windKmh: number;
+};
+
+export async function getWeatherNow(lat: number, lon: number): Promise<WeatherNow> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(lat));
+  url.searchParams.set("longitude", String(lon));
+  url.searchParams.set(
+    "current",
+    [
+      "temperature_2m",
+      "apparent_temperature",
+      "precipitation",
+      "rain",
+      "showers",
+      "weather_code",
+      "wind_speed_10m",
+    ].join(",")
+  );
+  url.searchParams.set("timezone", "Asia/Ho_Chi_Minh");
+  url.searchParams.set("wind_speed_unit", "kmh");
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error("Weather API failed");
+  const data = await res.json();
+
+  const c = data.current;
+  const rainMm = Number(c.precipitation ?? 0);
+
+  let condition = "cloudy";
+  if (rainMm > 0 || Number(c.rain ?? 0) > 0 || Number(c.showers ?? 0) > 0) condition = "rainy";
+  else if (Number(c.weather_code) === 0) condition = "clear";
+
+  return {
+    tempC: Number(c.temperature_2m),
+    feelsLikeC: Number(c.apparent_temperature),
+    condition,
+    rainMm,
+    windKmh: Number(c.wind_speed_10m ?? 0),
+  };
+}
+
+```
+
+
+---
+# src/lib/llm/geminiVisual.ts
+```text
+import { GoogleGenAI } from "@google/genai";
+import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+
+const toJsonSchema = zodToJsonSchema as unknown as (schema: unknown) => any;
+
+function getGeminiClient() {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) throw new Error("Missing GEMINI_API_KEY in environment.");
+    return new GoogleGenAI({ apiKey: key });
+}
+
+const ResponseSchema = z.object({
+    clothesDescription: z.string().describe("Detailed description of the garments in Vietnamese"),
+    imagen_prompt: z.string().describe("Detailed English prompt for image generation (imagen-3)"),
+    note: z.string().describe("explanation from the stylist in Vietnamese"),
+    outfit: z.any().describe("Outfit's name"),
+});
+
+export type VisualOut = z.infer<typeof ResponseSchema>;
+
+export async function generateVisualGemini(input: {
+    userMessage: string;
+    profile: any;
+    images: Array<{ id: string; url?: string; png_base64: string }>;
+}): Promise<VisualOut> {
+    const ai = getGeminiClient();
+
+    const userGender = input.profile?.gender || "unknown";
+    const userHeight = input.profile?.heightCm || "unknown";
+    const userWeight = input.profile?.weightKg || "unknown";
+    const userMessage = input.userMessage || "No occasion provided";
+    const userAge = input.profile?.age ? `${input.profile.age} years old` : "unknown";
+    const userbust = input.profile?.bustCm ? `${input.profile.bustCm} cm` : "unknown";
+    const userWaist = input.profile?.waistCm ? `${input.profile.waistCm} cm` : "unknown";
+    const userHip = input.profile?.hipCm ? `${input.profile.hipCm} cm` : "unknown";
+
+    // console.log(userAge, userbust, userWaist, userHip, userGender, userMessage);
+
+    const systemText = `
+ROLE:
+You are a professional Asian fashion stylist and prompt engineer.
+
+USER PROFILE:
+The user gender is: ${userGender}.
+The user height is: ${userHeight} cm.
+The user weight is: ${userWeight} kg.
+The user age is: ${userAge} years old.
+The user bust measurement is: ${userbust} cm.
+The user waist measurement is: ${userWaist} cm.
+The user hip measurement is: ${userHip} cm.
+(note: the mennequin in the generate_image_prompt MUST match these body proportions)
+
+All styling decisions MUST strictly follow ${userGender} fashion conventions.
+Do NOT mix gender attributes.
+
+INPUT:
+You will receive:
+- Multiple source garment images
+- A user message describing the occasion/ event/ weather/ destination or style vibe (e.g. "outfit for wedding", "I need a set for going to the fair", "light and feminine style")
+
+STRICT RULES:
+1. You MUST only use garments that appear in the provided source images.
+2. Respect the vibe of the occasion: "${input.userMessage}". 
+   - If it's "Formal", do not suggest "Casual" items.
+3. Do NOT modify the garment's color, fabric, silhouette, or pattern.
+4. All styling must respect ${userGender} body structure.
+
+TASKS:
+
+1) IMAGE ANALYSIS  
+For each image:
+- Identify garment category
+- Color
+- Fabric
+- Pattern
+- Fit / silhouette
+- Style (casual, formal, streetwear, etc.)
+
+2) OUTFIT SELECTION  
+- Select the most appropriate outfit for the occasion that mentioned in user's message"${input.userMessage}".
+
+3) IMAGEN PROMPT:
+Create a highly detailed English prompt describing:
+- A featureless, faceless white plastic ${userGender} mannequin with a smooth surface (no human facial features, no eyes, no nose, no mouth).
+- The mannequin is made of solid opaque white plastic, matching ${userGender} body proportions .
+- Wearing EXACTLY the selected garments.
+- Full body shot from head to toe.
+- Standing upright in a rigid, neutral pose with arms relaxed at sides.
+- Professional studio lighting highlighting the plastic texture and garment fabric.
+- Background: Pure white, seamless, high-end fashion catalog style.
+- NO human skin, NO human hair, NO facial expressions.
+
+4) ASNSWER STRUCTURE
+Produce **ONLY a single JSON object (NOT an array)**. 
+Do not include any introductory text, markdown code blocks, or explanations outside the JSON.
+Produce a JSON with the following structure:
+{
+  "clothesDescription": "The detailed description of the garments in task 1",
+  "imagen_prompt": "Detailed English prompt for image generation (imagen-3)",
+  "note": "explanation from the stylist in Vietnamese",
+  "outfit": "Outfit's name"
+}
+
+Produce the JSON now.`.trim();
+
+    const multimodalContents = [
+        systemText,
+        ...input.images.map((img) => ({
+            inlineData: {
+                data: img.png_base64,
+                mimeType: "image/png",
+            },
+        })),
+    ];
+
+
+    const res = await ai.models.generateContent({
+        model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
+        contents: multimodalContents,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: toJsonSchema(ResponseSchema),
+        },
+    });
+
+    let raw = res.text;
+
+    if (!raw || !raw.trim()) {
+        throw new Error("Gemini returned empty response text for visual prompt generation");
+    }
+
+    raw = raw.replace(/^```json\s*/, "").replace(/```$/, "").trim();
+
+    try {
+        const parsed = ResponseSchema.parse(JSON.parse(raw));
+        return parsed;
+    } catch (error) {
+        console.error("Lỗi Parse JSON từ Gemini. Dữ liệu thô AI trả về:", raw);
+        throw error;
+    }
+
+}
+
+
+
+export default generateVisualGemini;
+```
+
+
+---
+# src/lib/ai/labelItem.ts
+```text
+// src/lib/ai/labelItem.ts
+import { z } from "zod";
+import crypto from "crypto";
+
+// -----------------------------
+// Schemas
+// -----------------------------
+export const SimpleLabelSchema = z.object({
+  category: z.enum(["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"]),
+  color: z.string().min(1).max(40).default("Không rõ"), // giữ field để không phá UI/db
+  itemName: z.string().min(1).max(80).nullable().default(null),
+  confidence: z.number().min(0).max(1).nullable().default(null),
+});
+export type SimpleLabel = z.infer<typeof SimpleLabelSchema>;
+
+type SimpleLabelHints = {
+  categoryHint?: string;
+  colorHint?: string;
+  confidenceHint?: number | null;
+};
+
+// -----------------------------
+// Small in-memory cache (LRU-ish)
+// -----------------------------
+const SIMPLE_LABEL_CACHE_MAX = 500;
+const simpleLabelCache = new Map<string, { value: SimpleLabel; ts: number }>();
+
+function cacheKeyOf(pngBase64: string, hints: SimpleLabelHints) {
+  const h = crypto
+    .createHash("sha1")
+    .update(pngBase64)
+    .update("|")
+    .update(String(hints.categoryHint ?? ""))
+    .update("|")
+    .update(String(hints.colorHint ?? ""))
+    .digest("hex");
+  return `label:simple:v2:${h}`;
+}
+
+function cacheGet(k: string): SimpleLabel | null {
+  const x = simpleLabelCache.get(k);
+  if (!x) return null;
+  // 24h TTL
+  if (Date.now() - x.ts > 24 * 60 * 60 * 1000) {
+    simpleLabelCache.delete(k);
+    return null;
+  }
+  // refresh LRU
+  simpleLabelCache.delete(k);
+  simpleLabelCache.set(k, x);
+  return x.value;
+}
+
+function cacheSet(k: string, v: SimpleLabel) {
+  if (simpleLabelCache.has(k)) simpleLabelCache.delete(k);
+  simpleLabelCache.set(k, { value: v, ts: Date.now() });
+  while (simpleLabelCache.size > SIMPLE_LABEL_CACHE_MAX) {
+    const firstKey = simpleLabelCache.keys().next().value;
+    if (!firstKey) break;
+    simpleLabelCache.delete(firstKey);
+  }
+}
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
+const AI_LABEL_URL = process.env.AI_LABEL_URL || `${AI_SERVICE_URL}/label`;
+
+const ALLOWED_CATS = new Set(["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"]);
+function safeCat(x: any): SimpleLabel["category"] | undefined {
+  return typeof x === "string" && ALLOWED_CATS.has(x) ? (x as any) : undefined;
+}
+
+async function callAiServiceLabel(pngBase64: string) {
+  const res = await fetch(AI_LABEL_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    // include_color = false: bạn muốn chỉ category để nhanh nhất
+    body: JSON.stringify({
+      image_png_base64: pngBase64,
+      backend: process.env.AI_LABEL_BACKEND || "clip",
+      include_color: false,
+    }),
+    // nextjs fetch option:
+    cache: "no-store",
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json?.ok) {
+    const msg = json?.message || `AI label failed (${res.status})`;
+    throw new Error(msg);
+  }
+  return json?.label as any;
+}
+
+// -----------------------------
+// Simple label (category only; color kept as "Không rõ" for compatibility)
+// -----------------------------
+export async function labelWardrobeItemSimpleFromPngBase64(
+  pngBase64: string,
+  hints: SimpleLabelHints = {}
+): Promise<SimpleLabel> {
+  const k = cacheKeyOf(pngBase64, hints);
+  const cached = cacheGet(k);
+  if (cached) return cached;
+
+  // Default fallback from hints
+  const hintCategory = safeCat(hints.categoryHint) ?? undefined;
+  const hintColor = typeof hints.colorHint === "string" && hints.colorHint.trim() ? hints.colorHint.trim() : undefined;
+  const hintConfidence = typeof hints.confidenceHint === "number" ? hints.confidenceHint : null;
+
+  let category: SimpleLabel["category"] = hintCategory ?? "Khác";
+  let confidence: number | null = hintConfidence ?? null;
+
+  try {
+    const label = await callAiServiceLabel(pngBase64);
+    const c = safeCat(label?.category);
+    if (c) category = c;
+    if (typeof label?.confidence === "number") confidence = label.confidence;
+  } catch {
+    // keep hint fallback
+  }
+
+  const out: SimpleLabel = SimpleLabelSchema.parse({
+    category,
+    // bạn không muốn phân màu -> giữ "Không rõ", nhưng nếu hints có màu thì giữ lại
+    color: hintColor ?? "Không rõ",
+    itemName: null,
+    confidence,
+  });
+
+  cacheSet(k, out);
+  return out;
+}
+
+// -----------------------------
+// Detailed label (placeholder, still returns category + confidence)
+// -----------------------------
+export const ItemLabelSchema = z.object({
+  category: z.enum(["Áo", "Quần", "Váy", "Đầm", "Giày", "Khác"]),
+  subcategory: z.string().min(1).max(80),
+  layer: z.enum(["base", "mid", "outer", "onepiece", "footwear", "accessory"]),
+  colors: z.array(z.string().min(1).max(30)).min(1).max(3),
+  pattern: z.string().min(1).max(40),
+  material: z.string().min(1).max(40),
+  season: z.array(z.enum(["spring", "summer", "autumn", "winter", "all"])).min(1),
+  formality: z.enum(["casual", "smartcasual", "formal", "sport"]),
+  notes: z.string().max(200).nullable(),
+  confidence: z.number().min(0).max(1),
+});
+export type ItemLabel = z.infer<typeof ItemLabelSchema>;
+
+function defaultLayerForCategory(cat: ItemLabel["category"]): ItemLabel["layer"] {
+  switch (cat) {
+    case "Áo":
+      return "base";
+    case "Quần":
+      return "base";
+    case "Váy":
+      return "base";
+    case "Đầm":
+      return "onepiece";
+    case "Giày":
+      return "footwear";
+    default:
+      return "accessory";
+  }
+}
+
+export async function labelWardrobeItemFromPngBase64(pngBase64: string): Promise<ItemLabel> {
+  const simple = await labelWardrobeItemSimpleFromPngBase64(pngBase64);
+
+  // NOTE: bạn muốn chỉ category -> các field khác set placeholder hợp lệ
+  return ItemLabelSchema.parse({
+    category: simple.category,
+    subcategory: "unknown",
+    layer: defaultLayerForCategory(simple.category),
+    colors: ["unknown"],
+    pattern: "none",
+    material: "unknown",
+    season: ["all"],
+    formality: "casual",
+    notes: null,
+    confidence: typeof simple.confidence === "number" ? simple.confidence : 0.5,
+  });
+}
+```

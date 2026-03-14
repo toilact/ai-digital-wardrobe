@@ -11,13 +11,16 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState>({ user: null, loading: true });
 
+function isLegacyLocalEmail(email?: string | null) {
+  return typeof email === "string" && email.trim().toLowerCase().endsWith("@adw.local");
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(auth));
 
   useEffect(() => {
     if (!auth) {
-      setLoading(false);
       return;
     }
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -26,6 +29,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!user || !auth || !isLegacyLocalEmail(user.email)) {
+      return;
+    }
+
+    let active = true;
+
+    const syncLegacyEmail = async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/auth/sync-email", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        await user.reload();
+        if (active) {
+          setUser(auth.currentUser);
+        }
+      } catch (err) {
+        console.error("Sync legacy auth email failed:", err);
+      }
+    };
+
+    void syncLegacyEmail();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

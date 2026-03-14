@@ -3,7 +3,19 @@ import { db } from "@/lib/firebase";
 
 export type Gender = "male" | "female";
 
-export type UserProfile = {
+export type UserAccount = {
+  username?: string;
+  displayName?: string | null;
+  email?: string | null;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  isVIP?: boolean;
+  itemQuantity?: number;
+  outfitGenerationsToday?: number;
+  outfitGenerationDate?: string;
+};
+
+export type UserMetrics = {
   gender: Gender;
   age: number;
   heightCm: number;
@@ -11,25 +23,28 @@ export type UserProfile = {
   bustCm?: number;
   waistCm?: number;
   hipCm?: number;
-  updatedAt?: any;
-  createdAt?: any;
-  isVIP?: boolean;
-  itemQuantity?: number;
-  outfitGenerationsToday?: number;
-  outfitGenerationDate?: string;
 };
 
-function isValidGender(x: any): x is Gender {
+export type UserProfile = UserAccount & UserMetrics;
+
+type UserDoc = UserAccount & Partial<UserMetrics>;
+
+function isValidGender(x: unknown): x is Gender {
   return x === "male" || x === "female";
 }
 
-export async function getUserProfile(uid: string) {
+export async function getUserAccount(uid: string) {
   if (!db) return null;
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
 
-  const data = snap.data() as any;
+  return snap.data() as UserDoc;
+}
+
+export async function getUserProfile(uid: string) {
+  const data = await getUserAccount(uid);
+  if (!data) return null;
 
   const ok =
     isValidGender(data.gender) &&
@@ -47,13 +62,14 @@ export async function upsertUserProfile(uid: string, profile: UserProfile) {
   if (!db) return;
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
+  const existingData = snap.exists() ? (snap.data() as UserDoc) : null;
 
   await setDoc(
     ref,
     {
       ...profile,
       updatedAt: serverTimestamp(),
-      createdAt: snap.exists() ? (snap.data() as any).createdAt : serverTimestamp(),
+      createdAt: existingData?.createdAt ?? serverTimestamp(),
     },
     { merge: true }
   );
