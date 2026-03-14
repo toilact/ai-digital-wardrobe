@@ -13,15 +13,19 @@ export default function GoogleLoginButton() {
       alert("Firebase chưa được khởi tạo!");
       return;
     }
+
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
     router.push("/dashboard");
   };
 
   return (
-    <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 border border-gray-300  bg-gray-700 py-1 px-3 hover:bg-gray-800 transition-all mb-2">
+    <button
+      onClick={handleLogin}
+      className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white transition hover:border-white/15 hover:bg-white/[0.08]"
+    >
       <FcGoogle className="text-2xl" />
-      <span className="text-white font-medium">Tiếp tục với Google</span>
+      <span className="font-medium text-white/85">Tiếp tục với Google</span>
     </button>
   );
 }
