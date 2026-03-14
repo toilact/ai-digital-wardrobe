@@ -47,6 +47,7 @@ export default function WardrobeStylistChat({
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [showAllSelectedItemsModal, setShowAllSelectedItemsModal] = useState(false);
   const [modalImages, setModalImages] = useState<string[] | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -300,17 +301,22 @@ export default function WardrobeStylistChat({
                     return (
                       <>
                         {displayedImgs.map((src, i) => (
-                          <div key={i} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10">
+                          <div key={i} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10 group cursor-pointer" onClick={() => setZoomImage(src)}>
                             <img
                               key={i}
                               src={src}
                               alt={`outfit-${i}`}
-                              className="w-12 h-12 object-contain rounded"
+                              className="w-12 h-12 object-contain rounded group-hover:scale-105 transition-transform"
                               onError={(e) => {
                                 console.error("Lỗi tải ảnh từ URL:", src);
                                 e.currentTarget.style.display = 'none'; // Ẩn ảnh nếu lỗi
                               }}
                             />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
                           </div>
                         ))}
 
@@ -561,6 +567,28 @@ export default function WardrobeStylistChat({
     </div>
   ) : null;
 
+  const zoomImageModal = zoomImage ? (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setZoomImage(null)} />
+      <div className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center justify-center z-10">
+        <button
+          onClick={() => setZoomImage(null)}
+          className="absolute -top-4 -right-4 md:-top-6 md:-right-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 transition shadow-lg"
+          title="Đóng"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <img 
+          src={zoomImage} 
+          alt="zoomed-outfit" 
+          className="w-full h-auto max-h-[85vh] object-contain rounded-xl shadow-2xl border border-white/10 bg-black" 
+        />
+      </div>
+    </div>
+  ) : null;
+
   if (mode === "drawer") {
     if (!open) return null;
     return (
@@ -570,6 +598,7 @@ export default function WardrobeStylistChat({
 
         {allSelectedModal}
         {messageImagesModal}
+        {zoomImageModal}
 
         {showWardrobeSelector ? (
           <div className="fixed inset-0 z-90">
@@ -624,6 +653,7 @@ export default function WardrobeStylistChat({
     <div className="w-full h-[100svh] overflow-hidden p-4 md:p-6">{shell}
       {allSelectedModal}
       {messageImagesModal}
+      {zoomImageModal}
       {showWardrobeSelector ? (
         <div className="fixed inset-0 z-90">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />

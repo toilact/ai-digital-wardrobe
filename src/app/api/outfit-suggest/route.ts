@@ -109,7 +109,7 @@ export async function POST(req: Request) {
           const isVIP = !!userProfile?.isVIP;
           const limit = isVIP ? 5 : 1;
           const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-          
+
           let currentGenerations = userProfile?.outfitGenerationsToday || 0;
           let lastGenerationDate = userProfile?.outfitGenerationDate || "";
 
@@ -120,12 +120,12 @@ export async function POST(req: Request) {
           }
 
           if (currentGenerations >= limit) {
-             sendStep(controller, { 
-               ok: false, 
-               message: `Bạn đã sử dụng hết lượt gợi ý trang phục hôm nay. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} có tối đa ${limit} lượt/ngày.` 
-             });
-             controller.close();
-             return;
+            sendStep(controller, {
+              ok: false,
+              message: `Bạn đã sử dụng hết lượt gợi ý trang phục hôm nay. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} có tối đa ${limit} lượt/ngày.`
+            });
+            controller.close();
+            return;
           }
           // --------------------------------
 
@@ -188,43 +188,75 @@ export async function POST(req: Request) {
           console.timeEnd("gemini_visual");
 
           sendStep(controller, { stage: "generating_outfit" });
-          console.log("Generating image with Gemini Imagen for:", out.outfit);
-          console.time("imagen_gen");
-
+          console.log("Generating image with Infip API for:", out.outfit);
+          console.time("infip_gen");
+          let sizeModels = ["img4", "img3"];
+          let aspectModels = ["flux-schnell", "flux2-klein-9b", "flux2-klein-4b", "flux2-dev", "lucid-origin", "phoenix", "sdxl", "sdxl-lite", "dreamshaper"];
           let imageUrl = "";
           try {
-            const { GoogleGenAI } = await import("@google/genai");
-            const imagenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+            let infipResponse: any = null;
+            let success = false;
+            let lastErrorText = "";
 
-            const imagenResponse = await imagenAI.models.generateImages({
-              model: "imagen-3.0-generate-002",
-              prompt: out.imagen_prompt,
-              config: { numberOfImages: 1 },
-            });
-
-            const imgData = imagenResponse.generatedImages?.[0]?.image?.imageBytes;
-            if (imgData) {
-              const { v2: cloudinary } = await import("cloudinary");
-              cloudinary.config({
-                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-                api_key: process.env.CLOUDINARY_API_KEY,
-                api_secret: process.env.CLOUDINARY_API_SECRET,
+            for (const model of sizeModels) {
+              infipResponse = await fetch("https://api.infip.pro/v1/images/generations", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  model: model,
+                  prompt: out.imagen_prompt,
+                  n: 1,
+                  size: "1024x1024",
+                  response_format: "url"
+                })
               });
+              if (infipResponse.ok) {
+                success = true;
+                break;
+              } else {
+                lastErrorText = await infipResponse.text();
+              }
+            }
 
-              const uploadResult: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload(
-                  `data:image/png;base64,${imgData}`,
-                  { folder: "outfit-suggestions", format: "webp", quality: "auto" },
-                  (err: any, result: any) => (err ? reject(err) : resolve(result))
-                );
-              });
-              imageUrl = uploadResult?.secure_url || "";
-              console.log("Imagen + Cloudinary OK, url:", imageUrl);
+            if (!success) {
+              for (const model of aspectModels) {
+                infipResponse = await fetch("https://api.infip.pro/v1/images/generations", {
+                  method: "POST",
+                  headers: {
+                    "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    model: model,
+                    prompt: out.imagen_prompt,
+                    n: 1,
+                    aspect: "square",
+                    response_format: "url"
+                  })
+                });
+                if (infipResponse.ok) {
+                  success = true;
+                  break;
+                } else {
+                  lastErrorText = await infipResponse.text();
+                }
+              }
+            }
+
+            if (success && infipResponse) {
+              const data = await infipResponse.json();
+              imageUrl = data.data?.[0]?.url || "";
+              console.log("Infip API OK, url:", imageUrl);
+            } else {
+              console.error("Infip API All Models Failed:", lastErrorText);
             }
           } catch (imgErr: any) {
-            console.error("Imagen Error (Fallback to text):", imgErr.message || imgErr);
+            console.error("Infip Error (Fallback to text):", imgErr.message || imgErr);
           }
-          console.timeEnd("imagen_gen");
+          console.timeEnd("infip_gen");
 
           // --- UPDATE USER QUOTA ---
           await adminDb.collection("users").doc(uid).update({
