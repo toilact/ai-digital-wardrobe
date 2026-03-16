@@ -68,6 +68,42 @@ function getStorageKey(idUser: string) {
   return `${CHAT_HISTORY_STORAGE_PREFIX}:${idUser}`;
 }
 
+function normalizeConversationList(raw: unknown) {
+  return Array.isArray(raw)
+    ? raw
+        .map((conversation) => normalizeStoredConversation(conversation as StoredConversation))
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, MAX_STORED_CONVERSATIONS)
+    : [];
+}
+
+function readLocalConversations(idUser: string) {
+  if (typeof window === "undefined" || !idUser) return [];
+
+  try {
+    const raw = window.localStorage.getItem(getStorageKey(idUser));
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return normalizeConversationList(parsed);
+  } catch (error) {
+    console.error("Không thể đọc lịch sử chat local:", error);
+    return [];
+  }
+}
+
+function writeLocalConversations(idUser: string, conversations: ChatConversation[]) {
+  if (typeof window === "undefined" || !idUser) return;
+
+  try {
+    const payload = [...conversations]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_STORED_CONVERSATIONS);
+    window.localStorage.setItem(getStorageKey(idUser), JSON.stringify(payload));
+  } catch (error) {
+    console.error("Không thể lưu lịch sử chat local:", error);
+  }
+}
+
 function getConversationTitle(text: string) {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) return DEFAULT_CONVERSATION_TITLE;
@@ -152,6 +188,9 @@ export default function WardrobeStylistChat({
   const [activeConversationId, setActiveConversationId] = useState("");
   const [historyReady, setHistoryReady] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [menuConversationId, setMenuConversationId] = useState<string | null>(null);
+  const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [loadingStage, setLoadingStage] = useState<"thinking" | "analyzing_clothes" | "generating_outfit" | null>(null);
@@ -164,6 +203,8 @@ export default function WardrobeStylistChat({
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
 
   const quickChips = useMemo(
     () => [
@@ -205,7 +246,7 @@ export default function WardrobeStylistChat({
     setConversations([]);
     setActiveConversationId("");
 
-    if (typeof window === "undefined" || !idUser) {
+    if (!idUser) {
       const fallbackConversation = createConversation();
       setConversations([fallbackConversation]);
       setActiveConversationId(fallbackConversation.id);
@@ -213,44 +254,132 @@ export default function WardrobeStylistChat({
       return;
     }
 
-    try {
-      const raw = window.localStorage.getItem(getStorageKey(idUser));
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      const restored = Array.isArray(parsed)
-        ? parsed
-            .map((conversation: unknown) => normalizeStoredConversation(conversation))
-            .filter((conversation): conversation is ChatConversation => conversation !== null)
-            .sort((a, b) => b.updatedAt - a.updatedAt)
-            .slice(0, MAX_STORED_CONVERSATIONS)
-        : [];
+    let cancelled = false;
 
-      const nextConversations = restored.length > 0 ? restored : [createConversation()];
-      setConversations(nextConversations);
-      setActiveConversationId(nextConversations[0].id);
-    } catch (error) {
-      console.error("Không thể tải lịch sử chat:", error);
-      const fallbackConversation = createConversation();
-      setConversations([fallbackConversation]);
-      setActiveConversationId(fallbackConversation.id);
-    } finally {
-      setHistoryReady(true);
-    }
-  }, [idUser]);
+    const loadHistory = async () => {
+      const localConversations = readLocalConversations(idUser);
+
+      try {
+        const token = await user?.getIdToken?.();
+
+        if (!token) {
+          const nextConversations = localConversations.length > 0 ? localConversations : [createConversation()];
+          if (!cancelled) {
+            setConversations(nextConversations);
+            setActiveConversationId(nextConversations[0].id);
+          }
+          return;
+        }
+
+        const response = await fetch("/api/chat-history", {
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const payload: { ok?: boolean; conversations?: StoredConversation[] } = await response.json();
+        const remoteConversations = normalizeConversationList(payload.conversations);
+        const nextConversations =
+          remoteConversations.length > 0
+            ? remoteConversations
+            : localConversations.length > 0
+              ? localConversations
+              : [createConversation()];
+
+        if (!cancelled) {
+          setConversations(nextConversations);
+          setActiveConversationId(nextConversations[0].id);
+          writeLocalConversations(idUser, nextConversations);
+        }
+      } catch (error) {
+        console.error("Không thể tải lịch sử chat từ Firebase:", error);
+        const nextConversations = localConversations.length > 0 ? localConversations : [createConversation()];
+        if (!cancelled) {
+          setConversations(nextConversations);
+          setActiveConversationId(nextConversations[0].id);
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryReady(true);
+        }
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [idUser, user]);
 
   useEffect(() => {
-    if (!historyReady || typeof window === "undefined" || !idUser || conversations.length === 0) return;
+    if (!historyReady || !idUser || conversations.length === 0) return;
 
     const payload = [...conversations]
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, MAX_STORED_CONVERSATIONS);
 
-    window.localStorage.setItem(getStorageKey(idUser), JSON.stringify(payload));
-  }, [conversations, historyReady, idUser]);
+    writeLocalConversations(idUser, payload);
+
+    const timeout = setTimeout(async () => {
+      try {
+        const token = await user?.getIdToken?.();
+        if (!token) return;
+
+        const response = await fetch("/api/chat-history", {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            conversations: payload,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+      } catch (error) {
+        console.error("Không thể đồng bộ lịch sử chat lên Firebase:", error);
+      }
+    }, 700);
+
+    return () => clearTimeout(timeout);
+  }, [conversations, historyReady, idUser, user]);
 
   useEffect(() => {
     if (activeConversation || conversations.length === 0) return;
     setActiveConversationId(conversations[0].id);
   }, [activeConversation, conversations]);
+
+  useEffect(() => {
+    if (!menuConversationId) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuConversationId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [menuConversationId]);
+
+  useEffect(() => {
+    if (!renamingConversationId) return;
+
+    const timeout = setTimeout(() => {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [renamingConversationId]);
 
   function updateConversation(
     conversationId: string,
@@ -292,6 +421,9 @@ export default function WardrobeStylistChat({
     setInput("");
     setSelectedIds({});
     setShowHistoryPanel(false);
+    setMenuConversationId(null);
+    setRenamingConversationId(null);
+    setRenameValue("");
   }
 
   function switchConversation(conversationId: string) {
@@ -300,6 +432,58 @@ export default function WardrobeStylistChat({
     setInput("");
     setSelectedIds({});
     setShowHistoryPanel(false);
+    setMenuConversationId(null);
+  }
+
+  function openConversationMenu(conversationId: string) {
+    if (sending) return;
+    setMenuConversationId((currentId) => (currentId === conversationId ? null : conversationId));
+  }
+
+  function startRenameConversation(conversation: ChatConversation) {
+    setMenuConversationId(null);
+    setRenamingConversationId(conversation.id);
+    setRenameValue(conversation.title);
+  }
+
+  function cancelRenameConversation() {
+    setRenamingConversationId(null);
+    setRenameValue("");
+  }
+
+  function submitRenameConversation() {
+    if (!renamingConversationId) return;
+
+    const nextTitle = renameValue.trim() || DEFAULT_CONVERSATION_TITLE;
+    updateConversation(renamingConversationId, (conversation) => ({
+      ...conversation,
+      title: nextTitle,
+    }));
+    cancelRenameConversation();
+  }
+
+  function deleteConversation(conversationId: string) {
+    if (sending) return;
+
+    const remainingConversations = conversations.filter((conversation) => conversation.id !== conversationId);
+    const nextConversations =
+      remainingConversations.length > 0
+        ? remainingConversations.sort((a, b) => b.updatedAt - a.updatedAt)
+        : [createConversation()];
+
+    setConversations(nextConversations);
+    setActiveConversationId((currentActiveId) => {
+      if (currentActiveId !== conversationId && nextConversations.some((conversation) => conversation.id === currentActiveId)) {
+        return currentActiveId;
+      }
+      return nextConversations[0].id;
+    });
+    setInput("");
+    setSelectedIds({});
+    setMenuConversationId(null);
+    if (renamingConversationId === conversationId) {
+      cancelRenameConversation();
+    }
   }
 
   async function send(text: string) {
@@ -496,7 +680,7 @@ export default function WardrobeStylistChat({
       <div className="flex items-center justify-between gap-3 px-2 py-2">
         <div>
           <div className="text-sm font-semibold text-white/90">Lịch sử trò chuyện</div>
-          <div className="text-xs text-white/45">Mỗi user được lưu cục bộ trên trình duyệt này</div>
+          <div className="text-xs text-white/45">Được đồng bộ theo tài khoản của bạn trên Firebase</div>
         </div>
         {mode === "drawer" || showHistoryPanel ? (
           <button
@@ -521,25 +705,73 @@ export default function WardrobeStylistChat({
         {sortedConversations.map((conversation) => {
           const isActive = conversation.id === activeConversationId;
           return (
-            <button
+            <div
               key={conversation.id}
-              onClick={() => switchConversation(conversation.id)}
-              disabled={sending}
               className={cls(
-                "w-full rounded-2xl border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
+                "group relative rounded-2xl border px-3 py-3 transition",
                 isActive
                   ? "border-cyan-300/35 bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,.25)]"
                   : "border-white/10 bg-black/20 hover:bg-white/8"
               )}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="truncate text-sm font-medium text-white/90">{conversation.title}</div>
-                <div className="shrink-0 text-[11px] text-white/45">{formatConversationTime(conversation.updatedAt)}</div>
+              <button
+                onClick={() => switchConversation(conversation.id)}
+                disabled={sending}
+                className="w-full pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="truncate text-sm font-medium text-white/90">{conversation.title}</div>
+                  <div className="shrink-0 pr-1 text-[11px] text-white/45">{formatConversationTime(conversation.updatedAt)}</div>
+                </div>
+                <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/55">
+                  {getConversationPreview(conversation)}
+                </div>
+              </button>
+
+              <div className="absolute right-2 top-2" ref={menuConversationId === conversation.id ? menuRef : null}>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openConversationMenu(conversation.id);
+                  }}
+                  className={cls(
+                    "flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white/65 transition hover:bg-white/10 hover:text-white",
+                    menuConversationId === conversation.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  )}
+                  title="Tùy chọn"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 8a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 8a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="currentColor" />
+                  </svg>
+                </button>
+
+                {menuConversationId === conversation.id ? (
+                  <div className="absolute right-0 top-10 z-20 w-36 overflow-hidden rounded-2xl border border-white/10 bg-[#121722]/95 p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.45)] backdrop-blur-xl">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startRenameConversation(conversation);
+                      }}
+                      className="flex w-full items-center rounded-xl px-3 py-2 text-sm text-white/85 transition hover:bg-white/10"
+                    >
+                      Đổi tên
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteConversation(conversation.id);
+                      }}
+                      className="mt-1 flex w-full items-center rounded-xl px-3 py-2 text-sm text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/55">
-                {getConversationPreview(conversation)}
-              </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -937,6 +1169,54 @@ export default function WardrobeStylistChat({
     </div>
   ) : null;
 
+  const renameConversationModal = renamingConversationId ? (
+    <div className="fixed inset-0 z-[115] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={cancelRenameConversation} />
+      <div className="relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-[#10141e]/95 p-6 shadow-[0_28px_90px_rgba(0,0,0,.5)] backdrop-blur-xl">
+        <div className="text-lg font-semibold text-white/92">Đổi tên cuộc trò chuyện</div>
+        <p className="mt-2 text-sm leading-6 text-white/58">
+          Chọn một tên ngắn gọn để bạn dễ tìm lại cuộc trò chuyện này trong lịch sử.
+        </p>
+
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={(event) => setRenameValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submitRenameConversation();
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              cancelRenameConversation();
+            }
+          }}
+          placeholder="Ví dụ: Outfit đi làm thứ Hai"
+          className="mt-5 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/90 outline-none focus:border-cyan-300/35 focus:shadow-[0_0_0_4px_rgba(34,211,238,.10)]"
+          maxLength={80}
+        />
+
+        <div className="mt-5 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={cancelRenameConversation}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/10"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={submitRenameConversation}
+            className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Lưu tên mới
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (!historyReady || !activeConversation) {
     const loadingShell = (
       <div className="flex h-full items-center justify-center rounded-3xl border border-white/10 bg-white/5 text-white/70 backdrop-blur-xl">
@@ -979,6 +1259,7 @@ export default function WardrobeStylistChat({
         {allSelectedModal}
         {messageImagesModal}
         {zoomImageModal}
+        {renameConversationModal}
         {wardrobeSelectorModal}
       </div>
     );
@@ -990,6 +1271,7 @@ export default function WardrobeStylistChat({
       {allSelectedModal}
       {messageImagesModal}
       {zoomImageModal}
+      {renameConversationModal}
       {wardrobeSelectorModal}
     </div>
   );

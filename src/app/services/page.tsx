@@ -94,7 +94,7 @@ export default function Services() {
                             </ul>
 
                             <button className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl">
-                                Nâng cấp VIP
+                                Mua Vip Thôi Nào !
                             </button>
                         </div>
                     </div>
