@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
+import { hasActiveVip } from "@/lib/vip";
 
 export const runtime = "nodejs";
 
@@ -203,7 +204,7 @@ export async function POST(req: Request) {
     const userDocRef = db.collection("users").doc(uid);
     const userDoc = await userDocRef.get();
     const userData = userDoc.exists ? userDoc.data() : null;
-    const isVIP = !!userData?.isVIP;
+    const isVIP = hasActiveVip(userData);
     const currentQuantity = typeof userData?.itemQuantity === "number" ? userData.itemQuantity : 0;
     const limit = isVIP ? 30 : 15;
 

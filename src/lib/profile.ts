@@ -1,5 +1,7 @@
+// src/lib/profile.ts
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { hasActiveVip as hasActiveVipBase, toDateSafe } from "@/lib/vip";
 
 export type Gender = "male" | "female";
 
@@ -9,7 +11,12 @@ export type UserAccount = {
   email?: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
+
   isVIP?: boolean;
+  vipPlan?: string | null;
+  vipActivatedAt?: unknown;
+  vipExpiresAt?: unknown | null;
+
   itemQuantity?: number;
   outfitGenerationsToday?: number;
   outfitGenerationDate?: string;
@@ -31,6 +38,14 @@ type UserDoc = UserAccount & Partial<UserMetrics>;
 
 function isValidGender(x: unknown): x is Gender {
   return x === "male" || x === "female";
+}
+
+export function hasActiveVip(account?: UserAccount | null) {
+  return hasActiveVipBase(account);
+}
+
+export function getVipExpiresAt(account?: UserAccount | null) {
+  return toDateSafe(account?.vipExpiresAt);
 }
 
 export async function getUserAccount(uid: string) {

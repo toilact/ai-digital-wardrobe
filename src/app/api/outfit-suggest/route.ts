@@ -3,6 +3,7 @@ import { getAdmin } from "@/lib/firebaseAdmin";
 import { generateVisualGemini } from "@/lib/llm/geminiVisual";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getUserProfile, type UserProfile } from "@/lib/profile";
+import { hasActiveVip } from "@/lib/vip";
 
 export const runtime = "nodejs";
 
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
 
         if (isEvent) {
           // --- VIP & QUOTA CHECK ---
-          const isVIP = !!userProfile?.isVIP;
+          const isVIP = hasActiveVip(userProfile);
           const limit = isVIP ? 5 : 1;
           const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 

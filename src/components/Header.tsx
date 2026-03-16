@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import {
     getUserAccount,
     getUserProfile,
+    hasActiveVip,
     type UserAccount,
     type UserProfile,
 } from "@/lib/profile";
@@ -31,6 +32,7 @@ export default function Header() {
     const resolvedEmail = account?.email || user?.email;
     const resolvedDisplayName = account?.displayName || user?.displayName;
     const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
+    const vipActive = hasActiveVip(account ?? profile ?? null);
 
     useEffect(() => {
         if (!user) return;
@@ -94,12 +96,18 @@ export default function Header() {
                             <>
                                 {(account || profile) && (
 
-                                    <div className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${(account?.isVIP ?? profile?.isVIP) ? 'bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-white/10 text-white/80 border-white/20'}`}>
-                                        {(account?.isVIP ?? profile?.isVIP) ? (
+                                    <div
+                                        className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${
+                                            vipActive
+                                                ? "bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                                                : "bg-white/10 text-white/80 border-white/20"
+                                        }`}
+                                    >
+                                        {vipActive ? (
                                             <>
                                                 <span className="text-base leading-none">♛</span> VIP
                                             </>
-                                        ) : 'Thường'}
+                                        ) : "Thường"}
                                     </div>
                                 )}
                                 <button

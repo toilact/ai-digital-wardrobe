@@ -680,7 +680,7 @@ export default function WardrobeStylistChat({
       <div className="flex items-center justify-between gap-3 px-2 py-2">
         <div>
           <div className="text-sm font-semibold text-white/90">Lịch sử trò chuyện</div>
-          <div className="text-xs text-white/45">Được đồng bộ theo tài khoản của bạn trên Firebase</div>
+          <div className="text-xs text-white/45">Nơi lưu trữ những đoạn chat thú vị cùng ADW AI</div>
         </div>
         {mode === "drawer" || showHistoryPanel ? (
           <button

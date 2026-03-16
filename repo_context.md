@@ -11454,23 +11454,6 @@ def init_model(name, *args, **kwargs):
 
 
 ---
-# ai-service/scripts/download_checkpoints.sh
-```text
-#!/usr/bin/env bash
-set -e
-
-mkdir -p ai-service/checkpoints
-
-echo "Downloading lip.pth..."
-curl -L -o ai-service/checkpoints/lip.pth \
-"https://huggingface.co/aravindhv10/Self-Correction-Human-Parsing/resolve/main/checkpoints/lip.pth"
-
-echo "Done: ai-service/checkpoints/lip.pth"
-
-```
-
-
----
 # ai-service/modules/__init__.py
 ```text
 import torch.nn as nn
@@ -12674,6 +12657,7 @@ import {
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import Header from "@/components/Header";
+import { FiAtSign, FiCheckCircle, FiLock, FiUser } from "react-icons/fi";
 
 function firebaseMsg(err: unknown) {
   const e = err as AuthError;
@@ -12780,83 +12764,187 @@ export default function RegisterPage() {
   };
 
   return (
-    <main>
+    <main className="relative overflow-hidden text-white">
+      <div className="absolute inset-0 -z-20 bg-[linear-gradient(135deg,#060816_0%,#0a1224_42%,#14081f_100%)]" />
+      <div className="absolute inset-0 -z-20 opacity-70 bg-[radial-gradient(circle_at_15%_18%,rgba(56,189,248,.18),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(217,70,239,.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(16,185,129,.10),transparent_32%)]" />
+      <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
+
       <Header />
 
-      <header className="hero text-center md:context-centered">
-        <div className="hero-left">
-          <h1>
-            <span className="grad">AI Digital Wardrobe</span>
-          </h1>
+      <section className="wrap">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
+          <div className="relative w-full max-w-[620px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+            <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+            <div className="relative z-10">
+              <div className="mb-4 flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/adw-logo-clean.png"
+                  alt="AI Digital Wardrobe"
+                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  draggable={false}
+                />
+              </div>
+
+              <div className="text-center">
+                <h1 className="register-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                  Đăng ký
+                </h1>
+
+                <p className="mx-auto mt-1 max-w-[460px] text-sm leading-7 text-white/60 md:text-[15px]">
+                  Tạo tài khoản để bắt đầu xây dựng tủ đồ số, nhận gợi ý outfit
+                  và cá nhân hóa trải nghiệm AI Digital Wardrobe.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Tên hiển thị <span className="text-white/40">(tuỳ chọn)</span>
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: Nguyễn Văn A"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Tên đăng nhập
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="text"
+                        placeholder="Nhập tên đăng nhập"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        autoComplete="username"
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Email
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiAtSign className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="email"
+                        placeholder="Nhập email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Mật khẩu
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="password"
+                        placeholder="Tối thiểu 6 ký tự"
+                        value={pass}
+                        onChange={(e) => setPass(e.target.value)}
+                        autoComplete="new-password"
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Nhập lại mật khẩu
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiCheckCircle className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="password"
+                        placeholder="Nhập lại mật khẩu"
+                        value={confirm}
+                        onChange={(e) => setConfirm(e.target.value)}
+                        autoComplete="new-password"
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={onRegister}
+                    disabled={loading}
+                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                  >
+                    {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
+                  </button>
+                </div>
+
+                <p className="mt-5 text-center text-sm text-white/55">
+                  Đã có tài khoản?{" "}
+                  <Link
+                    href="/auth/login"
+                    className="font-semibold text-cyan-300 transition hover:text-cyan-200 hover:underline"
+                  >
+                    Đăng nhập
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </header>
+      </section>
 
-      <main className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm shadow-2xl rounded-xl p-6 space-y-4 bg-gray-900">
-          <h2 className="text-2xl font-semibold text-center">Đăng ký</h2>
+      <style jsx>{`
+        .register-title {
+          background: linear-gradient(
+            90deg,
+            #ffffff 0%,
+            #e9d5ff 22%,
+            #67e8f9 48%,
+            #c4b5fd 72%,
+            #ffffff 100%
+          );
+          background-size: 220% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: titleShine 5s ease-in-out infinite;
+          filter: drop-shadow(0 0 10px rgba(103, 232, 249, 0.1));
+        }
 
-          <input
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            placeholder="Tên hiển thị (tuỳ chọn)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-
-          <input
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            placeholder="Tên đăng nhập"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-          />
-
-          <input
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-
-          <input
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            placeholder="Mật khẩu (>= 6 ký tự)"
-            type="password"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            autoComplete="new-password"
-          />
-
-          <input
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            placeholder="Nhập lại mật khẩu"
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            autoComplete="new-password"
-          />
-
-          <button
-            onClick={onRegister}
-            disabled={loading}
-            className="w-full bg-[#00a400] text-white rounded py-2 disabled:opacity-50"
-          >
-            {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-          </button>
-
-          <p className="text-sm text-gray-300 text-center">
-            Đã có tài khoản?{" "}
-            <Link className="underline" href="/auth/login">
-              Đăng nhập
-            </Link>
-          </p>
-        </div>
-      </main>
+        @keyframes titleShine {
+          0% {
+            background-position: 0% 50%;
+            filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.08));
+          }
+          50% {
+            background-position: 100% 50%;
+            filter: drop-shadow(0 0 18px rgba(192, 132, 252, 0.18));
+          }
+          100% {
+            background-position: 0% 50%;
+            filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.08));
+          }
+        }
+      `}</style>
     </main>
   );
 }
-
 ```
 
 
@@ -12869,6 +12957,7 @@ import Header from "@/components/Header";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FiArrowRight, FiKey, FiLock, FiMail, FiUser } from "react-icons/fi";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -12925,10 +13014,12 @@ export default function ForgotPasswordPage() {
     if (!uname) return alert("Nhập tên đăng nhập.");
     if (!code) return alert("Nhập mã xác nhận.");
     if (!newPassword) return alert("Nhập mật khẩu mới.");
-    if (newPassword.length < 6)
+    if (newPassword.length < 6) {
       return alert("Mật khẩu mới phải có ít nhất 6 ký tự.");
-    if (newPassword !== confirmPassword)
+    }
+    if (newPassword !== confirmPassword) {
       return alert("Mật khẩu nhập lại không khớp.");
+    }
 
     setLoadingReset(true);
 
@@ -12959,86 +13050,198 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main>
+    <main className="relative overflow-hidden text-white">
+      <div className="absolute inset-0 -z-20 bg-[linear-gradient(135deg,#060816_0%,#0a1224_42%,#14081f_100%)]" />
+      <div className="absolute inset-0 -z-20 opacity-70 bg-[radial-gradient(circle_at_15%_18%,rgba(56,189,248,.18),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(217,70,239,.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(16,185,129,.10),transparent_32%)]" />
+      <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
+
       <Header />
-      <div className="wrap">
-        <div className="mt-20 flex items-center justify-center min-h-[60vh]">
-          <div className="w-full max-w-[420px] bg-gray-900 rounded-xl p-6 shadow-2xl">
-            <h2 className="text-3xl font-light text-white mb-2 tracking-tight text-center">
-              Quên mật khẩu
-            </h2>
 
-            <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">
-              Nhập tên đăng nhập để nhận mã xác nhận qua email đã đăng ký.
-            </p>
+      <section className="wrap">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
+          <div className="relative w-full max-w-[575px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+            <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Tên đăng nhập"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
-              />
-
-              <button
-                onClick={onSendCode}
-                disabled={loadingSend}
-                className="w-full bg-blue-500 text-white p-3 rounded font-semibold hover:bg-blue-600 transition-colors disabled:opacity-60"
-              >
-                {loadingSend ? "Đang gửi mã..." : sent ? "Gửi lại mã" : "Gửi mã xác nhận"}
-              </button>
-
-              {message ? (
-                <p className="text-sm text-green-400 leading-relaxed">{message}</p>
-              ) : null}
-
-              <div className="pt-2 border-t border-gray-700 space-y-4">
-                <input
-                  type="text"
-                  placeholder="Mã xác nhận gồm 6 chữ số"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
+            <div className="relative z-10">
+              <div className="mb-4 flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/adw-logo-clean.png"
+                  alt="AI Digital Wardrobe"
+                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  draggable={false}
                 />
-
-                <input
-                  type="password"
-                  placeholder="Mật khẩu mới"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
-                />
-
-                <input
-                  type="password"
-                  placeholder="Nhập lại mật khẩu mới"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
-                />
-
-                <button
-                  onClick={onResetPassword}
-                  disabled={loadingReset}
-                  className="w-full bg-green-600 text-white p-3 rounded font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
-                >
-                  {loadingReset ? "Đang cập nhật..." : "Tiếp tục"}
-                </button>
               </div>
 
-              <div className="text-center pt-2">
-                <Link
-                  href="/auth/login"
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  Quay về đăng nhập
-                </Link>
+              <div className="text-center">
+                <h1 className="forgot-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                  Quên mật khẩu
+                </h1>
+
+                <p className="mx-auto mt-1 max-w-[450px] text-sm leading-7 text-white/60 md:text-[15px]">
+                  Nhập tên đăng nhập để nhận mã xác nhận qua email đã đăng ký,
+                  sau đó đặt lại mật khẩu mới cho tài khoản của bạn.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Tên đăng nhập
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="text"
+                        placeholder="Nhập tên đăng nhập"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={onSendCode}
+                    disabled={loadingSend}
+                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                  >
+                    {loadingSend ? (
+                      "Đang gửi mã..."
+                    ) : sent ? (
+                      "Gửi lại mã"
+                    ) : (
+                      <>
+                        Gửi mã xác nhận
+                        <FiMail className="transition group-hover:translate-x-0.5" />
+                      </>
+                    )}
+                  </button>
+
+                  {message ? (
+                    <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-4 py-3 text-sm leading-7 text-emerald-200/90">
+                      {message}
+                    </div>
+                  ) : null}
+
+                  <div className="my-2 flex items-center gap-4">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
+                      Cập nhật mật khẩu
+                    </span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Mã xác nhận
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiKey className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="text"
+                        placeholder="Nhập mã 6 chữ số"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Mật khẩu mới
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="password"
+                        placeholder="Tối thiểu 6 ký tự"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Nhập lại mật khẩu mới
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="password"
+                        placeholder="Nhập lại mật khẩu mới"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={onResetPassword}
+                    disabled={loadingReset}
+                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(16,185,129,.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(20,184,166,.24)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                  >
+                    {loadingReset ? "Đang cập nhật..." : "Tiếp tục"}
+                    {!loadingReset && (
+                      <FiArrowRight className="transition group-hover:translate-x-0.5" />
+                    )}
+                  </button>
+                </div>
+
+                <p className="mt-5 text-center text-sm text-white/55">
+                  Nhớ lại mật khẩu rồi?{" "}
+                  <Link
+                    href="/auth/login"
+                    className="font-semibold text-cyan-300 transition hover:text-cyan-200 hover:underline"
+                  >
+                    Quay về đăng nhập
+                  </Link>
+                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <style jsx>{`
+        .forgot-title {
+          background: linear-gradient(
+            90deg,
+            #ffffff 0%,
+            #e9d5ff 22%,
+            #67e8f9 48%,
+            #c4b5fd 72%,
+            #ffffff 100%
+          );
+          background-size: 220% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: titleShine 5s ease-in-out infinite;
+          filter: drop-shadow(0 0 10px rgba(103, 232, 249, 0.1));
+        }
+
+        @keyframes titleShine {
+          0% {
+            background-position: 0% 50%;
+            filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.08));
+          }
+          50% {
+            background-position: 100% 50%;
+            filter: drop-shadow(0 0 18px rgba(192, 132, 252, 0.18));
+          }
+          100% {
+            background-position: 0% 50%;
+            filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.08));
+          }
+        }
+      `}</style>
     </main>
   );
 }
@@ -13056,8 +13259,9 @@ import { auth, db } from "@/lib/firebase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import GoogleLoginButton from "@/components/GoogleLoginButton";
 import Header from "@/components/Header";
+import GoogleLoginButton from "@/components/GoogleLoginButton";
+import { FiArrowRight, FiLock, FiUser } from "react-icons/fi";
 
 async function getLoginEmails(username: string) {
   const fallbackEmail = `${username}@adw.local`;
@@ -13071,9 +13275,7 @@ async function getLoginEmails(username: string) {
     ? (usernameSnap.data()?.email as string | undefined)?.trim().toLowerCase()
     : "";
 
-  return Array.from(
-    new Set([mappedEmail, fallbackEmail].filter(Boolean))
-  );
+  return Array.from(new Set([mappedEmail, fallbackEmail].filter(Boolean)));
 }
 
 export default function Login() {
@@ -13083,7 +13285,10 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const onLogin = async () => {
-    if (!username || !pass) return alert("Nhập tên đăng nhập và mật khẩu");
+    if (!username || !pass) {
+      alert("Nhập tên đăng nhập và mật khẩu");
+      return;
+    }
 
     setLoading(true);
 
@@ -13106,6 +13311,7 @@ export default function Login() {
         } catch (err) {
           lastError = err;
           const code = ((err as AuthError)?.code ?? "").toString();
+
           if (
             code &&
             code !== "auth/invalid-credential" &&
@@ -13125,168 +13331,464 @@ export default function Login() {
   };
 
   return (
-    <main>
+    <main className="relative overflow-hidden text-white">
+      <div className="absolute inset-0 -z-20 bg-[linear-gradient(135deg,#060816_0%,#0a1224_42%,#14081f_100%)]" />
+      <div className="absolute inset-0 -z-20 opacity-70 bg-[radial-gradient(circle_at_15%_18%,rgba(56,189,248,.18),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(217,70,239,.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(16,185,129,.10),transparent_32%)]" />
+      <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
+
       <Header />
-      <div className="wrap">
-        <div className="mt-20 flex items-center justify-center min-h-[60vh]">
-          <div className="w-full max-w-[400px] bg-gray-900 rounded-xl p-6 shadow-2xl flex flex-col items-center">
-            <h2 className="text-3xl font-light text-white mb-2 tracking-tight">
-              Đăng nhập
-            </h2>
 
-            <div className="w-full space-y-4">
-              <div className="relative m-2">
-                <input
-                  type="text"
-                  placeholder="Tên đăng nhập"
-                  value={username}
-                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
-                  onChange={(e) => setUsername(e.target.value)}
+      <section className="wrap">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
+          <div className="relative w-full max-w-[575px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+            <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
+
+            <div className="relative z-10">
+              <div className="mb-4 flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/adw-logo-clean.png"
+                  alt="AI Digital Wardrobe"
+                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  draggable={false}
                 />
               </div>
 
-              <div className="relative m-2">
-                <input
-                  type="password"
-                  placeholder="Mật khẩu"
-                  value={pass}
-                  onChange={(e) => setPass(e.target.value)}
-                  className="w-full border border-gray-300 p-3 outline-none focus:border-blue-400 bg-gray-800 text-white rounded"
-                />
+              <div className="text-center">
+                <h1 className="login-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                  Đăng nhập
+                </h1>
+
+                <p className="mx-auto mt-1 max-w-[420px] text-sm leading-7 text-white/60 md:text-[15px]">
+                  {/* Tiếp tục quản lý tủ đồ, nhận gợi ý outfit thông minh và đồng bộ
+                  trải nghiệm thời trang số của bạn. */}
+                </p>
               </div>
 
-              <div className="flex justify-end px-2 -mt-2">
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  Quên mật khẩu?
-                </Link>
+              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Tên đăng nhập
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="text"
+                        placeholder="Nhập tên đăng nhập"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/75">
+                      Mật khẩu
+                    </label>
+                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                      <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
+                      <input
+                        type="password"
+                        placeholder="Nhập mật khẩu"
+                        value={pass}
+                        onChange={(e) => setPass(e.target.value)}
+                        className="w-full bg-transparent text-white outline-none placeholder:text-white/28"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end pt-1 text-sm">
+                    <Link
+                      href="/auth/forgot-password"
+                      className="font-medium text-cyan-300 transition hover:text-cyan-200 hover:underline"
+                    >
+                      Quên mật khẩu?
+                    </Link>
+                  </div>
+
+                  <button
+                    onClick={onLogin}
+                    disabled={loading}
+                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                  >
+                    {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                    {!loading && (
+                      <FiArrowRight className="transition group-hover:translate-x-0.5" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="my-5 flex items-center gap-4">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
+                    Hoặc
+                  </span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
+
+                <GoogleLoginButton />
+
+                <p className="mt-4 text-center text-sm text-white/55">
+                  Chưa có tài khoản?{" "}
+                  <Link
+                    href="/auth/register"
+                    className="font-semibold text-fuchsia-300 transition hover:text-fuchsia-200 hover:underline"
+                  >
+                    Đăng ký ngay
+                  </Link>
+                </p>
               </div>
-
-              <div className="m-2">
-                <button
-                  onClick={onLogin}
-                  disabled={loading}
-                  className="w-full bg-[#4a90e2] text-white p-3 font-semibold hover:bg-blue-600 transition-colors rounded"
-                >
-                  {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-                </button>
-              </div>
-            </div>
-
-            <div className="w-full flex items-center my-6">
-              <div className="flex-1 h-[1px] bg-gray-200"></div>
-              <span className="px-3 text-xs text-gray-400 uppercase">Hoặc</span>
-              <div className="flex-1 h-[1px] bg-gray-200"></div>
-            </div>
-
-            <div className="pt-2 border-t border-gray-700 w-full">
-              <GoogleLoginButton />
-            </div>
-
-            <div className="flex gap-4 text-sm text-white mt-4">
-              <Link href="/auth/register" className="hover:underline">
-                Đăng ký
-              </Link>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <style jsx>{`
+        .login-title {
+          background: linear-gradient(
+            90deg,
+            #ffffff 0%,
+            #e9d5ff 22%,
+            #67e8f9 48%,
+            #c4b5fd 72%,
+            #ffffff 100%
+          );
+          background-size: 220% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          animation: titleShine 5s ease-in-out infinite;
+          filter: drop-shadow(0 0 10px rgba(103, 232, 249, 0.1));
+        }
+
+        @keyframes titleShine {
+          0% {
+            background-position: 0% 50%;
+            filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.08));
+          }
+          50% {
+            background-position: 100% 50%;
+            filter: drop-shadow(0 0 18px rgba(192, 132, 252, 0.18));
+          }
+          100% {
+            background-position: 0% 50%;
+            filter: drop-shadow(0 0 8px rgba(103, 232, 249, 0.08));
+          }
+        }
+      `}</style>
     </main>
   );
 }
-
 ```
 
 
 ---
 # src/app/about/page.tsx
 ```text
+import Link from "next/link";
 import Header from "@/components/Header";
 
+const pillars = [
+  {
+    title: "Cá nhân hóa thực sự",
+    description:
+      "Mỗi gợi ý được xây dựng từ chính tủ đồ, bối cảnh sử dụng và phong cách riêng của bạn, thay vì những lời khuyên thời trang chung chung.",
+  },
+  {
+    title: "AI có ích trong đời sống",
+    description:
+      "Chúng tôi ứng dụng AI để giải quyết việc chọn đồ hằng ngày nhanh hơn, rõ ràng hơn và bớt lãng phí hơn.",
+  },
+  {
+    title: "Thiết kế lấy trải nghiệm làm trung tâm",
+    description:
+      "Mọi tính năng đều hướng tới một hành trình mượt mà: lưu tủ đồ, hiểu món đồ và nhận đề xuất có thể dùng ngay.",
+  },
+];
+
+const capabilities = [
+  {
+    eyebrow: "01",
+    title: "Số hóa tủ đồ cá nhân",
+    description:
+      "Biến tủ đồ vật lý thành một hệ thống trực quan, có cấu trúc và dễ quản lý trên nền tảng số.",
+  },
+  {
+    eyebrow: "02",
+    title: "Hiểu ngữ cảnh mặc đẹp",
+    description:
+      "Gợi ý outfit dựa trên dịp sử dụng, thời tiết, màu sắc, phong cách mong muốn và các món đồ bạn đang có.",
+  },
+  {
+    eyebrow: "03",
+    title: "Tối ưu giá trị từng món đồ",
+    description:
+      "Giúp người dùng nhìn lại tủ đồ hiện tại, phối mới từ đồ cũ và ra quyết định mua sắm thông minh hơn.",
+  },
+];
+
+const teamAreas = [
+  {
+    label: "Product & Experience",
+    title: "Thiết kế một trải nghiệm thời trang rõ ràng, hiện đại và đáng tin cậy",
+    description:
+      "Đội ngũ sản phẩm tập trung vào trải nghiệm người dùng, hành vi sử dụng thực tế và cách biến những thao tác phức tạp thành hành trình đơn giản.",
+    accent: "from-sky-500/25 via-cyan-400/10 to-transparent",
+  },
+  {
+    label: "AI & Intelligence",
+    title: "Xây dựng hệ thống hiểu hình ảnh, ngữ cảnh và nhu cầu phối đồ",
+    description:
+      "Chúng tôi phát triển các luồng AI có khả năng phân tích tủ đồ, hiểu yêu cầu người dùng và tạo ra gợi ý mang tính ứng dụng cao.",
+    accent: "from-fuchsia-500/25 via-pink-400/10 to-transparent",
+  },
+  {
+    label: "Platform & Reliability",
+    title: "Đảm bảo nền tảng vận hành ổn định, an toàn và sẵn sàng mở rộng",
+    description:
+      "Phía sau giao diện là hạ tầng được thiết kế để xử lý dữ liệu, đồng bộ trải nghiệm và giữ cho hệ thống luôn đáng tin cậy.",
+    accent: "from-emerald-500/25 via-lime-400/10 to-transparent",
+  },
+];
+
+const principles = [
+  "Thiết kế tính năng dựa trên nhu cầu thật của người dùng, không chạy theo công nghệ vì xu hướng.",
+  "Ưu tiên lời gợi ý rõ ràng, hữu ích và có thể áp dụng ngay trong đời sống hằng ngày.",
+  "Kết hợp thời trang, dữ liệu và AI theo cách dễ hiểu, gần gũi và thực tế.",
+];
+
 export default function About() {
-    return (
-        <main className="">
-            <Header />
-            <div className="wrap">
-                {/* Hero Section */}
-                <section className="text-center py-20">
-                    <h1 className="text-5xl font-bold grad-text mb-4">
-                        Về chúng tôi
-                    </h1>
-                    <p className="text-xl text-gray-300 mb-8">
-                        Đội ngũ đằng sau AI Digital Wardrobe
-                    </p>
-                </section>
+  return (
+    <main className="pb-20">
+      <Header />
 
-                {/* Sứ mệnh */}
-                <section className="py-20">
-                    <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-8 max-w-4xl mx-auto shadow-xl">
-                        <h2 className="text-3xl font-semibold text-white/90 mb-6 text-center">Sứ mệnh của chúng tôi</h2>
-                        <p className="text-gray-300 text-lg leading-relaxed">
-                            Tại AI Digital Wardrobe, sứ mệnh của chúng tôi là cách mạng hóa cách mọi người quản lý và tương tác với tủ đồ cá nhân. Chúng tôi tin rằng công nghệ AI có thể giúp mọi người tiết kiệm thời gian, giảm lãng phí và thể hiện phong cách cá nhân một cách tốt hơn. Bằng cách kết hợp trí tuệ nhân tạo với hiểu biết sâu sắc về thời trang, chúng tôi tạo ra một nền tảng giúp bạn dễ dàng khám phá và tận dụng tối đa bộ sưu tập quần áo của mình.
-                        </p>
-                    </div>
-                </section>
+      <div className="wrap">
+        <section className="relative overflow-hidden py-16 md:py-24">
+          <div className="absolute inset-x-0 top-8 -z-10 mx-auto h-72 w-[82%] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.22),rgba(236,72,153,0.12),transparent_70%)] blur-3xl" />
 
-                {/* Đội ngũ */}
-                <section className="py-20">
-                    <h2 className="text-4xl font-bold text-white text-center mb-12">Đội ngũ phát triển</h2>
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {/* Thành viên 1 */}
-                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
-                            <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-white text-3xl font-bold">A</span>
-                            </div>
-                            <h3 className="text-xl font-semibold text-white/90 mb-2">Nguyễn Văn A</h3>
-                            <p className="text-gray-400 mb-4">Frontend Developer</p>
-                            <p className="text-gray-300 text-sm">
-                                Chuyên gia phát triển giao diện người dùng với niềm đam mê tạo ra trải nghiệm người dùng tuyệt vời.
-                            </p>
-                        </div>
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+            <div>
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/75 backdrop-blur-md">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.75)]" />
+                AI-powered fashion platform
+              </div>
 
-                        {/* Thành viên 2 */}
-                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
-                            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-white text-3xl font-bold">B</span>
-                            </div>
-                            <h3 className="text-xl font-semibold text-white/90 mb-2">Trần Thị B</h3>
-                            <p className="text-gray-400 mb-4">AI Engineer</p>
-                            <p className="text-gray-300 text-sm">
-                                Chuyên gia trí tuệ nhân tạo, phát triển các thuật toán phân tích hình ảnh và gợi ý trang phục thông minh.
-                            </p>
-                        </div>
+              <h1 className="max-w-4xl text-5xl font-bold leading-tight md:text-6xl">
+                <span className="grad-text">Chúng tôi xây dựng AI Digital Wardrobe</span>
+                <span className="block mt-3 text-white/92">
+                  để việc quản lý tủ đồ và chọn trang phục trở nên thông minh, tinh gọn và truyền cảm hứng hơn mỗi ngày.
+                </span>
+              </h1>
 
-                        {/* Thành viên 3 */}
-                        <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
-                            <div className="w-24 h-24 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-white text-3xl font-bold">C</span>
-                            </div>
-                            <h3 className="text-xl font-semibold text-white/90 mb-2">Lê Văn C</h3>
-                            <p className="text-gray-400 mb-4">Backend Developer</p>
-                            <p className="text-gray-300 text-sm">
-                                Phát triển hệ thống backend mạnh mẽ, đảm bảo an toàn và hiệu suất cao cho ứng dụng.
-                            </p>
-                        </div>
-                    </div>
-                </section>
+              <p className="mt-6 max-w-3xl text-lg leading-8 text-white/68">
+                AI Digital Wardrobe là nơi thời trang gặp công nghệ theo cách thực tế nhất: giúp bạn hiểu rõ tủ đồ của mình,
+                đưa ra quyết định nhanh hơn và tận dụng tốt hơn những gì bạn đã sở hữu.
+              </p>
 
-                {/* Liên hệ */}
-                <section className="text-center py-20">
-                    <h2 className="text-3xl font-bold text-white mb-6">Liên hệ với chúng tôi</h2>
-                    <p className="text-gray-300 mb-8">
-                        Có câu hỏi hoặc góp ý? Chúng tôi luôn sẵn sàng lắng nghe từ bạn.
-                    </p>
-                    <div className="space-y-4">
-                        <p className="text-gray-300">Email: contact@aidigitalwardrobe.com</p>
-                        <p className="text-gray-300">Địa chỉ: Hà Nội, Việt Nam</p>
-                    </div>
-                </section>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  href="/services"
+                  className="rounded-2xl bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 px-6 py-3 font-semibold text-white shadow-[0_20px_50px_rgba(0,0,0,0.28)] transition hover:scale-[1.02]"
+                >
+                  Khám phá dịch vụ
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="rounded-2xl border border-white/12 bg-white/5 px-6 py-3 font-semibold text-white/88 backdrop-blur-md transition hover:bg-white/10"
+                >
+                  Trải nghiệm tủ đồ thông minh
+                </Link>
+              </div>
             </div>
-        </main>
-    );
+
+            <div className="space-y-5">
+              <div className="rounded-[28px] border border-white/10 bg-white/6 p-6 shadow-[0_22px_70px_rgba(0,0,0,.38)] backdrop-blur-xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm uppercase tracking-[0.22em] text-white/45">Tầm nhìn</div>
+                    <div className="mt-3 text-2xl font-semibold text-white/92">
+                      Trở thành trợ lý thời trang cá nhân đáng tin cậy cho cuộc sống hiện đại.
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
+                    <div className="text-xs text-white/45">Focus</div>
+                    <div className="text-lg font-semibold text-white/90">Style x AI</div>
+                  </div>
+                </div>
+                <p className="mt-5 text-sm leading-7 text-white/65">
+                  Chúng tôi theo đuổi một trải nghiệm nơi AI không thay thế gu thẩm mỹ của bạn, mà giúp bạn khai mở nó một cách nhanh hơn và chính xác hơn.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 via-white/5 to-transparent p-5 backdrop-blur-xl">
+                  <div className="text-sm text-white/50">Điểm mạnh cốt lõi</div>
+                  <div className="mt-2 text-2xl font-semibold text-white/92">AI hiểu tủ đồ thật</div>
+                  <p className="mt-3 text-sm leading-7 text-white/62">
+                    Phân tích hình ảnh, nhận diện món đồ và tạo đề xuất từ dữ liệu bạn đang có.
+                  </p>
+                </div>
+
+                <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/18 via-white/5 to-transparent p-5 backdrop-blur-xl">
+                  <div className="text-sm text-white/50">Giá trị mang lại</div>
+                  <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít ma sát hơn</div>
+                  <p className="mt-3 text-sm leading-7 text-white/62">
+                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp mặc hằng ngày.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-10 md:py-16">
+          <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-[0_24px_80px_rgba(0,0,0,.36)] backdrop-blur-xl md:p-10">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+              <div>
+                <div className="text-sm uppercase tracking-[0.22em] text-white/45">Sứ mệnh</div>
+                <h2 className="mt-3 text-3xl font-semibold leading-tight text-white/92 md:text-4xl">
+                  Đưa việc quản lý tủ đồ từ cảm tính sang một trải nghiệm có cấu trúc, thông minh và đầy cảm hứng.
+                </h2>
+              </div>
+
+              <div className="space-y-5 text-base leading-8 text-white/68">
+                <p>
+                  Chúng tôi tin rằng một tủ đồ tốt không chỉ là tập hợp của nhiều món quần áo, mà là khả năng hiểu rõ mình có gì,
+                  mặc gì cho đúng lúc và tận dụng tối đa những lựa chọn sẵn có.
+                </p>
+                <p>
+                  AI Digital Wardrobe ra đời để kết nối ba yếu tố thường bị tách rời: dữ liệu về món đồ, bối cảnh sử dụng thực tế
+                  và gu thẩm mỹ cá nhân. Khi ba yếu tố này được đặt cùng nhau, việc chọn outfit trở nên nhanh hơn, chính xác hơn
+                  và bền vững hơn.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-10 md:py-16">
+          <div className="mb-10 max-w-3xl">
+            <div className="text-sm uppercase tracking-[0.22em] text-white/45">Năng lực cốt lõi</div>
+            <h2 className="mt-3 text-4xl font-bold text-white/95">Điều làm nên AI Digital Wardrobe</h2>
+            <p className="mt-4 text-lg leading-8 text-white/62">
+              Chúng tôi không xây dựng một ứng dụng thời trang chỉ để trông đẹp. Chúng tôi xây dựng một công cụ hữu ích đủ để bạn muốn quay lại sử dụng mỗi ngày.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {capabilities.map((item) => (
+              <article
+                key={item.title}
+                className="group rounded-[28px] border border-white/10 bg-white/5 p-7 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-white/20"
+              >
+                <div className="text-sm font-semibold tracking-[0.18em] text-white/40">{item.eyebrow}</div>
+                <h3 className="mt-4 text-2xl font-semibold text-white/92">{item.title}</h3>
+                <p className="mt-4 text-base leading-8 text-white/62">{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="py-10 md:py-16">
+          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+            <div>
+              <div className="text-sm uppercase tracking-[0.22em] text-white/45">Cách chúng tôi làm việc</div>
+              <h2 className="mt-3 text-4xl font-bold text-white/95">Một đội ngũ liên ngành, cùng tập trung vào một mục tiêu rõ ràng</h2>
+              <p className="mt-5 text-lg leading-8 text-white/64">
+                Chúng tôi kết hợp tư duy sản phẩm, công nghệ AI và kỹ thuật nền tảng để tạo ra trải nghiệm có chiều sâu,
+                thay vì chỉ thêm AI như một lớp trang trí.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                {principles.map((principle) => (
+                  <div
+                    key={principle}
+                    className="flex items-start gap-4 rounded-2xl border border-white/10 bg-black/20 px-5 py-4"
+                  >
+                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-indigo-400 to-emerald-400" />
+                    <p className="text-white/70">{principle}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {teamAreas.map((area) => (
+                <article
+                  key={area.label}
+                  className={`rounded-[28px] border border-white/10 bg-gradient-to-br ${area.accent} p-6 backdrop-blur-xl`}
+                >
+                  <div className="text-sm uppercase tracking-[0.18em] text-white/48">{area.label}</div>
+                  <h3 className="mt-3 text-2xl font-semibold leading-tight text-white/92">{area.title}</h3>
+                  <p className="mt-4 text-base leading-8 text-white/64">{area.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-10 md:py-16">
+          <div className="grid gap-6 md:grid-cols-3">
+            {pillars.map((pillar) => (
+              <div
+                key={pillar.title}
+                className="rounded-[26px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-[0_18px_50px_rgba(0,0,0,.24)]"
+              >
+                <h3 className="text-xl font-semibold text-white/92">{pillar.title}</h3>
+                <p className="mt-4 leading-8 text-white/62">{pillar.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="py-12 md:py-20">
+          <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(135deg,rgba(99,102,241,.16),rgba(236,72,153,.12),rgba(34,197,94,.12))] p-8 shadow-[0_26px_90px_rgba(0,0,0,.4)] backdrop-blur-xl md:p-10">
+            <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+            <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+              <div>
+                <div className="text-sm uppercase tracking-[0.22em] text-white/45">Liên hệ</div>
+                <h2 className="mt-3 max-w-3xl text-3xl font-bold leading-tight text-white/95 md:text-4xl">
+                  Nếu bạn quan tâm đến tương lai của thời trang cá nhân hóa bằng AI, chúng tôi rất sẵn lòng kết nối.
+                </h2>
+                <p className="mt-5 max-w-2xl text-lg leading-8 text-white/66">
+                  AI Digital Wardrobe luôn chào đón những cuộc trò chuyện về sản phẩm, trải nghiệm người dùng và những ý tưởng có thể làm cho việc mặc đẹp trở nên thông minh hơn.
+                </p>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-white/78">
+                    Email: katoxz1002@gmail.com
+                  </div>
+                  <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-white/78">
+                    Địa điểm: Hồ Chí Minh, Việt Nam
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <Link
+                  href="/services"
+                  className="rounded-2xl border border-white/12 bg-white/8 px-6 py-3 font-semibold text-white/90 transition hover:bg-white/12"
+                >
+                  Xem dịch vụ
+                </Link>
+                <Link
+                  href="/auth/login"
+                  className="rounded-2xl bg-white px-6 py-3 font-semibold text-slate-900 transition hover:bg-white/90"
+                >
+                  Bắt đầu ngay
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
 }
+
 ```
 
 
@@ -14237,6 +14739,159 @@ export async function POST(req: Request) {
 
 
 ---
+# src/app/api/chat-history/route.ts
+```text
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+type Role = "user" | "assistant";
+type Msg = { id: string; role: Role; content: string; ts: number; images?: string[] };
+type ChatConversation = {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: Msg[];
+};
+
+const DEFAULT_CONVERSATION_TITLE = "Cuộc trò chuyện mới";
+const MAX_STORED_CONVERSATIONS = 12;
+const MAX_MESSAGES_PER_CONVERSATION = 40;
+const WELCOME_MESSAGE =
+  "Xin chào! Mình là stylist AI 👗✨\nBạn muốn phối đồ cho dịp nào? (đi học / đi chơi / đi làm / hẹn hò / đi sự kiện…)\nGợi ý: nói thêm thời tiết, địa điểm, phong cách bạn thích.";
+
+function uid() {
+  return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1];
+}
+
+function createWelcomeMessage(ts = Date.now()): Msg {
+  return {
+    id: uid(),
+    role: "assistant",
+    ts,
+    content: WELCOME_MESSAGE,
+  };
+}
+
+function normalizeMessage(raw: unknown): Msg | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const source = raw as Partial<Msg>;
+  if (typeof source.content !== "string") return null;
+
+  const images = Array.isArray(source.images)
+    ? source.images.filter((image): image is string => typeof image === "string" && image.trim().length > 0)
+    : undefined;
+
+  return {
+    id: typeof source.id === "string" && source.id ? source.id : uid(),
+    role: source.role === "user" ? "user" : "assistant",
+    content: source.content,
+    ts: typeof source.ts === "number" ? source.ts : Date.now(),
+    ...(images && images.length > 0 ? { images } : {}),
+  };
+}
+
+function normalizeConversation(raw: unknown): ChatConversation | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const source = raw as Partial<ChatConversation>;
+  const messages = Array.isArray(source.messages)
+    ? source.messages
+        .map((message) => normalizeMessage(message))
+        .filter((message): message is Msg => message !== null)
+        .slice(-MAX_MESSAGES_PER_CONVERSATION)
+    : [];
+
+  const updatedAt = typeof source.updatedAt === "number" ? source.updatedAt : Date.now();
+  const createdAt = typeof source.createdAt === "number" ? source.createdAt : updatedAt;
+
+  return {
+    id: typeof source.id === "string" && source.id ? source.id : uid(),
+    title:
+      typeof source.title === "string" && source.title.trim().length > 0
+        ? source.title.trim()
+        : DEFAULT_CONVERSATION_TITLE,
+    createdAt,
+    updatedAt,
+    messages: messages.length > 0 ? messages : [createWelcomeMessage(updatedAt)],
+  };
+}
+
+function normalizeConversations(raw: unknown) {
+  return Array.isArray(raw)
+    ? raw
+        .map((conversation) => normalizeConversation(conversation))
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, MAX_STORED_CONVERSATIONS)
+    : [];
+}
+
+export async function GET(req: Request) {
+  try {
+    const admin = getAdmin();
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json({ ok: false, message: "Missing token" }, { status: 401 });
+    }
+
+    const { uid } = await admin.auth().verifyIdToken(token);
+    const snap = await admin.firestore().collection("chatHistories").doc(uid).get();
+    const conversations = normalizeConversations(snap.data()?.conversations);
+
+    return NextResponse.json({ ok: true, conversations });
+  } catch (error: unknown) {
+    console.error(error);
+    const message = error instanceof Error ? error.message : "Load history failed";
+    return NextResponse.json({ ok: false, message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const admin = getAdmin();
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json({ ok: false, message: "Missing token" }, { status: 401 });
+    }
+
+    const { uid } = await admin.auth().verifyIdToken(token);
+    const body = await req.json();
+    const conversations = normalizeConversations(body?.conversations);
+    const docRef = admin.firestore().collection("chatHistories").doc(uid);
+    const existing = await docRef.get();
+
+    await docRef.set(
+      {
+        uid,
+        conversations,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: existing.exists ? existing.data()?.createdAt ?? admin.firestore.FieldValue.serverTimestamp() : admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    console.error(error);
+    const message = error instanceof Error ? error.message : "Save history failed";
+    return NextResponse.json({ ok: false, message }, { status: 500 });
+  }
+}
+
+```
+
+
+---
 # src/app/api/auth/forgot-password/reset/route.ts
 ```text
 import { NextResponse } from "next/server";
@@ -14408,23 +15063,10 @@ export async function POST(req: Request) {
 
     const data = usernameSnap.data() || {};
     const uid = typeof data.uid === "string" ? data.uid : "";
-    let email =
+    const email =
       typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
 
-    if (!uid) {
-      return genericOk;
-    }
-
-    try {
-      const userRecord = await admin.auth().getUser(uid);
-      if (userRecord.email) {
-        email = userRecord.email.trim().toLowerCase();
-      }
-    } catch (err) {
-      console.error("getUser(uid) failed:", err);
-    }
-
-    if (!email) {
+    if (!uid || !email) {
       return genericOk;
     }
 
@@ -14434,21 +15076,21 @@ export async function POST(req: Request) {
       Date.now() + 10 * 60 * 1000
     );
 
-    await resetRef.set(
-      {
-        uid,
-        email,
-        codeHash,
-        attempts: 0,
-        expiresAt,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    const payload = {
+      uid,
+      email,
+      codeHash,
+      attempts: 0,
+      expiresAt,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
 
     try {
-      await sendPasswordResetCodeEmail(email, code);
+      await Promise.all([
+        resetRef.set(payload, { merge: true }),
+        sendPasswordResetCodeEmail(email, code),
+      ]);
     } catch (mailErr: unknown) {
       console.error("Send mail error:", {
         message: mailErr instanceof Error ? mailErr.message : String(mailErr),
@@ -14687,7 +15329,7 @@ export async function POST(req: Request) {
           const isVIP = !!userProfile?.isVIP;
           const limit = isVIP ? 5 : 1;
           const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-          
+
           let currentGenerations = userProfile?.outfitGenerationsToday || 0;
           let lastGenerationDate = userProfile?.outfitGenerationDate || "";
 
@@ -14698,12 +15340,12 @@ export async function POST(req: Request) {
           }
 
           if (currentGenerations >= limit) {
-             sendStep(controller, { 
-               ok: false, 
-               message: `Bạn đã sử dụng hết lượt gợi ý trang phục hôm nay. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} có tối đa ${limit} lượt/ngày.` 
-             });
-             controller.close();
-             return;
+            sendStep(controller, {
+              ok: false,
+              message: `Bạn đã sử dụng hết lượt gợi ý trang phục hôm nay. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} có tối đa ${limit} lượt/ngày.`
+            });
+            controller.close();
+            return;
           }
           // --------------------------------
 
@@ -14766,43 +15408,75 @@ export async function POST(req: Request) {
           console.timeEnd("gemini_visual");
 
           sendStep(controller, { stage: "generating_outfit" });
-          console.log("Generating image with Gemini Imagen for:", out.outfit);
-          console.time("imagen_gen");
-
+          console.log("Generating image with Infip API for:", out.outfit);
+          console.time("infip_gen");
+          let sizeModels = ["img4", "img3"];
+          let aspectModels = ["flux-schnell", "flux2-klein-9b", "flux2-klein-4b", "flux2-dev", "lucid-origin", "phoenix", "sdxl", "sdxl-lite", "dreamshaper"];
           let imageUrl = "";
           try {
-            const { GoogleGenAI } = await import("@google/genai");
-            const imagenAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+            let infipResponse: any = null;
+            let success = false;
+            let lastErrorText = "";
 
-            const imagenResponse = await imagenAI.models.generateImages({
-              model: "imagen-3.0-generate-002",
-              prompt: out.imagen_prompt,
-              config: { numberOfImages: 1 },
-            });
-
-            const imgData = imagenResponse.generatedImages?.[0]?.image?.imageBytes;
-            if (imgData) {
-              const { v2: cloudinary } = await import("cloudinary");
-              cloudinary.config({
-                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-                api_key: process.env.CLOUDINARY_API_KEY,
-                api_secret: process.env.CLOUDINARY_API_SECRET,
+            for (const model of sizeModels) {
+              infipResponse = await fetch("https://api.infip.pro/v1/images/generations", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  model: model,
+                  prompt: out.imagen_prompt,
+                  n: 1,
+                  size: "1024x1024",
+                  response_format: "url"
+                })
               });
+              if (infipResponse.ok) {
+                success = true;
+                break;
+              } else {
+                lastErrorText = await infipResponse.text();
+              }
+            }
 
-              const uploadResult: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload(
-                  `data:image/png;base64,${imgData}`,
-                  { folder: "outfit-suggestions", format: "webp", quality: "auto" },
-                  (err: any, result: any) => (err ? reject(err) : resolve(result))
-                );
-              });
-              imageUrl = uploadResult?.secure_url || "";
-              console.log("Imagen + Cloudinary OK, url:", imageUrl);
+            if (!success) {
+              for (const model of aspectModels) {
+                infipResponse = await fetch("https://api.infip.pro/v1/images/generations", {
+                  method: "POST",
+                  headers: {
+                    "Authorization": `Bearer ${process.env.INFIP_API_KEY}`,
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    model: model,
+                    prompt: out.imagen_prompt,
+                    n: 1,
+                    aspect: "square",
+                    response_format: "url"
+                  })
+                });
+                if (infipResponse.ok) {
+                  success = true;
+                  break;
+                } else {
+                  lastErrorText = await infipResponse.text();
+                }
+              }
+            }
+
+            if (success && infipResponse) {
+              const data = await infipResponse.json();
+              imageUrl = data.data?.[0]?.url || "";
+              console.log("Infip API OK, url:", imageUrl);
+            } else {
+              console.error("Infip API All Models Failed:", lastErrorText);
             }
           } catch (imgErr: any) {
-            console.error("Imagen Error (Fallback to text):", imgErr.message || imgErr);
+            console.error("Infip Error (Fallback to text):", imgErr.message || imgErr);
           }
-          console.timeEnd("imagen_gen");
+          console.timeEnd("infip_gen");
 
           // --- UPDATE USER QUOTA ---
           await adminDb.collection("users").doc(uid).update({
@@ -14953,7 +15627,7 @@ export default function Services() {
                             </ul>
 
                             <button className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl">
-                                Nâng cấp VIP
+                                Mua Vip Thôi Nào !
                             </button>
                         </div>
                     </div>
@@ -15533,19 +16207,22 @@ export default function GoogleLoginButton() {
       alert("Firebase chưa được khởi tạo!");
       return;
     }
+
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
     router.push("/dashboard");
   };
 
   return (
-    <button onClick={handleLogin} className="w-full flex items-center justify-center gap-3 border border-gray-300  bg-gray-700 py-1 px-3 hover:bg-gray-800 transition-all mb-2">
+    <button
+      onClick={handleLogin}
+      className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white transition hover:border-white/15 hover:bg-white/[0.08]"
+    >
       <FcGoogle className="text-2xl" />
-      <span className="text-white font-medium">Tiếp tục với Google</span>
+      <span className="font-medium text-white/85">Tiếp tục với Google</span>
     </button>
   );
 }
-
 ```
 
 
@@ -15919,14 +16596,42 @@ export default function ProfileDrawer({
 # src/components/WardrobeStylistChat.tsx
 ```text
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { UserProfile } from "firebase/auth";
-import { he } from "zod/locales";
 
 type Role = "user" | "assistant";
 type Msg = { id: string; role: Role; content: string; ts: number; images?: string[] };
+type ChatConversation = {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: Msg[];
+};
+type StoredMessage = Partial<Msg>;
+type StoredConversation = Partial<ChatConversation> & { messages?: StoredMessage[] };
+type WardrobeItem = { id: string; imageUrl?: string; category?: string };
+type RequestError = Error & { status?: number; code?: number | string };
+type ReplyPayload = {
+  note?: string;
+  images?: Array<{ url?: string }>;
+  intent?: string;
+  stage?: string;
+};
+type StreamChunk = {
+  stage?: string;
+  ok?: boolean;
+  message?: string;
+  reply?: string | ReplyPayload;
+};
+
+const CHAT_HISTORY_STORAGE_PREFIX = "wardrobe-stylist-history";
+const DEFAULT_CONVERSATION_TITLE = "Cuộc trò chuyện mới";
+const MAX_STORED_CONVERSATIONS = 12;
+const WELCOME_MESSAGE =
+  "Xin chào! Mình là stylist AI 👗✨\nBạn muốn phối đồ cho dịp nào? (đi học / đi chơi / đi làm / hẹn hò / đi sự kiện…)\nGợi ý: nói thêm thời tiết, địa điểm, phong cách bạn thích.";
 
 function uid() {
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
@@ -15934,6 +16639,133 @@ function uid() {
 
 function cls(...s: Array<string | false | undefined | null>) {
   return s.filter(Boolean).join(" ");
+}
+
+function createWelcomeMessage(ts = Date.now()): Msg {
+  return {
+    id: uid(),
+    role: "assistant",
+    ts,
+    content: WELCOME_MESSAGE,
+  };
+}
+
+function createConversation(): ChatConversation {
+  const now = Date.now();
+  return {
+    id: uid(),
+    title: DEFAULT_CONVERSATION_TITLE,
+    createdAt: now,
+    updatedAt: now,
+    messages: [createWelcomeMessage(now)],
+  };
+}
+
+function getStorageKey(idUser: string) {
+  return `${CHAT_HISTORY_STORAGE_PREFIX}:${idUser}`;
+}
+
+function normalizeConversationList(raw: unknown) {
+  return Array.isArray(raw)
+    ? raw
+        .map((conversation) => normalizeStoredConversation(conversation as StoredConversation))
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, MAX_STORED_CONVERSATIONS)
+    : [];
+}
+
+function readLocalConversations(idUser: string) {
+  if (typeof window === "undefined" || !idUser) return [];
+
+  try {
+    const raw = window.localStorage.getItem(getStorageKey(idUser));
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return normalizeConversationList(parsed);
+  } catch (error) {
+    console.error("Không thể đọc lịch sử chat local:", error);
+    return [];
+  }
+}
+
+function writeLocalConversations(idUser: string, conversations: ChatConversation[]) {
+  if (typeof window === "undefined" || !idUser) return;
+
+  try {
+    const payload = [...conversations]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_STORED_CONVERSATIONS);
+    window.localStorage.setItem(getStorageKey(idUser), JSON.stringify(payload));
+  } catch (error) {
+    console.error("Không thể lưu lịch sử chat local:", error);
+  }
+}
+
+function getConversationTitle(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return DEFAULT_CONVERSATION_TITLE;
+  return normalized.length > 48 ? `${normalized.slice(0, 48).trim()}...` : normalized;
+}
+
+function getConversationPreview(conversation: ChatConversation) {
+  const lastMessage = [...conversation.messages]
+    .reverse()
+    .find((message) => message.role === "user" || message.content !== WELCOME_MESSAGE);
+
+  if (!lastMessage) return "Bắt đầu cuộc trò chuyện mới";
+
+  const preview = lastMessage.content.replace(/\s+/g, " ").trim();
+  return preview.length > 72 ? `${preview.slice(0, 72).trim()}...` : preview;
+}
+
+function formatConversationTime(ts: number) {
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(ts);
+}
+
+function normalizeStoredMessage(raw: StoredMessage | undefined): Msg | null {
+  if (!raw || typeof raw.content !== "string") return null;
+
+  const role: Role = raw.role === "user" ? "user" : "assistant";
+  const images = Array.isArray(raw.images)
+    ? raw.images.filter((image: unknown): image is string => typeof image === "string" && image.trim().length > 0)
+    : undefined;
+
+  return {
+    id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+    role,
+    content: raw.content,
+    ts: typeof raw.ts === "number" ? raw.ts : Date.now(),
+    ...(images && images.length > 0 ? { images } : {}),
+  };
+}
+
+function normalizeStoredConversation(raw: StoredConversation | undefined): ChatConversation | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const messages = Array.isArray(raw.messages)
+    ? raw.messages
+        .map((message: unknown) => normalizeStoredMessage(message))
+        .filter((message): message is Msg => message !== null)
+    : [];
+
+  const updatedAt = typeof raw.updatedAt === "number" ? raw.updatedAt : Date.now();
+  const createdAt = typeof raw.createdAt === "number" ? raw.createdAt : updatedAt;
+
+  return {
+    id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+    title:
+      typeof raw.title === "string" && raw.title.trim().length > 0
+        ? raw.title.trim()
+        : DEFAULT_CONVERSATION_TITLE,
+    createdAt,
+    updatedAt,
+    messages: messages.length > 0 ? messages : [createWelcomeMessage(updatedAt)],
+  };
 }
 
 export default function WardrobeStylistChat({
@@ -15949,27 +16781,27 @@ export default function WardrobeStylistChat({
 }) {
   const { user } = useAuth();
 
-  const [messages, setMessages] = useState<Msg[]>(() => [
-    {
-      id: uid(),
-      role: "assistant",
-      ts: Date.now(),
-      content:
-        "Xin chào! Mình là stylist AI 👗✨\nBạn muốn phối đồ cho dịp nào? (đi học / đi chơi / đi làm / hẹn hò / đi sự kiện…)\nGợi ý: nói thêm thời tiết, địa điểm, phong cách bạn thích.",
-    },
-  ]);
-
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
+  const [historyReady, setHistoryReady] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [menuConversationId, setMenuConversationId] = useState<string | null>(null);
+  const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [loadingStage, setLoadingStage] = useState<"thinking" | "analyzing_clothes" | "generating_outfit" | null>(null);
   const [showWardrobeSelector, setShowWardrobeSelector] = useState(false);
-  const [wardrobeItems, setWardrobeItems] = useState<Array<any>>([]);
+  const [wardrobeItems, setWardrobeItems] = useState<WardrobeItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [showAllSelectedItemsModal, setShowAllSelectedItemsModal] = useState(false);
   const [modalImages, setModalImages] = useState<string[] | null>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
 
   const quickChips = useMemo(
     () => [
@@ -15982,6 +16814,19 @@ export default function WardrobeStylistChat({
     []
   );
 
+  const sortedConversations = useMemo(
+    () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
+    [conversations]
+  );
+
+  const activeConversation = useMemo(
+    () => conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0] ?? null,
+    [activeConversationId, conversations]
+  );
+
+  const messages = useMemo(() => activeConversation?.messages ?? [], [activeConversation]);
+  const activeConversationTitle = activeConversation?.title ?? DEFAULT_CONVERSATION_TITLE;
+
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -15991,17 +16836,263 @@ export default function WardrobeStylistChat({
     if (mode === "drawer" && !open) return;
     const t = setTimeout(() => inputRef.current?.focus(), 120);
     return () => clearTimeout(t);
-  }, [mode, open]);
+  }, [mode, open, activeConversationId]);
+
+  useEffect(() => {
+    setHistoryReady(false);
+    setConversations([]);
+    setActiveConversationId("");
+
+    if (!idUser) {
+      const fallbackConversation = createConversation();
+      setConversations([fallbackConversation]);
+      setActiveConversationId(fallbackConversation.id);
+      setHistoryReady(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      const localConversations = readLocalConversations(idUser);
+
+      try {
+        const token = await user?.getIdToken?.();
+
+        if (!token) {
+          const nextConversations = localConversations.length > 0 ? localConversations : [createConversation()];
+          if (!cancelled) {
+            setConversations(nextConversations);
+            setActiveConversationId(nextConversations[0].id);
+          }
+          return;
+        }
+
+        const response = await fetch("/api/chat-history", {
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const payload: { ok?: boolean; conversations?: StoredConversation[] } = await response.json();
+        const remoteConversations = normalizeConversationList(payload.conversations);
+        const nextConversations =
+          remoteConversations.length > 0
+            ? remoteConversations
+            : localConversations.length > 0
+              ? localConversations
+              : [createConversation()];
+
+        if (!cancelled) {
+          setConversations(nextConversations);
+          setActiveConversationId(nextConversations[0].id);
+          writeLocalConversations(idUser, nextConversations);
+        }
+      } catch (error) {
+        console.error("Không thể tải lịch sử chat từ Firebase:", error);
+        const nextConversations = localConversations.length > 0 ? localConversations : [createConversation()];
+        if (!cancelled) {
+          setConversations(nextConversations);
+          setActiveConversationId(nextConversations[0].id);
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryReady(true);
+        }
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [idUser, user]);
+
+  useEffect(() => {
+    if (!historyReady || !idUser || conversations.length === 0) return;
+
+    const payload = [...conversations]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_STORED_CONVERSATIONS);
+
+    writeLocalConversations(idUser, payload);
+
+    const timeout = setTimeout(async () => {
+      try {
+        const token = await user?.getIdToken?.();
+        if (!token) return;
+
+        const response = await fetch("/api/chat-history", {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            conversations: payload,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+      } catch (error) {
+        console.error("Không thể đồng bộ lịch sử chat lên Firebase:", error);
+      }
+    }, 700);
+
+    return () => clearTimeout(timeout);
+  }, [conversations, historyReady, idUser, user]);
+
+  useEffect(() => {
+    if (activeConversation || conversations.length === 0) return;
+    setActiveConversationId(conversations[0].id);
+  }, [activeConversation, conversations]);
+
+  useEffect(() => {
+    if (!menuConversationId) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuConversationId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [menuConversationId]);
+
+  useEffect(() => {
+    if (!renamingConversationId) return;
+
+    const timeout = setTimeout(() => {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [renamingConversationId]);
+
+  function updateConversation(
+    conversationId: string,
+    updater: (conversation: ChatConversation) => ChatConversation
+  ) {
+    setConversations((currentConversations) =>
+      currentConversations
+        .map((conversation) => {
+          if (conversation.id !== conversationId) return conversation;
+          return updater(conversation);
+        })
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, MAX_STORED_CONVERSATIONS)
+    );
+  }
+
+  function appendMessageToConversation(conversationId: string, message: Msg) {
+    updateConversation(conversationId, (conversation) => ({
+      ...conversation,
+      title:
+        conversation.title === DEFAULT_CONVERSATION_TITLE && message.role === "user"
+          ? getConversationTitle(message.content)
+          : conversation.title,
+      updatedAt: message.ts,
+      messages: [...conversation.messages, message],
+    }));
+  }
+
+  function createNewConversation() {
+    if (sending) return;
+
+    const nextConversation = createConversation();
+    setConversations((currentConversations) =>
+      [nextConversation, ...currentConversations]
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, MAX_STORED_CONVERSATIONS)
+    );
+    setActiveConversationId(nextConversation.id);
+    setInput("");
+    setSelectedIds({});
+    setShowHistoryPanel(false);
+    setMenuConversationId(null);
+    setRenamingConversationId(null);
+    setRenameValue("");
+  }
+
+  function switchConversation(conversationId: string) {
+    if (sending || conversationId === activeConversationId) return;
+    setActiveConversationId(conversationId);
+    setInput("");
+    setSelectedIds({});
+    setShowHistoryPanel(false);
+    setMenuConversationId(null);
+  }
+
+  function openConversationMenu(conversationId: string) {
+    if (sending) return;
+    setMenuConversationId((currentId) => (currentId === conversationId ? null : conversationId));
+  }
+
+  function startRenameConversation(conversation: ChatConversation) {
+    setMenuConversationId(null);
+    setRenamingConversationId(conversation.id);
+    setRenameValue(conversation.title);
+  }
+
+  function cancelRenameConversation() {
+    setRenamingConversationId(null);
+    setRenameValue("");
+  }
+
+  function submitRenameConversation() {
+    if (!renamingConversationId) return;
+
+    const nextTitle = renameValue.trim() || DEFAULT_CONVERSATION_TITLE;
+    updateConversation(renamingConversationId, (conversation) => ({
+      ...conversation,
+      title: nextTitle,
+    }));
+    cancelRenameConversation();
+  }
+
+  function deleteConversation(conversationId: string) {
+    if (sending) return;
+
+    const remainingConversations = conversations.filter((conversation) => conversation.id !== conversationId);
+    const nextConversations =
+      remainingConversations.length > 0
+        ? remainingConversations.sort((a, b) => b.updatedAt - a.updatedAt)
+        : [createConversation()];
+
+    setConversations(nextConversations);
+    setActiveConversationId((currentActiveId) => {
+      if (currentActiveId !== conversationId && nextConversations.some((conversation) => conversation.id === currentActiveId)) {
+        return currentActiveId;
+      }
+      return nextConversations[0].id;
+    });
+    setInput("");
+    setSelectedIds({});
+    setMenuConversationId(null);
+    if (renamingConversationId === conversationId) {
+      cancelRenameConversation();
+    }
+  }
 
   async function send(text: string) {
     const content = text.trim();
-    if (!content || sending) return;
+    const conversationId = activeConversation?.id;
 
-    // Get selected images from wardrobe items
-    const selectedItemIds = Object.keys(selectedIds).filter((k) => selectedIds[k]);
+    if (!content || sending || !conversationId || !activeConversation) return;
+
+    const selectedItemIds = Object.keys(selectedIds).filter((key) => selectedIds[key]);
     const selectedImages = selectedItemIds
       .map((id) => {
-        const item = wardrobeItems.find((w) => w.id === id);
+        const item = wardrobeItems.find((wardrobeItem) => wardrobeItem.id === id);
         return item?.imageUrl;
       })
       .filter(Boolean) as string[];
@@ -16011,11 +17102,12 @@ export default function WardrobeStylistChat({
       role: "user",
       content,
       ts: Date.now(),
-      images: selectedImages.length > 0 ? selectedImages : undefined
+      ...(selectedImages.length > 0 ? { images: selectedImages } : {}),
     };
-    setMessages((m) => [...m, userMsg]);
+
+    appendMessageToConversation(conversationId, userMsg);
     setInput("");
-    setSelectedIds({}); // Clear selected items
+    setSelectedIds({});
     setSending(true);
     setLoadingStage("thinking");
 
@@ -16029,25 +17121,28 @@ export default function WardrobeStylistChat({
         },
         body: JSON.stringify({
           message: content,
-          history: messages.slice(-10).map((x) => ({ role: x.role, content: x.content })),
-          selectedItemIds: Object.keys(selectedIds).filter((k) => selectedIds[k]),
-          idUser: idUser,
+          history: activeConversation.messages.slice(-10).map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          selectedItemIds,
+          idUser,
         }),
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        const err = new Error(text || "Network error");
-        (err as any).status = res.status;
-        throw err;
+        const textResponse = await res.text();
+        const error: RequestError = new Error(textResponse || "Network error");
+        error.status = res.status;
+        throw error;
       }
 
-      // read the streamed chunks, updating loadingStage as stage messages arrive
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");
+
       const decoder = new TextDecoder();
       let buffer = "";
-      let finalData: any = null;
+      let finalData: StreamChunk | null = null;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -16055,88 +17150,89 @@ export default function WardrobeStylistChat({
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() ?? "";
+
           for (const line of lines) {
             if (!line.trim()) continue;
-            let obj: any;
+
+            let parsedChunk: StreamChunk;
             try {
-              obj = JSON.parse(line);
-            } catch (parseErr) {
-              console.error("failed to parse chunk", parseErr, line);
+              parsedChunk = JSON.parse(line) as StreamChunk;
+            } catch (parseError) {
+              console.error("failed to parse chunk", parseError, line);
               continue;
             }
-            if (obj.stage) {
-              setLoadingStage(obj.stage);
+
+            if (
+              parsedChunk.stage === "thinking" ||
+              parsedChunk.stage === "analyzing_clothes" ||
+              parsedChunk.stage === "generating_outfit"
+            ) {
+              setLoadingStage(parsedChunk.stage);
             }
-            // detect final payload: we know it contains ok or reply
-            if (obj.hasOwnProperty("ok") || obj.reply) {
-              finalData = obj;
+
+            if (parsedChunk.hasOwnProperty("ok") || parsedChunk.reply) {
+              finalData = parsedChunk;
             }
           }
         }
+
         if (done) break;
       }
-      const data = finalData || { ok: false, message: "No data" };
+
+      const data: StreamChunk = finalData || { ok: false, message: "No data" };
       if (!data.ok) {
-        const error = new Error(data?.message || "Request failed");
-        (error as any).status = res.status;
+        const error: RequestError = new Error(data.message || "Request failed");
+        error.status = res.status;
         throw error;
       }
 
-      // process final response (same as before)
-      if (data?.reply?.images && Array.isArray(data.reply.images)) {
-        const imgs = data.reply.images
-          .map((it: any) => {
-            if (it.url) return it.url;
-            return null;
-          })
-          .filter(Boolean);
+      if (typeof data.reply === "object" && data.reply?.images && Array.isArray(data.reply.images)) {
+        const images = data.reply.images
+          .map((item) => (item.url ? item.url : null))
+          .filter((item): item is string => typeof item === "string" && item.length > 0);
 
-        const botMsg: Msg = {
+        appendMessageToConversation(conversationId, {
           id: uid(),
           role: "assistant",
-          content: (data.reply?.note as string) || "Mình đã tạo ảnh outfit cho bạn.",
-          images: imgs,
+          content: data.reply.note || "Mình đã tạo ảnh outfit cho bạn.",
+          images,
           ts: Date.now(),
-        };
-        setMessages((m) => [...m, botMsg]);
+        });
       } else {
-        const botMsg: Msg = {
+        appendMessageToConversation(conversationId, {
           id: uid(),
           role: "assistant",
-          content: typeof data.reply === 'object' ? (data.reply.note || "") : String(data.reply),
+          content: typeof data.reply === "object" ? data.reply?.note || "" : String(data.reply),
           ts: Date.now(),
-        };
-        setMessages((m) => [...m, botMsg]);
+        });
       }
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const requestError = error as RequestError;
       let errorMessage = "";
       let errorIcon = "😥";
 
-      // Kiểm tra mã lỗi từ response hoặc error code
-      if (e?.code === 503 || e?.status === 503) {
-        // Service Unavailable
+      if (requestError?.code === 503 || requestError?.status === 503) {
         errorMessage = "Hiện có nhiều người cùng sử dụng, hãy thử lại sau nhé";
         errorIcon = "⏳";
-      } else if (e?.code === 429 || e?.status === 429 || e?.message?.includes("quota") || e?.message?.includes("hết lượt")) {
-        // Rate limit / Quota exceeded
+      } else if (
+        requestError?.code === 429 ||
+        requestError?.status === 429 ||
+        requestError?.message?.includes("quota") ||
+        requestError?.message?.includes("hết lượt")
+      ) {
         errorMessage = "Hiện đã hết lượt sử dụng, vui lòng quay lại khi khác";
         errorIcon = "🔒";
       } else {
-        // Other errors
-        errorMessage = `Mình gặp lỗi: ${e?.message || "unknown error"}`;
-        errorIcon = "😥";
+        errorMessage = `Mình gặp lỗi: ${requestError?.message || "unknown error"}`;
       }
 
-      setMessages((m) => [
-        ...m,
-        {
-          id: uid(),
-          role: "assistant",
-          ts: Date.now(),
-          content: `${errorIcon}\n${errorMessage}`
-        },
-      ]);
-      console.error(e);
+      appendMessageToConversation(conversationId, {
+        id: uid(),
+        role: "assistant",
+        ts: Date.now(),
+        content: `${errorIcon}\n${errorMessage}`,
+      });
+      console.error(requestError);
     } finally {
       setSending(false);
       setLoadingStage(null);
@@ -16151,98 +17247,238 @@ export default function WardrobeStylistChat({
     }
   }
 
+  async function openWardrobeSelector() {
+    setShowWardrobeSelector(true);
+    try {
+      const token = await user?.getIdToken?.();
+      const res = await fetch("/api/wardrobe/list", {
+        headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      });
+      const response = await res.json();
+      if (res.ok && response?.ok && Array.isArray(response.items)) {
+        setWardrobeItems(response.items);
+      } else if (res.ok && response?.items) {
+        setWardrobeItems(response.items);
+      } else {
+        setWardrobeItems([]);
+      }
+    } catch (error) {
+      console.error(error);
+      setWardrobeItems([]);
+    }
+  }
 
-  /*
+  function toggleSelect(id: string) {
+    setSelectedIds((currentSelection) => ({ ...currentSelection, [id]: !currentSelection[id] }));
+  }
 
-  
-  */
-
-  const shell = (
-    <div className="relative h-full flex flex-col rounded-3xl  border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_22px_70px_rgba(0,0,0,.55)] overflow-hidden">
-      {/* grid + scanline */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
-      <div className="cy-scanline pointer-events-none absolute inset-0" />
-
-      {/* header */}
-      <div className="flex items-center justify-left gap-3 px-5 py-4 border-b border-white/10">
-        <button
-          onClick={() => {
-            if (onClose) return onClose();
-            if (typeof window !== 'undefined') window.history.back();
-          }}
-          className="text-white/80 hover:text-white transition"
-          title="Quay lại"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
-            <span className="text-sm font-semibold text-white/90">AI</span>
-          </div>
-          <div>
-            <div className="font-semibold text-white/90">Wardrobe Stylist</div>
-            <div className="text-xs text-white/50">Gemini-style chat • outfit • weather • style</div>
-          </div>
+  const historyPanel = (
+    <div className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl shadow-[0_22px_70px_rgba(0,0,0,.45)]">
+      <div className="flex items-center justify-between gap-3 px-2 py-2">
+        <div>
+          <div className="text-sm font-semibold text-white/90">Lịch sử trò chuyện</div>
+          <div className="text-xs text-white/45">Nơi lưu trữ những đoạn chat thú vị cùng ADW AI</div>
         </div>
-
-        {mode === "drawer" ? (
+        {mode === "drawer" || showHistoryPanel ? (
           <button
-            onClick={onClose}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition"
+            onClick={() => setShowHistoryPanel(false)}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/75 hover:bg-white/10 transition"
+            title="Đóng lịch sử"
           >
             Đóng
           </button>
         ) : null}
       </div>
 
-      {/* messages */}
-      <div ref={listRef} className="px-5 py-5 flex-1 min-h-0 overflow-y-auto space-y-3">
-        {messages.map((m) => (
-          <div key={m.id} className={cls("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+      <button
+        onClick={createNewConversation}
+        disabled={sending}
+        className="mt-3 rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-indigo-500/30 via-fuchsia-500/20 to-cyan-400/20 px-4 py-3 text-left text-sm font-medium text-white/90 hover:border-cyan-300/35 disabled:cursor-not-allowed disabled:opacity-60 transition"
+      >
+        + Cuộc trò chuyện mới
+      </button>
+
+      <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
+        {sortedConversations.map((conversation) => {
+          const isActive = conversation.id === activeConversationId;
+          return (
+            <div
+              key={conversation.id}
+              className={cls(
+                "group relative rounded-2xl border px-3 py-3 transition",
+                isActive
+                  ? "border-cyan-300/35 bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,.25)]"
+                  : "border-white/10 bg-black/20 hover:bg-white/8"
+              )}
+            >
+              <button
+                onClick={() => switchConversation(conversation.id)}
+                disabled={sending}
+                className="w-full pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="truncate text-sm font-medium text-white/90">{conversation.title}</div>
+                  <div className="shrink-0 pr-1 text-[11px] text-white/45">{formatConversationTime(conversation.updatedAt)}</div>
+                </div>
+                <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/55">
+                  {getConversationPreview(conversation)}
+                </div>
+              </button>
+
+              <div className="absolute right-2 top-2" ref={menuConversationId === conversation.id ? menuRef : null}>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openConversationMenu(conversation.id);
+                  }}
+                  className={cls(
+                    "flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white/65 transition hover:bg-white/10 hover:text-white",
+                    menuConversationId === conversation.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  )}
+                  title="Tùy chọn"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 8a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 8a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="currentColor" />
+                  </svg>
+                </button>
+
+                {menuConversationId === conversation.id ? (
+                  <div className="absolute right-0 top-10 z-20 w-36 overflow-hidden rounded-2xl border border-white/10 bg-[#121722]/95 p-1.5 shadow-[0_20px_50px_rgba(0,0,0,.45)] backdrop-blur-xl">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startRenameConversation(conversation);
+                      }}
+                      className="flex w-full items-center rounded-xl px-3 py-2 text-sm text-white/85 transition hover:bg-white/10"
+                    >
+                      Đổi tên
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteConversation(conversation.id);
+                      }}
+                      className="mt-1 flex w-full items-center rounded-xl px-3 py-2 text-sm text-rose-300 transition hover:bg-rose-500/12 hover:text-rose-200"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const chatShell = (
+    <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_22px_70px_rgba(0,0,0,.55)] backdrop-blur-xl">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
+      <div className="cy-scanline pointer-events-none absolute inset-0" />
+
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            onClick={() => {
+              if (onClose) return onClose();
+              if (typeof window !== "undefined") window.history.back();
+            }}
+            className="text-white/80 transition hover:text-white"
+            title="Quay lại"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => setShowHistoryPanel(true)}
+            className={cls(
+              "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 transition",
+              mode === "page" && "lg:hidden"
+            )}
+          >
+            Lịch sử
+          </button>
+
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+              <span className="text-sm font-semibold text-white/90">AI</span>
+            </div>
+            <div className="min-w-0">
+              <div className="truncate font-semibold text-white/90">{activeConversationTitle}</div>
+              <div className="truncate text-xs text-white/50">Wardrobe Stylist • outfit • weather • style</div>
+            </div>
+          </div>
+        </div>
+
+        {mode === "drawer" ? (
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 transition hover:bg-white/10"
+          >
+            Đóng
+          </button>
+        ) : null}
+      </div>
+
+      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-5">
+        {messages.map((message) => (
+          <div key={message.id} className={cls("flex", message.role === "user" ? "justify-end" : "justify-start")}>
             <div
               className={cls(
                 "max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap",
-                m.role === "user"
-                  ? "bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 border border-white/10 text-white/92 shadow-[0_14px_40px_rgba(0,0,0,.35)]"
-                  : "bg-black/30 border border-white/10 text-white/80"
+                message.role === "user"
+                  ? "border border-white/10 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 text-white/92 shadow-[0_14px_40px_rgba(0,0,0,.35)]"
+                  : "border border-white/10 bg-black/30 text-white/80"
               )}
             >
-              {m.content}
-              {m.images && m.images.length ? (
+              {message.content}
+              {message.images && message.images.length > 0 ? (
                 <div className="mt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
                   {(() => {
                     const maxDisplay = 3;
-                    const displayedImgs = m.images.slice(0, maxDisplay);
-                    const remainingCount = m.images.length - maxDisplay;
+                    const displayedImages = message.images.slice(0, maxDisplay);
+                    const remainingCount = message.images.length - maxDisplay;
 
                     return (
                       <>
-                        {displayedImgs.map((src, i) => (
-                          <div key={i} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10">
+                        {displayedImages.map((src, index) => (
+                          <div
+                            key={`${message.id}-${index}`}
+                            className="group relative flex-shrink-0 cursor-pointer rounded-lg border border-white/10 bg-white/5 p-1"
+                            onClick={() => setZoomImage(src)}
+                          >
                             <img
-                              key={i}
                               src={src}
-                              alt={`outfit-${i}`}
-                              className="w-12 h-12 object-contain rounded"
+                              alt={`outfit-${index}`}
+                              className="h-12 w-12 rounded object-contain transition-transform group-hover:scale-105"
                               onError={(e) => {
                                 console.error("Lỗi tải ảnh từ URL:", src);
-                                e.currentTarget.style.display = 'none'; // Ẩn ảnh nếu lỗi
+                                e.currentTarget.style.display = "none";
                               }}
                             />
+                            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
                           </div>
                         ))}
 
-                        {remainingCount > 0 && (
+                        {remainingCount > 0 ? (
                           <button
-                            onClick={() => setModalImages(m.images!)}
-                            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition"
+                            onClick={() => setModalImages(message.images ?? null)}
+                            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-xs text-white transition hover:bg-white/20"
                             title={`Xem thêm ${remainingCount} ảnh`}
                           >
                             +{remainingCount}
                           </button>
-                        )}
+                        ) : null}
                       </>
                     );
                   })()}
@@ -16254,8 +17490,8 @@ export default function WardrobeStylistChat({
 
         {sending ? (
           <div className="flex justify-start">
-            <div className="rounded-2xl px-4 py-3 text-sm bg-black/30 border border-white/10 text-white/70">
-              <span className="inline-flex gap-1 items-center">
+            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/70">
+              <span className="inline-flex items-center gap-1">
                 <span className="dotty" />
                 <span className="dotty delay-150" />
                 <span className="dotty delay-300" />
@@ -16270,45 +17506,42 @@ export default function WardrobeStylistChat({
         ) : null}
       </div>
 
-      {/* chips */}
       <div className="px-5 pb-3">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
-          {quickChips.map((c) => (
+        <div className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar">
+          {quickChips.map((chip) => (
             <button
-              key={c}
-              onClick={() => send(c)}
-              className="shrink-0 text-xs px-3 py-2 rounded-full border border-white/10 bg-white/5 text-white/75 hover:bg-white/10 transition"
-              title={c}
+              key={chip}
+              onClick={() => send(chip)}
+              disabled={sending}
+              className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/75 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              title={chip}
             >
-              {c}
+              {chip}
             </button>
           ))}
-
         </div>
       </div>
 
-      {/* Selected items row (Max 3 thumbnails + N more button) */}
       <div className="px-5 pb-3">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {(() => {
-            const selectedArr = Object.keys(selectedIds).filter((k) => selectedIds[k]);
-            if (selectedArr.length === 0) return null;
+            const selectedItemIds = Object.keys(selectedIds).filter((key) => selectedIds[key]);
+            if (selectedItemIds.length === 0) return null;
 
             const maxDisplay = 3;
-            const displayedIds = selectedArr.slice(0, maxDisplay);
-            const remainingCount = selectedArr.length - maxDisplay;
+            const displayedIds = selectedItemIds.slice(0, maxDisplay);
+            const remainingCount = selectedItemIds.length - maxDisplay;
 
             return (
               <>
                 {displayedIds.map((id) => {
-                  const it = wardrobeItems.find((w) => w.id === id);
+                  const item = wardrobeItems.find((wardrobeItem) => wardrobeItem.id === id);
                   return (
-                    <div key={id} className="relative flex-shrink-0 bg-white/5 p-1 rounded-lg border border-white/10 group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={it?.imageUrl} alt={it?.category || "item"} className="w-12 h-12 object-contain rounded" />
+                    <div key={id} className="group relative flex-shrink-0 rounded-lg border border-white/10 bg-white/5 p-1">
+                      <img src={item?.imageUrl} alt={item?.category || "item"} className="h-12 w-12 rounded object-contain" />
                       <button
                         onClick={() => toggleSelect(id)}
-                        className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] opacity-100 transition-opacity shadow-sm"
+                        className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white opacity-100 shadow-sm transition-opacity"
                         title="Bỏ chọn"
                       >
                         ×
@@ -16317,29 +17550,27 @@ export default function WardrobeStylistChat({
                   );
                 })}
 
-                {remainingCount > 0 && (
+                {remainingCount > 0 ? (
                   <button
                     onClick={() => setShowAllSelectedItemsModal(true)}
-                    className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition"
+                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-xs text-white transition hover:bg-white/20"
                     title={`Xem thêm ${remainingCount} món đồ đã chọn`}
                   >
                     +{remainingCount}
                   </button>
-                )}
+                ) : null}
               </>
             );
           })()}
         </div>
       </div>
 
-      {/* composer */}
-      <div className="px-5 py-4 border-t border-white/10 bg-[linear-gradient(to_top,rgba(8,10,18,.78),rgba(8,10,18,.22))] backdrop-blur-xl">
-
-        <div className="flex gap-3 items-end">
+      <div className="border-t border-white/10 bg-[linear-gradient(to_top,rgba(8,10,18,.78),rgba(8,10,18,.22))] px-5 py-4 backdrop-blur-xl">
+        <div className="flex items-end gap-3">
           <button
-            onClick={() => openWardrobeSelector()}
+            onClick={openWardrobeSelector}
             title="Chọn đồ"
-            className="h-10 w-10 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 7h18v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -16356,16 +17587,16 @@ export default function WardrobeStylistChat({
             className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/90 outline-none focus:border-cyan-300/35 focus:shadow-[0_0_0_4px_rgba(34,211,238,.10)]"
             rows={2}
           />
+
           <button
             disabled={sending || !input.trim()}
             onClick={() => send(input)}
-            className="rounded-2xl px-4 py-3 font-semibold border border-cyan-300/25
-                       bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20
-                       hover:border-cyan-300/40 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20 px-4 py-3 font-semibold transition hover:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Gửi
           </button>
         </div>
+
         <div className="mt-2 text-[11px] text-white/45">
           Tip: nói rõ “đi đâu + thời tiết + style + màu muốn tránh” để AI ra outfit chuẩn.
         </div>
@@ -16373,73 +17604,48 @@ export default function WardrobeStylistChat({
     </div>
   );
 
-  // Wardrobe selector modal (simple)
-  async function openWardrobeSelector() {
-    setShowWardrobeSelector(true);
-    try {
-      const token = await user?.getIdToken?.();
-      const res = await fetch("/api/wardrobe/list", {
-        headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      });
-      const j = await res.json();
-      if (res.ok && j?.ok && Array.isArray(j.items)) {
-        setWardrobeItems(j.items);
-      } else if (res.ok && j?.items) {
-        setWardrobeItems(j.items);
-      } else {
-        setWardrobeItems([]);
-      }
-    } catch (e) {
-      console.error(e);
-      setWardrobeItems([]);
-    }
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds((s) => ({ ...s, [id]: !s[id] }));
-  }
-
-  // Multi-selector expanded modal
   const allSelectedModal = showAllSelectedItemsModal ? (
     <div className="fixed inset-0 z-[100]">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAllSelectedItemsModal(false)} />
-      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-5 bg-[#121212] border border-white/10 rounded-2xl shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-white font-semibold text-lg">Đồ đã chọn ({Object.keys(selectedIds).filter(k => selectedIds[k]).length})</div>
-          <button onClick={() => setShowAllSelectedItemsModal(false)} className="text-white/50 hover:text-white transition">
+      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-[#121212] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-lg font-semibold text-white">
+            Đồ đã chọn ({Object.keys(selectedIds).filter((key) => selectedIds[key]).length})
+          </div>
+          <button onClick={() => setShowAllSelectedItemsModal(false)} className="text-white/50 transition hover:text-white">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-auto pb-3 no-scrollbar">
+        <div className="grid max-h-[50vh] grid-cols-3 gap-3 overflow-auto pb-3 no-scrollbar sm:grid-cols-4">
           {Object.keys(selectedIds)
-            .filter((k) => selectedIds[k])
+            .filter((key) => selectedIds[key])
             .map((id) => {
-              const it = wardrobeItems.find((w) => w.id === id);
-              if (!it) return null;
+              const item = wardrobeItems.find((wardrobeItem) => wardrobeItem.id === id);
+              if (!item) return null;
+
               return (
-                <div key={id} className="relative bg-white/5 rounded-xl border border-white/10 p-2 group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.imageUrl} alt={it.category || "item"} className="w-full h-20 object-contain" />
+                <div key={id} className="group relative rounded-xl border border-white/10 bg-white/5 p-2">
+                  <img src={item.imageUrl} alt={item.category || "item"} className="h-20 w-full object-contain" />
                   <button
                     onClick={() => toggleSelect(id)}
-                    className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 border-2 border-[#121212] text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#121212] bg-red-500 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
                     title="Bỏ chọn"
                   >
                     ×
                   </button>
-                  <div className="mt-1 text-center text-[10px] text-white/70 truncate">{it.category || "Item"}</div>
+                  <div className="mt-1 truncate text-center text-[10px] text-white/70">{item.category || "Item"}</div>
                 </div>
               );
             })}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+        <div className="mt-4 flex justify-end border-t border-white/10 pt-3">
           <button
             onClick={() => setShowAllSelectedItemsModal(false)}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium hover:opacity-90 transition"
+            className="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-2.5 font-medium text-white transition hover:opacity-90"
           >
             Đóng
           </button>
@@ -16451,28 +17657,28 @@ export default function WardrobeStylistChat({
   const messageImagesModal = modalImages && modalImages.length > 0 ? (
     <div className="fixed inset-0 z-[100]">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModalImages(null)} />
-      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-5 bg-[#121212] border border-white/10 rounded-2xl shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-white font-semibold text-lg">Ảnh trong tin nhắn ({modalImages.length})</div>
-          <button onClick={() => setModalImages(null)} className="text-white/50 hover:text-white transition">
+      <div className="absolute left-1/2 top-1/2 w-[480px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-[#121212] p-5 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-lg font-semibold text-white">Ảnh trong tin nhắn ({modalImages.length})</div>
+          <button onClick={() => setModalImages(null)} className="text-white/50 transition hover:text-white">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[50vh] overflow-auto pb-3 no-scrollbar">
-          {modalImages.map((src, i) => (
-            <div key={i} className="relative bg-white/5 rounded-xl border border-white/10 p-2">
-              <img src={src} alt="item" className="w-full h-32 object-contain" />
+        <div className="grid max-h-[50vh] grid-cols-2 gap-3 overflow-auto pb-3 no-scrollbar sm:grid-cols-3">
+          {modalImages.map((src, index) => (
+            <div key={index} className="relative rounded-xl border border-white/10 bg-white/5 p-2">
+              <img src={src} alt="item" className="h-32 w-full object-contain" />
             </div>
           ))}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-white/10 flex justify-end">
+        <div className="mt-4 flex justify-end border-t border-white/10 pt-3">
           <button
             onClick={() => setModalImages(null)}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 text-white font-medium hover:opacity-90 transition"
+            className="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 px-5 py-2.5 font-medium text-white transition hover:opacity-90"
           >
             Đóng
           </button>
@@ -16481,117 +17687,192 @@ export default function WardrobeStylistChat({
     </div>
   ) : null;
 
+  const zoomImageModal = zoomImage ? (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setZoomImage(null)} />
+      <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col items-center justify-center">
+        <button
+          onClick={() => setZoomImage(null)}
+          className="absolute -right-4 -top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg transition hover:bg-white/20 md:-right-6 md:-top-6"
+          title="Đóng"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <img
+          src={zoomImage}
+          alt="zoomed-outfit"
+          className="max-h-[85vh] w-full rounded-xl border border-white/10 bg-black object-contain shadow-2xl"
+        />
+      </div>
+    </div>
+  ) : null;
+
+  const wardrobeSelectorModal = showWardrobeSelector ? (
+    <div className="fixed inset-0 z-[90]">
+      <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />
+      <div className="absolute left-1/2 top-1/2 w-[720px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white/10 bg-neutral-900 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="font-semibold text-white">Chọn đồ từ tủ</div>
+          <div className="text-sm text-white/60">Chọn nhiều mục</div>
+        </div>
+
+        <div className="grid max-h-[60vh] grid-cols-2 gap-3 overflow-auto pb-3 sm:grid-cols-3 lg:grid-cols-4">
+          {wardrobeItems.map((item) => {
+            const isSelected = !!selectedIds[item.id];
+            return (
+              <div
+                key={item.id}
+                onClick={() => toggleSelect(item.id)}
+                className={cls(
+                  "cursor-pointer rounded border p-2 transition-all duration-200",
+                  isSelected
+                    ? "border-cyan-400 bg-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                    : "border-white/10 bg-white/5 hover:bg-white/10"
+                )}
+              >
+                <div className="relative">
+                  <img src={item.imageUrl} alt="item" className="h-28 w-full object-contain" />
+                  {isSelected ? (
+                    <div className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-500 text-xs text-white shadow-md">
+                      ✓
+                    </div>
+                  ) : null}
+                </div>
+                <div className="mt-2 text-center">
+                  <div className="pointer-events-none text-xs font-medium text-white/90">{item.category || "item"}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2 border-t border-white/10 pt-4">
+          <button
+            onClick={() => setShowWardrobeSelector(false)}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-white/80 transition hover:bg-white/10"
+          >
+            Huỷ
+          </button>
+          <button
+            onClick={() => setShowWardrobeSelector(false)}
+            className="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-semibold text-white shadow-[0_0_15px_rgba(56,189,248,0.2)] transition hover:opacity-90"
+          >
+            Xong
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const renameConversationModal = renamingConversationId ? (
+    <div className="fixed inset-0 z-[115] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={cancelRenameConversation} />
+      <div className="relative z-10 w-full max-w-md rounded-[28px] border border-white/10 bg-[#10141e]/95 p-6 shadow-[0_28px_90px_rgba(0,0,0,.5)] backdrop-blur-xl">
+        <div className="text-lg font-semibold text-white/92">Đổi tên cuộc trò chuyện</div>
+        <p className="mt-2 text-sm leading-6 text-white/58">
+          Chọn một tên ngắn gọn để bạn dễ tìm lại cuộc trò chuyện này trong lịch sử.
+        </p>
+
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={(event) => setRenameValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submitRenameConversation();
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              cancelRenameConversation();
+            }
+          }}
+          placeholder="Ví dụ: Outfit đi làm thứ Hai"
+          className="mt-5 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/90 outline-none focus:border-cyan-300/35 focus:shadow-[0_0_0_4px_rgba(34,211,238,.10)]"
+          maxLength={80}
+        />
+
+        <div className="mt-5 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={cancelRenameConversation}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/10"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={submitRenameConversation}
+            className="rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Lưu tên mới
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  if (!historyReady || !activeConversation) {
+    const loadingShell = (
+      <div className="flex h-full items-center justify-center rounded-3xl border border-white/10 bg-white/5 text-white/70 backdrop-blur-xl">
+        Đang tải lịch sử trò chuyện...
+      </div>
+    );
+
+    if (mode === "drawer") {
+      return (
+        <div className="fixed inset-0 z-[80]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-[560px] p-4 md:p-6">{loadingShell}</div>
+        </div>
+      );
+    }
+
+    return <div className="h-[100svh] w-full overflow-hidden p-4 md:p-6">{loadingShell}</div>;
+  }
+
+  const content = (
+    <div className="flex h-full gap-4">
+      {mode === "page" ? <div className="hidden h-full w-[290px] flex-shrink-0 lg:block">{historyPanel}</div> : null}
+      {chatShell}
+
+      {showHistoryPanel ? (
+        <div className="fixed inset-0 z-[85] lg:hidden">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowHistoryPanel(false)} />
+          <div className="absolute left-0 top-0 h-full w-[320px] max-w-[88vw] p-4">{historyPanel}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+
   if (mode === "drawer") {
     if (!open) return null;
     return (
       <div className="fixed inset-0 z-[80]">
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
-        <div className="absolute right-0 top-0 h-full w-full max-w-[560px] p-4 md:p-6">{shell}</div>
-
+        <div className="absolute right-0 top-0 h-full w-full max-w-[560px] p-4 md:p-6">{content}</div>
         {allSelectedModal}
         {messageImagesModal}
-
-        {showWardrobeSelector ? (
-          <div className="fixed inset-0 z-90">
-            <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />
-            <div className="absolute left-1/2 top-1/2 w-[720px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-4 bg-neutral-900 border border-white/10 rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-white font-semibold">Chọn đồ từ tủ</div>
-                <div className="text-sm text-white/60">Chọn nhiều mục</div>
-              </div>
-              <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
-                {wardrobeItems.map((it) => {
-                  const isSelected = !!selectedIds[it.id];
-                  return (
-                    <div 
-                      key={it.id} 
-                      onClick={() => toggleSelect(it.id)}
-                      className={`p-2 rounded cursor-pointer border transition-all duration-200 ${
-                        isSelected 
-                          ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
-                          : "bg-white/5 border-white/10 hover:bg-white/10"
-                      }`}
-                    >
-                      <div className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
-                        {isSelected && (
-                          <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-md">
-                            ✓
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-2 text-center">
-                        <label className="text-xs font-medium text-white/90 pointer-events-none">{it.category || "item"}</label>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
-                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">Huỷ</button>
-                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-90 transition shadow-[0_0_15px_rgba(56,189,248,0.2)]">Xong</button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {zoomImageModal}
+        {renameConversationModal}
+        {wardrobeSelectorModal}
       </div>
     );
   }
 
-  // page mode: full screen, không padding gây scroll w-full
   return (
-    <div className="w-full h-[100svh] overflow-hidden p-4 md:p-6">{shell}
+    <div className="h-[100svh] w-full overflow-hidden p-4 md:p-6">
+      {content}
       {allSelectedModal}
       {messageImagesModal}
-      {showWardrobeSelector ? (
-        <div className="fixed inset-0 z-90">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setShowWardrobeSelector(false)} />
-          <div className="absolute left-1/2 top-1/2 w-[720px] max-w-[96vw] -translate-x-1/2 -translate-y-1/2 p-4 bg-neutral-900 border border-white/10 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-white font-semibold">Chọn đồ từ tủ</div>
-              <div className="text-sm text-white/60">Chọn nhiều mục</div>
-            </div>
-              <div className="grid grid-cols-4 gap-3 max-h-[60vh] overflow-auto pb-3">
-                {wardrobeItems.map((it) => {
-                  const isSelected = !!selectedIds[it.id];
-                  return (
-                    <div 
-                      key={it.id} 
-                      onClick={() => toggleSelect(it.id)}
-                      className={`p-2 rounded cursor-pointer border transition-all duration-200 ${
-                        isSelected 
-                          ? "bg-cyan-500/20 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.2)]" 
-                          : "bg-white/5 border-white/10 hover:bg-white/10"
-                      }`}
-                    >
-                      <div className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={it.imageUrl} alt="item" className="w-full h-28 object-contain" />
-                        {isSelected && (
-                          <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center text-white text-xs shadow-md">
-                            ✓
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-2 text-center">
-                        <label className="text-xs font-medium text-white/90 pointer-events-none">{it.category || "item"}</label>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-white/10">
-                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition">Huỷ</button>
-                <button onClick={() => setShowWardrobeSelector(false)} className="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-90 transition shadow-[0_0_15px_rgba(56,189,248,0.2)]">Xong</button>
-              </div>
-          </div>
-        </div>
-      ) : null}
+      {zoomImageModal}
+      {renameConversationModal}
+      {wardrobeSelectorModal}
     </div>
   );
 }
-
 
 ```
 
@@ -17256,10 +18537,16 @@ function getTransporter() {
     host,
     port,
     secure,
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
     auth: {
       user,
       pass,
     },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
 
   return transporter;
