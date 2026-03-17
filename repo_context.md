@@ -12156,7 +12156,7 @@ export default function RootLayout({
 
         <AuthProvider>
 
-          <div className="dashboard-container flex-1">
+          <div className="dashboard-container flex-1 pb-10">
             <div>{children}</div>
           </div>
 
@@ -12290,6 +12290,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ConfirmModal from "@/components/ConfirmModal";
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 
 type WardrobeItem = {
   id: string;
@@ -12342,6 +12343,7 @@ export default function WardrobePage() {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingPublicId, setPendingPublicId] = useState<string | undefined>(undefined);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const [activeCat, setActiveCat] = useState<CatKey>("ao");
 
@@ -12423,14 +12425,14 @@ export default function WardrobePage() {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data?.message || "Xóa thất bại");
+        setAlertMsg(data?.message || "Xóa thất bại");
         return;
       }
 
       setItems((prev) => prev.filter((it) => it.id !== id));
     } catch (e) {
       console.error(e);
-      alert("Xóa thất bại (lỗi mạng hoặc API).");
+      setAlertMsg("Xóa thất bại (lỗi mạng hoặc API).");
     } finally {
       setDeletingId(null);
       setConfirmLoading(false);
@@ -12513,6 +12515,7 @@ export default function WardrobePage() {
           loading={confirmLoading}
         />
       </div>
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </main>
   );
 }
@@ -12649,6 +12652,7 @@ export default function WardrobeUploadPage() {
 /* eslint-disable @next/next/no-img-element */
 
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12678,6 +12682,7 @@ export default function VipCheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState<VipOrder | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "mb" | null>(null);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const momoQrImage =
     process.env.NEXT_PUBLIC_VIP_MOMO_QR_IMAGE || "/payments/momo-qr.png";
@@ -12709,8 +12714,8 @@ export default function VipCheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể tải đơn VIP.");
-        router.replace("/services");
+        setAlertMsg(data.error || "Không thể tải đơn VIP.");
+        setTimeout(() => router.replace("/services"), 2000);
         return;
       }
 
@@ -12720,8 +12725,8 @@ export default function VipCheckoutPage() {
       }
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi tải đơn VIP.");
-      router.replace("/services");
+      setAlertMsg("Có lỗi khi tải đơn VIP.");
+      setTimeout(() => router.replace("/services"), 2000);
     } finally {
       setLoading(false);
     }
@@ -12756,7 +12761,7 @@ export default function VipCheckoutPage() {
   const onMarkPaid = async () => {
     try {
       if (!user || !orderId || !paymentMethod) {
-        alert("Vui lòng chọn phương thức thanh toán.");
+        setAlertMsg("Vui lòng chọn phương thức thanh toán.");
         return;
       }
 
@@ -12778,15 +12783,15 @@ export default function VipCheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể ghi nhận thanh toán.");
+        setAlertMsg(data.error || "Không thể ghi nhận thanh toán.");
         return;
       }
 
-      alert("Đã ghi nhận. Admin sẽ duyệt giao dịch của bạn.");
+      setAlertMsg("Đã ghi nhận. Admin sẽ duyệt giao dịch của bạn.");
       await loadOrder();
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi xác nhận đã chuyển khoản.");
+      setAlertMsg("Có lỗi khi xác nhận đã chuyển khoản.");
     } finally {
       setSubmitting(false);
     }
@@ -12795,6 +12800,7 @@ export default function VipCheckoutPage() {
   return (
     <main>
       <Header />
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
       <div className="wrap py-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl font-bold grad-text mb-4 text-center">
@@ -13009,24 +13015,26 @@ export default function RegisterPage() {
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onRegister = async () => {
+    setError("");
     const uname = username.trim().toLowerCase();
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!uname) return alert("Nhập tên đăng nhập.");
+    if (!uname) return setError("Nhập tên đăng nhập.");
     if (!/^[a-z0-9_-]{3,32}$/.test(uname)) {
-      return alert(
+      return setError(
         "Tên đăng nhập chỉ gồm chữ thường, số, gạch dưới hoặc gạch ngang (3-32 ký tự)."
       );
     }
 
-    if (!normalizedEmail) return alert("Nhập email.");
-    if (!isValidEmail(normalizedEmail)) return alert("Email không hợp lệ.");
+    if (!normalizedEmail) return setError("Nhập email.");
+    if (!isValidEmail(normalizedEmail)) return setError("Email không hợp lệ.");
 
-    if (!pass) return alert("Nhập mật khẩu.");
-    if (pass.length < 6) return alert("Mật khẩu phải từ 6 ký tự trở lên.");
-    if (pass !== confirm) return alert("Mật khẩu nhập lại không khớp.");
+    if (!pass) return setError("Nhập mật khẩu.");
+    if (pass.length < 6) return setError("Mật khẩu phải từ 6 ký tự trở lên.");
+    if (pass !== confirm) return setError("Mật khẩu nhập lại không khớp.");
 
     setLoading(true);
 
@@ -13039,7 +13047,7 @@ export default function RegisterPage() {
       const unameSnap = await getDoc(unameRef);
 
       if (unameSnap.exists()) {
-        alert("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
+        setError("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
         return;
       }
 
@@ -13076,7 +13084,7 @@ export default function RegisterPage() {
 
       router.replace("/onboarding");
     } catch (err) {
-      alert(firebaseMsg(err));
+      setError(firebaseMsg(err));
       console.error(err);
     } finally {
       setLoading(false);
@@ -13092,24 +13100,24 @@ export default function RegisterPage() {
       <Header />
 
       <section className="wrap">
-        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
-          <div className="relative w-full max-w-[620px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
+          <div className="relative w-full max-w-[480px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="mb-4 flex justify-center">
+              <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/adw-logo-clean.png"
                   alt="AI Digital Wardrobe"
-                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  className="h-auto w-[180px] object-contain md:w-[200px]"
                   draggable={false}
                 />
               </div>
 
               <div className="text-center">
-                <h1 className="register-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                <h1 className="register-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Đăng ký
                 </h1>
 
@@ -13119,13 +13127,13 @@ export default function RegisterPage() {
                 </p>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
-                <div className="space-y-4">
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên hiển thị <span className="text-white/40">(tuỳ chọn)</span>
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -13138,10 +13146,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -13155,10 +13163,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Email
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiAtSign className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="email"
@@ -13172,10 +13180,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -13189,10 +13197,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Nhập lại mật khẩu
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiCheckCircle className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -13205,16 +13213,18 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+
                   <button
                     onClick={onRegister}
                     disabled={loading}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
                   </button>
                 </div>
 
-                <p className="mt-5 text-center text-sm text-white/55">
+                <p className="mt-3 text-center text-sm text-white/55">
                   Đã có tài khoản?{" "}
                   <Link
                     href="/auth/login"
@@ -13274,6 +13284,7 @@ export default function RegisterPage() {
 "use client";
 
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13291,12 +13302,16 @@ export default function ForgotPasswordPage() {
   const [loadingReset, setLoadingReset] = useState(false);
   const [sent, setSent] = useState(false);
   const [message, setMessage] = useState("");
+  const [errorSend, setErrorSend] = useState("");
+  const [errorReset, setErrorReset] = useState("");
+  const [alertMsg, setAlertMsg] = useState("");
 
   const onSendCode = async () => {
+    setErrorSend("");
     const uname = username.trim().toLowerCase();
 
     if (!uname) {
-      alert("Nhập tên đăng nhập.");
+      setErrorSend("Nhập tên đăng nhập.");
       return;
     }
 
@@ -13322,23 +13337,25 @@ export default function ForgotPasswordPage() {
           "Nếu tài khoản tồn tại và đã có email đăng ký, mã xác nhận đã được gửi."
       );
     } catch (err: any) {
-      alert(err?.message || "Không gửi được mã xác nhận.");
+      setErrorSend(err?.message || "Không gửi được mã xác nhận.");
     } finally {
       setLoadingSend(false);
     }
   };
 
   const onResetPassword = async () => {
+    setErrorReset("");
+    setMessage("");
     const uname = username.trim().toLowerCase();
 
-    if (!uname) return alert("Nhập tên đăng nhập.");
-    if (!code) return alert("Nhập mã xác nhận.");
-    if (!newPassword) return alert("Nhập mật khẩu mới.");
+    if (!uname) return setErrorReset("Nhập tên đăng nhập.");
+    if (!code) return setErrorReset("Nhập mã xác nhận.");
+    if (!newPassword) return setErrorReset("Nhập mật khẩu mới.");
     if (newPassword.length < 6) {
-      return alert("Mật khẩu mới phải có ít nhất 6 ký tự.");
+      return setErrorReset("Mật khẩu mới phải có ít nhất 6 ký tự.");
     }
     if (newPassword !== confirmPassword) {
-      return alert("Mật khẩu nhập lại không khớp.");
+      return setErrorReset("Mật khẩu nhập lại không khớp.");
     }
 
     setLoadingReset(true);
@@ -13360,10 +13377,9 @@ export default function ForgotPasswordPage() {
         throw new Error(data?.error || "Không đặt lại được mật khẩu.");
       }
 
-      alert("Đặt lại mật khẩu thành công. Hãy đăng nhập lại.");
-      router.push("/auth/login");
+      setAlertMsg("Đặt lại mật khẩu thành công. Hãy đăng nhập lại.");
     } catch (err: any) {
-      alert(err?.message || "Không đặt lại được mật khẩu.");
+      setErrorReset(err?.message || "Không đặt lại được mật khẩu.");
     } finally {
       setLoadingReset(false);
     }
@@ -13376,26 +13392,37 @@ export default function ForgotPasswordPage() {
       <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
 
       <Header />
+      <AlertModal 
+        isOpen={!!alertMsg} 
+        message={alertMsg} 
+        onClose={() => {
+          const msg = alertMsg;
+          setAlertMsg("");
+          if (msg.includes("thành công")) {
+            router.push("/auth/login");
+          }
+        }} 
+      />
 
       <section className="wrap">
-        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
-          <div className="relative w-full max-w-[575px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
+          <div className="relative w-full max-w-[440px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="mb-4 flex justify-center">
+              <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/adw-logo-clean.png"
                   alt="AI Digital Wardrobe"
-                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  className="h-auto w-[180px] object-contain md:w-[200px]"
                   draggable={false}
                 />
               </div>
 
               <div className="text-center">
-                <h1 className="forgot-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                <h1 className="forgot-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Quên mật khẩu
                 </h1>
 
@@ -13405,13 +13432,13 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
-                <div className="space-y-4">
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -13423,10 +13450,12 @@ export default function ForgotPasswordPage() {
                     </div>
                   </div>
 
+                  {errorSend && <p className="text-sm text-red-500">{errorSend}</p>}
+
                   <button
                     onClick={onSendCode}
                     disabled={loadingSend}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loadingSend ? (
                       "Đang gửi mã..."
@@ -13441,12 +13470,12 @@ export default function ForgotPasswordPage() {
                   </button>
 
                   {message ? (
-                    <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-4 py-3 text-sm leading-7 text-emerald-200/90">
+                    <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-sm leading-6 text-emerald-200/90">
                       {message}
                     </div>
                   ) : null}
 
-                  <div className="my-2 flex items-center gap-4">
+                  <div className="my-1 flex items-center gap-4">
                     <div className="h-px flex-1 bg-white/10" />
                     <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
                       Cập nhật mật khẩu
@@ -13455,10 +13484,10 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mã xác nhận
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiKey className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -13471,10 +13500,10 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu mới
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -13487,10 +13516,10 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Nhập lại mật khẩu mới
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -13502,10 +13531,12 @@ export default function ForgotPasswordPage() {
                     </div>
                   </div>
 
+                  {errorReset && <p className="text-sm text-red-500">{errorReset}</p>}
+
                   <button
                     onClick={onResetPassword}
                     disabled={loadingReset}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(16,185,129,.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(20,184,166,.24)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(16,185,129,.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(20,184,166,.24)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loadingReset ? "Đang cập nhật..." : "Tiếp tục"}
                     {!loadingReset && (
@@ -13514,7 +13545,7 @@ export default function ForgotPasswordPage() {
                   </button>
                 </div>
 
-                <p className="mt-5 text-center text-sm text-white/55">
+                <p className="mt-3 text-center text-sm text-white/55">
                   Nhớ lại mật khẩu rồi?{" "}
                   <Link
                     href="/auth/login"
@@ -13583,6 +13614,24 @@ import Header from "@/components/Header";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
 import { FiArrowRight, FiLock, FiUser } from "react-icons/fi";
 
+function firebaseMsg(err: unknown) {
+  const e = err as AuthError;
+  const code = (e?.code ?? "").toString();
+
+  switch (code) {
+    case "auth/invalid-credential":
+      return "Sai mật khẩu !";
+    case "auth/user-not-found":
+      return "Tài khoản không tồn tại.";
+    case "auth/too-many-requests":
+      return "Tài khoản tạm thời bị khóa do sai quá nhiều lần. Vui lòng thử lại sau.";
+    case "auth/network-request-failed":
+      return "Lỗi mạng. Kiểm tra kết nối internet.";
+    default:
+      return e?.message || "Đăng nhập thất bại.";
+  }
+}
+
 async function getLoginEmails(username: string) {
   const fallbackEmail = `${username}@adw.local`;
 
@@ -13595,7 +13644,7 @@ async function getLoginEmails(username: string) {
     ? (usernameSnap.data()?.email as string | undefined)?.trim().toLowerCase()
     : "";
 
-  return Array.from(new Set([mappedEmail, fallbackEmail].filter(Boolean)));
+  return Array.from(new Set([mappedEmail, fallbackEmail].filter(Boolean) as string[]));
 }
 
 export default function Login() {
@@ -13603,17 +13652,19 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onLogin = async () => {
+    setError("");
     if (!username || !pass) {
-      alert("Nhập tên đăng nhập và mật khẩu");
+      setError("Nhập tên đăng nhập và mật khẩu");
       return;
     }
 
     setLoading(true);
 
     if (!auth) {
-      alert("Firebase chưa được khởi tạo!");
+      setError("Firebase chưa được khởi tạo!");
       setLoading(false);
       return;
     }
@@ -13644,7 +13695,7 @@ export default function Login() {
 
       throw lastError;
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Login failed");
+      setError(firebaseMsg(e));
     } finally {
       setLoading(false);
     }
@@ -13659,40 +13710,39 @@ export default function Login() {
       <Header />
 
       <section className="wrap">
-        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
-          <div className="relative w-full max-w-[575px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
+          <div className="relative w-full max-w-[440px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="mb-4 flex justify-center">
+              <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/adw-logo-clean.png"
                   alt="AI Digital Wardrobe"
-                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  className="h-auto w-[180px] object-contain md:w-[200px]"
                   draggable={false}
                 />
               </div>
 
               <div className="text-center">
-                <h1 className="login-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                <h1 className="login-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Đăng nhập
                 </h1>
 
                 <p className="mx-auto mt-1 max-w-[420px] text-sm leading-7 text-white/60 md:text-[15px]">
-                  {/* Tiếp tục quản lý tủ đồ, nhận gợi ý outfit thông minh và đồng bộ
-                  trải nghiệm thời trang số của bạn. */}
+
                 </p>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
-                <div className="space-y-4">
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -13705,10 +13755,10 @@ export default function Login() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -13729,10 +13779,12 @@ export default function Login() {
                     </Link>
                   </div>
 
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+
                   <button
                     onClick={onLogin}
                     disabled={loading}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                     {!loading && (
@@ -13741,7 +13793,7 @@ export default function Login() {
                   </button>
                 </div>
 
-                <div className="my-5 flex items-center gap-4">
+                <div className="my-3 flex items-center gap-4">
                   <div className="h-px flex-1 bg-white/10" />
                   <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
                     Hoặc
@@ -13751,7 +13803,7 @@ export default function Login() {
 
                 <GoogleLoginButton />
 
-                <p className="mt-4 text-center text-sm text-white/55">
+                <p className="mt-3 text-center text-sm text-white/55">
                   Chưa có tài khoản?{" "}
                   <Link
                     href="/auth/register"
@@ -13812,6 +13864,7 @@ export default function Login() {
 "use client";
 
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffect, useState } from "react";
 
@@ -13833,6 +13886,7 @@ export default function AdminVipOrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<VipOrder[]>([]);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const loadOrders = async () => {
     try {
@@ -13849,14 +13903,14 @@ export default function AdminVipOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể tải đơn VIP.");
+        setAlertMsg(data.error || "Không thể tải đơn VIP.");
         return;
       }
 
       setOrders(data.orders || []);
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi tải danh sách đơn VIP.");
+      setAlertMsg("Có lỗi khi tải danh sách đơn VIP.");
     } finally {
       setLoading(false);
     }
@@ -13888,21 +13942,22 @@ export default function AdminVipOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể duyệt đơn VIP.");
+        setAlertMsg(data.error || "Không thể duyệt đơn VIP.");
         return;
       }
 
-      alert("Đã bật VIP thành công.");
+      setAlertMsg("Đã bật VIP thành công.");
       await loadOrders();
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi duyệt đơn VIP.");
+      setAlertMsg("Có lỗi khi duyệt đơn VIP.");
     }
   };
 
   return (
     <main>
       <Header />
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
       <div className="wrap py-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl font-bold grad-text mb-6 text-center">
@@ -14017,14 +14072,14 @@ const teamAreas = [
     label: "Platform & Reliability",
     title: "Đảm bảo nền tảng vận hành ổn định, an toàn và sẵn sàng mở rộng",
     description:
-      "Phía sau giao diện là hạ tầng được thiết kế để xử lý dữ liệu, đồng bộ trải nghiệm và giữ cho hệ thống luôn đáng tin cậy.",
+      "Phía sau giao diện là hạ tầng được thiết kế để xử lý dữ liệu, tối ưu hóa trải nghiệm và đảm bảo tính bảo mật luôn đáng tin cậy.",
     accent: "from-emerald-500/25 via-lime-400/10 to-transparent",
   },
 ];
 
 const principles = [
   "Thiết kế tính năng dựa trên nhu cầu thật của người dùng, không chạy theo công nghệ vì xu hướng.",
-  "Ưu tiên lời gợi ý rõ ràng, hữu ích và có thể áp dụng ngay trong đời sống hằng ngày.",
+  "Ưu tiên lời gợi ý rõ ràng, hữu ích cùng với hình ảnh minh họa trực quan để có thể giúp người dùng hình dung dễ dàng hơn outfit mình sẽ mặc.",
   "Kết hợp thời trang, dữ liệu và AI theo cách dễ hiểu, gần gũi và thực tế.",
 ];
 
@@ -14044,7 +14099,7 @@ export default function About() {
                 AI-powered fashion platform
               </div>
 
-              <h1 className="max-w-4xl text-5xl font-bold leading-tight md:text-6xl">
+              <h1 className="max-w-4xl text-3xl font-bold leading-tight md:text-4xl">
                 <span className="grad-text">Chúng tôi xây dựng AI Digital Wardrobe</span>
                 <span className="block mt-3 text-white/92">
                   để việc quản lý tủ đồ và chọn trang phục trở nên thông minh, tinh gọn và truyền cảm hứng hơn mỗi ngày.
@@ -14081,10 +14136,7 @@ export default function About() {
                       Trở thành trợ lý thời trang cá nhân đáng tin cậy cho cuộc sống hiện đại.
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-                    <div className="text-xs text-white/45">Focus</div>
-                    <div className="text-lg font-semibold text-white/90">Style x AI</div>
-                  </div>
+
                 </div>
                 <p className="mt-5 text-sm leading-7 text-white/65">
                   Chúng tôi theo đuổi một trải nghiệm nơi AI không thay thế gu thẩm mỹ của bạn, mà giúp bạn khai mở nó một cách nhanh hơn và chính xác hơn.
@@ -14102,9 +14154,9 @@ export default function About() {
 
                 <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/18 via-white/5 to-transparent p-5 backdrop-blur-xl">
                   <div className="text-sm text-white/50">Giá trị mang lại</div>
-                  <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít ma sát hơn</div>
+                  <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít thời gian hơn</div>
                   <p className="mt-3 text-sm leading-7 text-white/62">
-                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp mặc hằng ngày.
+                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp đặc biệt.
                   </p>
                 </div>
               </div>
@@ -14128,9 +14180,8 @@ export default function About() {
                   mặc gì cho đúng lúc và tận dụng tối đa những lựa chọn sẵn có.
                 </p>
                 <p>
-                  AI Digital Wardrobe ra đời để kết nối ba yếu tố thường bị tách rời: dữ liệu về món đồ, bối cảnh sử dụng thực tế
-                  và gu thẩm mỹ cá nhân. Khi ba yếu tố này được đặt cùng nhau, việc chọn outfit trở nên nhanh hơn, chính xác hơn
-                  và bền vững hơn.
+                  AI Digital Wardrobe ra đời để kết nối ba yếu tố thường bị tách rời: dữ liệu trang phục hiện có, bối cảnh sử dụng thực tế
+                  và gu thẩm mỹ cá nhân. Khi ba yếu tố này được đặt cùng nhau, việc chọn outfit trở nên nhanh hơn và chính xác hơn bao giơ hết.
                 </p>
               </div>
             </div>
@@ -14222,7 +14273,7 @@ export default function About() {
                   Nếu bạn quan tâm đến tương lai của thời trang cá nhân hóa bằng AI, chúng tôi rất sẵn lòng kết nối.
                 </h2>
                 <p className="mt-5 max-w-2xl text-lg leading-8 text-white/66">
-                  AI Digital Wardrobe luôn chào đón những cuộc trò chuyện về sản phẩm, trải nghiệm người dùng và những ý tưởng có thể làm cho việc mặc đẹp trở nên thông minh hơn.
+                  AI Digital Wardrobe luôn chào đón và ghi nhận những ý kiến đóng góp về sản phẩm, trải nghiệm người dùng và những ý tưởng có thể làm cho việc mặc đẹp trở nên thông minh hơn.
                 </p>
 
                 <div className="mt-8 flex flex-wrap gap-3">
@@ -16429,11 +16480,17 @@ export async function POST(req: Request) {
 ---
 # src/app/services/page.tsx
 ```text
+"use client";
+
 import Header from "@/components/Header";
 import Link from "next/link";
 import VipBuyButton from "@/components/VipBuyButton";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Services() {
+    const router = useRouter();
+    const { user } = useAuth();
     return (
         <main>
             <Header />
@@ -16476,9 +16533,12 @@ export default function Services() {
                                 </li>
                             </ul>
 
-                            <Link href="/auth/register" className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
-                                Đăng ký ngay
-                            </Link>
+                            <button
+                                onClick={() => router.push(user ? "/dashboard" : "/auth/register")}
+                                className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                            >
+                                Trải nghiệm ngay
+                            </button>
                         </div>
 
                         {/* Tài khoản VIP */}
@@ -16550,6 +16610,7 @@ import {
   type UserAccount,
   upsertUserProfile,
 } from "@/lib/profile";
+import AlertModal from "@/components/AlertModal";
 
 function emailPrefix(email?: string | null) {
   return (email || "").split("@")[0] || "";
@@ -16711,6 +16772,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [account, setAccount] = useState<UserAccount | null>(null);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const [gender, setGender] = useState<Gender>("male");
   const [age, setAge] = useState<number>(18);
@@ -16781,7 +16843,7 @@ export default function OnboardingPage() {
   const onSave = async () => {
     if (!user) return;
     const err = validate();
-    if (err) return alert(err);
+    if (err) return setAlertMsg(err);
 
     setSaving(true);
     try {
@@ -16797,7 +16859,7 @@ export default function OnboardingPage() {
       router.replace("/dashboard");
     } catch (e) {
       console.error(e);
-      alert("Lưu thông tin thất bại.");
+      setAlertMsg("Lưu thông tin thất bại.");
     } finally {
       setSaving(false);
     }
@@ -16957,7 +17019,65 @@ export default function OnboardingPage() {
           </div>
         </div>
       </main>
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </div>
+  );
+}
+
+```
+
+
+---
+# src/components/AlertModal.tsx
+```text
+"use client";
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+
+interface AlertModalProps {
+  isOpen: boolean;
+  message: string;
+  onClose: () => void;
+}
+
+export default function AlertModal({ isOpen, message, onClose }: AlertModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-[400px] overflow-hidden rounded-2xl border border-white/10 bg-gray-900 p-6 shadow-2xl">
+        <div className="mb-6 max-h-[60vh] overflow-y-auto pr-2 text-sm text-white/90">
+          {message}
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-lg bg-cyan-500/20 px-5 py-2 text-sm font-medium text-cyan-300 transition hover:bg-cyan-500/30"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -17025,7 +17145,7 @@ export default function ConfirmModal({
 ```text
 export default function Footer() {
     return (
-        <footer className="bg-gray-800 text-white mt-auto py-6">
+        <footer className="bg-gray-800 text-white mt-auto py-6 ">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 ml-25">
                     <div>
@@ -17034,22 +17154,22 @@ export default function Footer() {
                             Nền tảng trợ lý thời trang thông minh
                         </p>
                     </div>
-                    <div className="pl-10">
+                    <div className="">
                         <h4 className="text-lg font-semibold mb-4">Liên kết</h4>
                         <ul className="space-y-2 text-gray-400">
                             <li>
-                                <a href="/dashboard" className="hover:text-white transition">
-                                    Bảng điều khiển
+                                <a href="/" className="hover:text-white transition">
+                                    Trang chủ
                                 </a>
                             </li>
                             <li>
-                                <a href="/wardrobe" className="hover:text-white transition">
-                                    Tủ quần áo
+                                <a href="/services" className="hover:text-white transition">
+                                    Dịch vụ
                                 </a>
                             </li>
                             <li>
-                                <a href="/outfit-suggest" className="hover:text-white transition">
-                                    Gợi ý trang phục
+                                <a href="/about" className="hover:text-white transition">
+                                    Về chúng tôi
                                 </a>
                             </li>
                         </ul>
@@ -17094,13 +17214,16 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
+import { useState } from "react";
+import AlertModal from "./AlertModal";
 
 export default function GoogleLoginButton() {
   const router = useRouter();
+  const [alertMsg, setAlertMsg] = useState("");
 
   const handleLogin = async () => {
     if (!auth) {
-      alert("Firebase chưa được khởi tạo!");
+      setAlertMsg("Firebase chưa được khởi tạo!");
       return;
     }
 
@@ -17110,13 +17233,16 @@ export default function GoogleLoginButton() {
   };
 
   return (
-    <button
-      onClick={handleLogin}
-      className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white transition hover:border-white/15 hover:bg-white/[0.08]"
-    >
-      <FcGoogle className="text-2xl" />
-      <span className="font-medium text-white/85">Tiếp tục với Google</span>
-    </button>
+    <>
+      <button
+        onClick={handleLogin}
+        className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-white transition hover:border-white/15 hover:bg-white/[0.08]"
+      >
+        <FcGoogle className="text-2xl" />
+        <span className="font-medium text-white/85">Tiếp tục với Google</span>
+      </button>
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
+    </>
   );
 }
 ```
@@ -17130,6 +17256,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import ProfileDrawer from "./ProfileDrawer";
 import { useState, useEffect } from "react";
+import AlertModal from "./AlertModal";
 import {
     getUserAccount,
     getUserProfile,
@@ -17137,6 +17264,8 @@ import {
     type UserAccount,
     type UserProfile,
 } from "@/lib/profile";
+
+import { FiMoreVertical } from "react-icons/fi";
 
 function emailPrefix(email?: string | null) {
     return (email || "").split("@")[0] || "";
@@ -17153,8 +17282,10 @@ function initialsFrom(name?: string | null, email?: string | null) {
 export default function Header() {
     const { user } = useAuth();
     const [profileOpen, setProfileOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [account, setAccount] = useState<UserAccount | null>(null);
+    const [alertMsg, setAlertMsg] = useState("");
 
     const resolvedEmail = account?.email || user?.email;
     const resolvedDisplayName = account?.displayName || user?.displayName;
@@ -17195,7 +17326,7 @@ export default function Header() {
                             onClick={(e) => {
                                 if (!user) {
                                     e.preventDefault();
-                                    alert("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
+                                    setAlertMsg("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
                                 }
                             }}
                         >
@@ -17209,15 +17340,7 @@ export default function Header() {
                         </Link>
                     </nav>
 
-                    {/* Menu mobile (hiện ở màn hình nhỏ) */}
-                    <nav className="md:hidden flex space-x-4">
-                        <Link href="/" className="text-white/80 hover:text-white text-sm">
-                            Trang chủ
-                        </Link>
-                        {/* Ẩn bớt trên mobile cho gọn hoặc thêm menu dropdown */}
-                    </nav>
-
-                    {/* Bên phải: Nút Bắt đầu hoặc avatar */}
+                    {/* Bên phải: Nút Bắt đầu hoặc avatar + Mobile Menu */}
                     <div className="text-white z-10 flex items-center justify-end gap-3">
                         {user ? (
                             <>
@@ -17259,8 +17382,42 @@ export default function Header() {
                                 Bắt đầu
                             </Link>
                         )}
+
+                        {/* Nút 3 chấm mobile */}
+                        <button
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="md:hidden p-2 -mr-2 text-white/80 hover:text-white transition-colors"
+                            aria-label="Toggle mobile menu"
+                        >
+                            <FiMoreVertical size={24} />
+                        </button>
                     </div>
                 </div>
+
+                {/* Mobile Dropdown Menu */}
+                {mobileMenuOpen && (
+                    <div className="md:hidden border-t border-white/10 bg-black/80 backdrop-blur-xl absolute w-full left-0 top-full shadow-2xl">
+                        <div className="flex flex-col py-4 px-6 space-y-4">
+                            <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white font-medium text-lg">Trang chủ</Link>
+                            <Link
+                                href="/dashboard"
+                                onClick={(e) => {
+                                    if (!user) {
+                                        e.preventDefault();
+                                        setAlertMsg("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
+                                    } else {
+                                        setMobileMenuOpen(false);
+                                    }
+                                }}
+                                className="text-white/80 hover:text-white font-medium text-lg"
+                            >
+                                Tủ đồ thông minh
+                            </Link>
+                            <Link href="/services" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white font-medium text-lg">Dịch vụ</Link>
+                            <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white font-medium text-lg">Về chúng tôi</Link>
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* ProfileDrawer */}
@@ -17276,6 +17433,7 @@ export default function Header() {
                 account={user ? account : null}
                 profile={user ? profile : null}
             />
+            <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
         </>
     );
 }
@@ -17505,11 +17663,13 @@ export default function ProfileDrawer({
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import AlertModal from "@/components/AlertModal";
 
 export default function VipBuyButton() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [creating, setCreating] = useState(false);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const onBuy = async () => {
     try {
@@ -17533,27 +17693,30 @@ export default function VipBuyButton() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể tạo đơn VIP.");
+        setAlertMsg(data.error || "Không thể tạo đơn VIP.");
         return;
       }
 
       router.push(`/vip/checkout?orderId=${data.orderId}`);
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi tạo đơn VIP.");
+      setAlertMsg("Có lỗi khi tạo đơn VIP.");
     } finally {
       setCreating(false);
     }
   };
 
   return (
-    <button
-      onClick={onBuy}
-      disabled={creating || loading}
-      className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
-    >
-      {creating ? "Đang tạo đơn..." : "Mua Vip Thôi Nào !"}
-    </button>
+    <>
+      <button
+        onClick={onBuy}
+        disabled={creating || loading}
+        className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {creating ? "Đang tạo đơn..." : "Mua Vip Thôi Nào !"}
+      </button>
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
+    </>
   );
 }
 ```
@@ -18852,6 +19015,7 @@ export default function WardrobeStylistChat({
 import { useAuth } from "@/lib/AuthContext";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import AlertModal from "./AlertModal";
 
 type ParsedItem = {
   type: string;
@@ -18884,6 +19048,7 @@ export default function WardrobeUploader({
 
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [alertMsg, setAlertMsg] = useState("");
 
   // click-point per source file
   const [points, setPoints] = useState<Record<number, { x: number; y: number }>>({});
@@ -18981,7 +19146,7 @@ export default function WardrobeUploader({
     if (!user) return;
 
     const indices = typeof index === "number" ? [index] : files.map((_, i) => i);
-    if (indices.length === 0) return alert("Không có ảnh để tách.");
+    if (indices.length === 0) return setAlertMsg("Không có ảnh để tách.");
 
     setParsing(true);
     onUploadingChange?.(true);
@@ -19084,7 +19249,7 @@ export default function WardrobeUploader({
       })();
     } catch (e) {
       console.error(e);
-      alert("Tách đồ thất bại (lỗi mạng hoặc API).");
+      setAlertMsg("Tách đồ thất bại (lỗi mạng hoặc API).");
     } finally {
       setParsing(false);
       onUploadingChange?.(false);
@@ -19097,7 +19262,7 @@ export default function WardrobeUploader({
 
   const onUploadSelected = async () => {
     if (!user) return;
-    if (parsedItems.length === 0) return alert("Bạn cần tách đồ trước khi upload.");
+    if (parsedItems.length === 0) return setAlertMsg("Bạn cần tách đồ trước khi upload.");
 
     const picked = parsedItems
       .map((it, idx) => ({ it, idx }))
@@ -19109,7 +19274,7 @@ export default function WardrobeUploader({
           : it.image_png_base64,
       }));
 
-    if (picked.length === 0) return alert("Bạn chưa chọn item nào để thêm vào tủ.");
+    if (picked.length === 0) return setAlertMsg("Bạn chưa chọn item nào để thêm vào tủ.");
 
     setUploading(true);
     onUploadingChange?.(true);
@@ -19127,7 +19292,7 @@ export default function WardrobeUploader({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data?.message || "Thêm vào tủ thất bại.");
+        setAlertMsg(data?.message || "Thêm vào tủ thất bại.");
         console.error("CONFIRM FAIL:", data);
         return;
       }
@@ -19139,7 +19304,7 @@ export default function WardrobeUploader({
       onUploadSuccess?.();
     } catch (e) {
       console.error(e);
-      alert("Thêm vào tủ thất bại (lỗi mạng hoặc API).");
+      setAlertMsg("Thêm vào tủ thất bại (lỗi mạng hoặc API).");
     } finally {
       setUploading(false);
       onUploadingChange?.(false);
@@ -19320,6 +19485,7 @@ export default function WardrobeUploader({
           </div>
         </div>
       )}
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </div>
   );
 }
