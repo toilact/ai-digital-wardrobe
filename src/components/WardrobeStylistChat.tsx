@@ -71,10 +71,10 @@ function getStorageKey(idUser: string) {
 function normalizeConversationList(raw: unknown) {
   return Array.isArray(raw)
     ? raw
-        .map((conversation) => normalizeStoredConversation(conversation as StoredConversation))
-        .filter((conversation): conversation is ChatConversation => conversation !== null)
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, MAX_STORED_CONVERSATIONS)
+      .map((conversation) => normalizeStoredConversation(conversation as StoredConversation))
+      .filter((conversation): conversation is ChatConversation => conversation !== null)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_STORED_CONVERSATIONS)
     : [];
 }
 
@@ -152,8 +152,8 @@ function normalizeStoredConversation(raw: StoredConversation | undefined): ChatC
 
   const messages = Array.isArray(raw.messages)
     ? raw.messages
-        .map((message: unknown) => normalizeStoredMessage(message))
-        .filter((message): message is Msg => message !== null)
+      .map((message: unknown) => normalizeStoredMessage(message as Partial<Msg>))
+      .filter((message): message is Msg => message !== null)
     : [];
 
   const updatedAt = typeof raw.updatedAt === "number" ? raw.updatedAt : Date.now();
@@ -801,7 +801,7 @@ export default function WardrobeStylistChat({
           <button
             onClick={() => setShowHistoryPanel(true)}
             className={cls(
-              "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 transition",
+              "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition",
               mode === "page" && "lg:hidden"
             )}
           >

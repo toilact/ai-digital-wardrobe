@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Link from "next/link";
+import StartButton from "@/components/StartButton";
 
 export default function Home() {
   return (
@@ -13,19 +14,18 @@ export default function Home() {
 
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-5xl lg:text-[4.5rem] font-bold mb-6 leading-[1.15]">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-[1.15]">
                 <span className="grad-text">Chào mừng đến với  AI DIGITAL WARDROBE</span>
               </h1>
               <p className="text-xl text-white/75 max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-10">
-                Trợ lý thời trang cá nhân của bạn. Chỉ với vài thao tác, tủ đồ vật lý sẽ được số hoá hoàn toàn, giúp bạn quản lý và chọn trang phục thông minh, nhẹ nhàng hơn mỗi ngày.
+                Trợ lý thời trang cá nhân của bạn. Chỉ với vài thao tác, tủ đồ vật lý sẽ được số hoá hoàn toàn, giúp bạn quản lý và chọn trang phục thông minh, tiết kiệm thời gian hơn mỗi ngày.
               </p>
               <div className="flex justify-center lg:justify-start">
-                <Link
-                  href="/auth/login"
+                <StartButton
                   className="inline-flex rounded-2xl bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 px-8 py-4 font-semibold text-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition hover:scale-[1.03] text-lg"
                 >
                   Bắt đầu ngay
-                </Link>
+                </StartButton>
               </div>
             </div>
 
@@ -43,7 +43,7 @@ export default function Home() {
         {/* 2. Điểm mạnh */}
         <section className="py-12">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white/95">
+            <h2 className="text-4xl md:text-5xl lg:text-5xl font-bold text-white/95 leading-[1.15]">
               Tất cả những gì bạn cần <br /> <span className="grad-text">để mặc đẹp</span>
             </h2>
             <p className="text-white/60 mt-4 max-w-xl mx-auto text-lg">
@@ -51,45 +51,50 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-12">
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.2)]">
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
-                <span className="text-indigo-400 text-2xl">✨</span>
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-10">
+            <div className="rounded-[32px] bg-gradient-to-br p-[1.5px] from-indigo-500 via-pink-500 to-emerald-500 shadow-[0_15px_40px_rgba(0,0,0,0.2)] relative group hover:-translate-y-1 transition-transform duration-300">
+              <div className="h-full rounded-[31px] bg-[#0a0f1c]/95 p-8 backdrop-blur-xl relative z-10">
+                <div className="w-14 h-14 bg-gradient-to-br from-indigo-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
+                  <span className="text-indigo-400 text-2xl">✨</span>
+                </div>
+                <h3 className="text-xl font-semibold text-white/92 mb-4">Số hóa bằng AI</h3>
+                <p className="text-white/65 leading-relaxed">
+                  Chỉ cần chụp ảnh, AI sẽ tự động tách nền, nhận diện và đánh nhãn chính xác từng loại quần áo để lưu trữ có hệ thống.
+                </p>
               </div>
-              <h3 className="text-xl font-semibold text-white/92 mb-4">Số hóa bằng AI</h3>
-              <p className="text-white/65 leading-relaxed">
-                Chỉ cần chụp ảnh, AI sẽ tự động tách nền, nhận diện và đánh nhãn chính xác từng loại quần áo để lưu trữ có hệ thống.
-              </p>
             </div>
 
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.2)]">
-              <div className="w-14 h-14 bg-gradient-to-br from-emerald-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
-                <span className="text-emerald-400 text-2xl">📱</span>
+            <div className="rounded-[32px] bg-gradient-to-br p-[1.5px] from-indigo-500 via-pink-500 to-emerald-500 shadow-[0_15px_40px_rgba(0,0,0,0.2)] relative group hover:-translate-y-1 transition-transform duration-300">
+              <div className="h-full rounded-[31px] bg-[#0a0f1c]/95 p-8 backdrop-blur-xl relative z-10">
+                <div className="w-14 h-14 bg-gradient-to-br from-emerald-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
+                  <span className="text-emerald-400 text-2xl">📱</span>
+                </div>
+                <h3 className="text-xl font-semibold text-white/92 mb-4">Tủ đồ kỹ thuật số</h3>
+                <p className="text-white/65 leading-relaxed">
+                  Dễ dàng quan sát mọi trang phục mình có ngay trên điện thoại
+                </p>
               </div>
-              <h3 className="text-xl font-semibold text-white/92 mb-4">Tủ đồ kỹ thuật số</h3>
-              <p className="text-white/65 leading-relaxed">
-                Dễ dàng quan sát mọi trang phục mình có ngay trên điện thoại
-              </p>
             </div>
 
-            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.2)]">
-              <div className="w-14 h-14 bg-gradient-to-br from-pink-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
-                <span className="text-pink-400 text-2xl">💡</span>
+            <div className="rounded-[32px] bg-gradient-to-br p-[1.5px] from-indigo-500 via-pink-500 to-emerald-500 shadow-[0_15px_40px_rgba(0,0,0,0.2)] relative group hover:-translate-y-1 transition-transform duration-300">
+              <div className="h-full rounded-[31px] bg-[#0a0f1c]/95 p-8 backdrop-blur-xl relative z-10">
+                <div className="w-14 h-14 bg-gradient-to-br from-pink-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
+                  <span className="text-pink-400 text-2xl">💡</span>
+                </div>
+                <h3 className="text-xl font-semibold text-white/92 mb-4">Đề xuất thông minh</h3>
+                <p className="text-white/65 leading-relaxed">
+                  AI Stylist gợi ý outfit phù hợp nhất dựa theo thông tin người dùng và sự kiện người dùng cung cấp.
+                </p>
               </div>
-              <h3 className="text-xl font-semibold text-white/92 mb-4">Đề xuất thông minh</h3>
-              <p className="text-white/65 leading-relaxed">
-                AI Stylist gợi ý outfit phù hợp nhất dựa theo thông tin người dùng và sự kiện người dùng cung cấp.
-              </p>
             </div>
           </div>
 
           <div className="text-center">
-            <Link
-              href="/auth/login"
-              className="inline-flex rounded-2xl border border-white/15 bg-white/10 px-8 py-3.5 font-semibold text-white/90 backdrop-blur-md transition hover:bg-white/15 hover:text-white"
+            <StartButton
+              className="inline-flex rounded-3xl bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 px-10 py-4 font-bold text-white shadow-[0_20px_50px_rgba(0,0,0,0.25)] transition-all hover:scale-[1.03] text-lg"
             >
-              Bắt đầu
-            </Link>
+              Khởi tạo tủ đồ ngay
+            </StartButton>
           </div>
         </section>
 
@@ -137,13 +142,12 @@ export default function Home() {
                   </div>
 
                   <div className="mt-10">
-                    <Link
-                      href="/auth/login"
+                    <StartButton
                       className="inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-3.5 font-bold text-slate-900 shadow-[0_10px_20px_rgba(255,255,255,0.08)] transition-all hover:scale-105 hover:shadow-[0_15px_30px_rgba(255,255,255,0.15)] group/btn"
                     >
                       Bắt đầu ngay
                       <span className="transition-transform group-hover/btn:translate-x-1">→</span>
-                    </Link>
+                    </StartButton>
                   </div>
                 </div>
 
@@ -223,12 +227,11 @@ export default function Home() {
           </div>
 
           <div className="mt-20">
-            <Link
-              href="/auth/login"
+            <StartButton
               className="inline-flex rounded-full bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 px-10 py-5 font-bold text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition hover:scale-[1.03] text-lg"
             >
               Bắt đầu ngay
-            </Link>
+            </StartButton>
           </div>
         </section>
       </div>

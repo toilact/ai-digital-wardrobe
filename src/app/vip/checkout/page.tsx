@@ -7,6 +7,7 @@ import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 type VipOrder = {
   id: string;
@@ -22,7 +23,7 @@ type VipOrder = {
   approvedAt: string | null;
 };
 
-export default function VipCheckoutPage() {
+function VipCheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -310,5 +311,13 @@ export default function VipCheckoutPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function VipCheckoutPage() {
+  return (
+    <Suspense fallback={<div className="text-white text-center py-20">Đang tải...</div>}>
+      <VipCheckoutContent />
+    </Suspense>
   );
 }

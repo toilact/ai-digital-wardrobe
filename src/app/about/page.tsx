@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Header from "@/components/Header";
+import StartButton from "@/components/StartButton";
 
 const pillars = [
   {
@@ -105,12 +106,11 @@ export default function About() {
                 >
                   Khám phá dịch vụ
                 </Link>
-                <Link
-                  href="/dashboard"
+                <StartButton
                   className="rounded-2xl border border-white/12 bg-white/5 px-6 py-3 font-semibold text-white/88 backdrop-blur-md transition hover:bg-white/10"
                 >
                   Trải nghiệm tủ đồ thông minh
-                </Link>
+                </StartButton>
               </div>
             </div>
 
@@ -194,13 +194,13 @@ export default function About() {
                 <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-indigo-500/10 to-transparent p-1">
                   <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-indigo-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-pink-500/20 mix-blend-overlay"></div>
-                    <span className="text-white/30 text-xs font-semibold tracking-widest">[ ẢNH ]</span>
+                    <img src="/dacanh.png" alt="" />
                   </div>
                 </div>
-                
+
                 <div className="text-center sm:text-left pt-2">
                   <div className="space-y-1 mb-4">
-                    <h3 className="text-2xl font-bold text-white/95 group-hover:text-indigo-200 transition-colors">Anh Phạm</h3>
+                    <h3 className="text-2xl font-bold text-white/95 group-hover:text-indigo-200 transition-colors">Đắc Anh</h3>
                     <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 uppercase tracking-wider">
                       Developer
                     </div>
@@ -218,10 +218,10 @@ export default function About() {
                 <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-pink-500/10 to-transparent p-1">
                   <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-pink-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-emerald-500/20 mix-blend-overlay"></div>
-                    <span className="text-white/30 text-xs font-semibold tracking-widest">[ ẢNH ]</span>
+                    <img src="/chithanh.png" alt="" />
                   </div>
                 </div>
-                
+
                 <div className="text-center sm:text-left pt-2">
                   <div className="space-y-1 mb-4">
                     <h3 className="text-2xl font-bold text-white/95 group-hover:text-pink-200 transition-colors">Chí Thành</h3>
@@ -268,12 +268,11 @@ export default function About() {
                 >
                   Xem dịch vụ
                 </Link>
-                <Link
-                  href="/auth/login"
+                <StartButton
                   className="rounded-2xl bg-white px-6 py-3 font-semibold text-slate-900 transition hover:bg-white/90"
                 >
                   Bắt đầu ngay
-                </Link>
+                </StartButton>
               </div>
             </div>
           </div>

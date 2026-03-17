@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         await user.reload();
         if (active) {
-          setUser(auth.currentUser);
+          setUser(auth?.currentUser || null);
         }
       } catch (err) {
         console.error("Sync legacy auth email failed:", err);

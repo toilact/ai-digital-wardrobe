@@ -56,20 +56,24 @@ export default function Header() {
     return (
         <>
             <header className="sticky top-0 z-40 bg-white/5 backdrop-blur-md border-b border-white/10 shadow-lg">
-                <div className="flex justify-between items-center py-4 px-6 relative max-w-[1400px] mx-auto">
+                <div className="flex justify-between items-center py-2 px-6 relative max-w-[1400px] mx-auto">
                     {/* Tên trang web bên trái */}
                     <div className="text-2xl font-bold grad-text z-10">
-                        <Link href="/">AI Digital Wardrobe</Link>
+                        <Link href="/" className="flex items-center gap-2">
+                            <img src="/adw-logo-clean.png" alt="Logo" className="w-20 h-20 object-contain" />
+                            AI Digital Wardrobe
+                        </Link>
                     </div>
 
                     {/* Menu ở giữa */}
-                    <nav className="hidden md:flex absolute inset-0 items-center justify-center space-x-8 pointer-events-none">
-                        <Link href="/" className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium">
+                    <nav className="hidden md:flex absolute inset-0 items-center justify-center space-x-8 pointer-events-none text-lg">
+                        <Link href="/" className="relative h-full flex items-center ml-15 text-white/80 hover:text-white transition-colors pointer-events-auto font-medium group">
                             Trang chủ
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-center"></span>
                         </Link>
                         <Link
                             href="/dashboard"
-                            className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium"
+                            className="relative h-full flex items-center ml-15 text-white/80 hover:text-white transition-colors pointer-events-auto font-medium group"
                             onClick={(e) => {
                                 if (!user) {
                                     e.preventDefault();
@@ -78,12 +82,15 @@ export default function Header() {
                             }}
                         >
                             Tủ đồ thông minh
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-center"></span>
                         </Link>
-                        <Link href="/services" className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium">
+                        <Link href="/services" className="relative h-full flex items-center ml-15 text-white/80 hover:text-white transition-colors pointer-events-auto font-medium group">
                             Dịch vụ
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-center"></span>
                         </Link>
-                        <Link href="/about" className="text-white/80 hover:text-white transition-colors pointer-events-auto font-medium">
+                        <Link href="/about" className="relative h-full flex items-center ml-15 text-white/80 hover:text-white transition-colors pointer-events-auto font-medium group">
                             Về chúng tôi
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-center"></span>
                         </Link>
                     </nav>
 
@@ -94,11 +101,10 @@ export default function Header() {
                                 {(account || profile) && (
 
                                     <div
-                                        className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${
-                                            vipActive
-                                                ? "bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                                                : "bg-white/10 text-white/80 border-white/20"
-                                        }`}
+                                        className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg items-center gap-1.5 ${vipActive
+                                            ? "bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 text-white shadow-[0_0_10px_rgba(236,72,153,0.5)] border-0"
+                                            : "bg-white/10 text-white/80 border border-white/20"
+                                            }`}
                                     >
                                         {vipActive ? (
                                             <>

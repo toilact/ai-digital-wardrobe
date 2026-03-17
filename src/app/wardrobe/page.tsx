@@ -199,7 +199,7 @@ export default function WardrobePage() {
             Chưa có món nào trong mục <b className="text-white/80">{activeLabel}</b>.
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
             {activeList.map((it) => (
               <div key={it.id} className="border border-white/10 bg-white/5 rounded-xl overflow-hidden relative shadow-lg hover:border-white/20 transition group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

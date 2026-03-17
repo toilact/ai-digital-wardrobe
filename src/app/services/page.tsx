@@ -52,7 +52,7 @@ export default function Services() {
                             </ul>
 
                             <button
-                                onClick={() => router.push(user ? "/dashboard" : "/auth/register")}
+                                onClick={() => router.push(user ? "/dashboard" : "/auth/login")}
                                 className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
                             >
                                 Trải nghiệm ngay
