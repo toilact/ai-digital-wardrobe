@@ -12642,6 +12642,323 @@ export default function WardrobeUploadPage() {
 
 
 ---
+# src/app/vip/checkout/page.tsx
+```text
+// src/app/vip/checkout/page.tsx
+"use client";
+/* eslint-disable @next/next/no-img-element */
+
+import Header from "@/components/Header";
+import { useAuth } from "@/lib/AuthContext";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+type VipOrder = {
+  id: string;
+  uid: string;
+  email: string;
+  planCode: string | null;
+  amount: number;
+  orderCode: string;
+  paymentMethod: "momo" | "mb" | null;
+  status: "created" | "pending" | "approved" | "rejected";
+  createdAt: string | null;
+  markedPaidAt: string | null;
+  approvedAt: string | null;
+};
+
+export default function VipCheckoutPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
+
+  const orderId = searchParams.get("orderId");
+
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [order, setOrder] = useState<VipOrder | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"momo" | "mb" | null>(null);
+
+  const momoQrImage =
+    process.env.NEXT_PUBLIC_VIP_MOMO_QR_IMAGE || "/payments/momo-qr.png";
+  const momoName = process.env.NEXT_PUBLIC_VIP_MOMO_NAME || "CHU TAI KHOAN";
+  const momoPhone = process.env.NEXT_PUBLIC_VIP_MOMO_PHONE || "0900000000";
+
+  const mbBankCode = process.env.NEXT_PUBLIC_VIP_MB_BANK_CODE || "MB";
+  const mbAccountNo = process.env.NEXT_PUBLIC_VIP_MB_ACCOUNT_NO || "";
+  const mbAccountName =
+    process.env.NEXT_PUBLIC_VIP_MB_ACCOUNT_NAME || "CHU TAI KHOAN";
+
+  const mbQrUrl = useMemo(() => {
+    if (!order || !mbAccountNo) return "";
+    return `https://img.vietqr.io/image/${mbBankCode}-${mbAccountNo}-compact2.png?amount=${order.amount}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=${encodeURIComponent(mbAccountName)}`;
+  }, [order, mbBankCode, mbAccountNo, mbAccountName]);
+
+  const loadOrder = useCallback(async () => {
+    try {
+      if (!user || !orderId) return;
+
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/vip/order?orderId=${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Không thể tải đơn VIP.");
+        router.replace("/services");
+        return;
+      }
+
+      setOrder(data);
+      if (data.paymentMethod) {
+        setPaymentMethod(data.paymentMethod);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi khi tải đơn VIP.");
+      router.replace("/services");
+    } finally {
+      setLoading(false);
+    }
+  }, [user, orderId, router]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      router.replace("/auth/login?next=/services");
+      return;
+    }
+
+    if (!orderId) {
+      router.replace("/services");
+      return;
+    }
+
+    void loadOrder();
+  }, [authLoading, user, orderId, loadOrder, router]);
+
+  useEffect(() => {
+    if (!order || order.status !== "pending") return;
+
+    const timer = setInterval(() => {
+      void loadOrder();
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [order, loadOrder]);
+
+  const onMarkPaid = async () => {
+    try {
+      if (!user || !orderId || !paymentMethod) {
+        alert("Vui lòng chọn phương thức thanh toán.");
+        return;
+      }
+
+      setSubmitting(true);
+
+      const token = await user.getIdToken();
+      const res = await fetch("/api/vip/mark-paid", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId,
+          paymentMethod,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Không thể ghi nhận thanh toán.");
+        return;
+      }
+
+      alert("Đã ghi nhận. Admin sẽ duyệt giao dịch của bạn.");
+      await loadOrder();
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi khi xác nhận đã chuyển khoản.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <main>
+      <Header />
+      <div className="wrap py-10">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="text-4xl font-bold grad-text mb-4 text-center">
+            Thanh toán VIP
+          </h1>
+          <p className="text-gray-300 text-center mb-10">
+            Chọn phương thức thanh toán, quét QR và chuyển khoản đúng nội dung.
+          </p>
+
+          {loading ? (
+            <div className="text-center text-white">Đang tải đơn VIP...</div>
+          ) : !order ? (
+            <div className="text-center text-red-400">Không tìm thấy đơn VIP.</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+                <h2 className="text-2xl font-semibold text-white mb-5">Thông tin đơn</h2>
+
+                <div className="space-y-3 text-gray-200">
+                  <div>
+                    <span className="font-semibold">Mã đơn:</span> {order.orderCode}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Gói:</span> VIP tháng
+                  </div>
+                  <div>
+                    <span className="font-semibold">Giá:</span>{" "}
+                    {order.amount.toLocaleString("vi-VN")}đ
+                  </div>
+                  <div>
+                    <span className="font-semibold">Trạng thái:</span>{" "}
+                    {order.status === "created" && "Chưa xác nhận thanh toán"}
+                    {order.status === "pending" && "Đang chờ admin duyệt"}
+                    {order.status === "approved" && "Đã kích hoạt VIP"}
+                    {order.status === "rejected" && "Đã bị từ chối"}
+                  </div>
+                </div>
+
+                {order.status !== "approved" && (
+                  <>
+                    <h3 className="text-xl font-semibold text-white mt-8 mb-4">
+                      Chọn phương thức
+                    </h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setPaymentMethod("momo")}
+                        className={`rounded-2xl border p-4 text-white transition ${
+                          paymentMethod === "momo"
+                            ? "border-pink-500 bg-pink-500/20"
+                            : "border-white/10 bg-white/5 hover:bg-white/10"
+                        }`}
+                      >
+                        MoMo
+                      </button>
+
+                      <button
+                        onClick={() => setPaymentMethod("mb")}
+                        className={`rounded-2xl border p-4 text-white transition ${
+                          paymentMethod === "mb"
+                            ? "border-blue-500 bg-blue-500/20"
+                            : "border-white/10 bg-white/5 hover:bg-white/10"
+                        }`}
+                      >
+                        MB Bank
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {order.status === "approved" && (
+                  <>
+                    <div className="mt-8 rounded-2xl bg-green-500/15 border border-green-500/30 p-4 text-green-300">
+                      Gói VIP đã được kích hoạt cho tài khoản của bạn.
+                    </div>
+
+                    <button
+                      onClick={() => router.push("/dashboard")}
+                      className="mt-4 w-full rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
+                    >
+                      Vào Dashboard
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+                <h2 className="text-2xl font-semibold text-white mb-5">Quét mã thanh toán</h2>
+
+                {!paymentMethod && order.status !== "approved" && (
+                  <div className="text-gray-300">
+                    Hãy chọn MoMo hoặc MB để hiện QR thanh toán.
+                  </div>
+                )}
+
+                {paymentMethod === "momo" && order.status !== "approved" && (
+                  <div className="space-y-4">
+                    <img
+                      src={momoQrImage}
+                      alt="MoMo QR"
+                      className="w-full max-w-xs mx-auto rounded-2xl bg-white p-3"
+                    />
+
+                    <div className="space-y-2 text-gray-200">
+                      <div><span className="font-semibold">Ví:</span> MoMo</div>
+                      <div><span className="font-semibold">Tên:</span> {momoName}</div>
+                      <div><span className="font-semibold">SĐT:</span> {momoPhone}</div>
+                      <div><span className="font-semibold">Số tiền:</span> {order.amount.toLocaleString("vi-VN")}đ</div>
+                      <div><span className="font-semibold">Nội dung chuyển khoản:</span> {order.orderCode}</div>
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === "mb" && order.status !== "approved" && (
+                  <div className="space-y-4">
+                    {mbQrUrl ? (
+                      <img
+                        src={mbQrUrl}
+                        alt="MB QR"
+                        className="w-full max-w-xs mx-auto rounded-2xl bg-white p-3"
+                      />
+                    ) : (
+                      <div className="text-red-400">
+                        Bạn chưa cấu hình NEXT_PUBLIC_VIP_MB_ACCOUNT_NO.
+                      </div>
+                    )}
+
+                    <div className="space-y-2 text-gray-200">
+                      <div><span className="font-semibold">Ngân hàng:</span> MB Bank</div>
+                      <div><span className="font-semibold">Số tài khoản:</span> {mbAccountNo}</div>
+                      <div><span className="font-semibold">Chủ tài khoản:</span> {mbAccountName}</div>
+                      <div><span className="font-semibold">Số tiền:</span> {order.amount.toLocaleString("vi-VN")}đ</div>
+                      <div><span className="font-semibold">Nội dung chuyển khoản:</span> {order.orderCode}</div>
+                    </div>
+                  </div>
+                )}
+
+                {order.status !== "approved" && (
+                  <button
+                    onClick={onMarkPaid}
+                    disabled={!paymentMethod || submitting}
+                    className="mt-8 w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? "Đang ghi nhận..." : "Tôi đã chuyển khoản"}
+                  </button>
+                )}
+
+                {order.status === "pending" && (
+                  <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-yellow-200">
+                    Hệ thống đang chờ admin duyệt. Trang này sẽ tự cập nhật khi VIP được bật.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+```
+
+
+---
 # src/app/auth/register/page.tsx
 ```text
 "use client";
@@ -12749,6 +13066,9 @@ export default function RegisterPage() {
         email: normalizedEmail,
         createdAt: serverTimestamp(),
         isVIP: false,
+        vipPlan: null,
+        vipActivatedAt: null,
+        vipExpiresAt: null,
         itemQuantity: 0,
         outfitGenerationsToday: 0,
         outfitGenerationDate: "",
@@ -13479,6 +13799,154 @@ export default function Login() {
           }
         }
       `}</style>
+    </main>
+  );
+}
+```
+
+
+---
+# src/app/admin/vip-orders/page.tsx
+```text
+// src/app/admin/vip-orders/page.tsx
+"use client";
+
+import Header from "@/components/Header";
+import { useAuth } from "@/lib/AuthContext";
+import { useEffect, useState } from "react";
+
+type VipOrder = {
+  id: string;
+  uid: string;
+  email: string;
+  orderCode: string;
+  planCode: string;
+  amount: number;
+  paymentMethod: string | null;
+  status: string;
+  createdAt: string | null;
+  markedPaidAt: string | null;
+  approvedAt: string | null;
+};
+
+export default function AdminVipOrdersPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<VipOrder[]>([]);
+
+  const loadOrders = async () => {
+    try {
+      if (!user) return;
+
+      const token = await user.getIdToken();
+      const res = await fetch("/api/vip/admin/list", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Không thể tải đơn VIP.");
+        return;
+      }
+
+      setOrders(data.orders || []);
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi khi tải danh sách đơn VIP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    void loadOrders();
+  }, [authLoading, user]);
+
+  const approveOrder = async (orderId: string) => {
+    try {
+      if (!user) return;
+
+      const token = await user.getIdToken();
+      const res = await fetch("/api/vip/admin/approve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ orderId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Không thể duyệt đơn VIP.");
+        return;
+      }
+
+      alert("Đã bật VIP thành công.");
+      await loadOrders();
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi khi duyệt đơn VIP.");
+    }
+  };
+
+  return (
+    <main>
+      <Header />
+      <div className="wrap py-10">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="text-4xl font-bold grad-text mb-6 text-center">
+            Admin - Duyệt đơn VIP
+          </h1>
+
+          {authLoading || loading ? (
+            <div className="text-center text-white">Đang tải...</div>
+          ) : !user ? (
+            <div className="text-center text-red-400">Vui lòng đăng nhập.</div>
+          ) : orders.length === 0 ? (
+            <div className="text-center text-gray-300">Chưa có đơn VIP nào.</div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-lg"
+                >
+                  <div className="grid md:grid-cols-2 gap-4 text-gray-200">
+                    <div><span className="font-semibold">Mã đơn:</span> {order.orderCode}</div>
+                    <div><span className="font-semibold">Email:</span> {order.email}</div>
+                    <div><span className="font-semibold">UID:</span> {order.uid}</div>
+                    <div><span className="font-semibold">Số tiền:</span> {order.amount.toLocaleString("vi-VN")}đ</div>
+                    <div><span className="font-semibold">Phương thức:</span> {order.paymentMethod || "Chưa chọn"}</div>
+                    <div><span className="font-semibold">Trạng thái:</span> {order.status}</div>
+                    <div><span className="font-semibold">Tạo lúc:</span> {order.createdAt || "-"}</div>
+                    <div><span className="font-semibold">Báo đã chuyển:</span> {order.markedPaidAt || "-"}</div>
+                  </div>
+
+                  {order.status !== "approved" && (
+                    <button
+                      onClick={() => approveOrder(order.id)}
+                      className="mt-5 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700"
+                    >
+                      Duyệt và bật VIP
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
@@ -14250,6 +14718,7 @@ export async function POST(req: Request) {
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
+import { hasActiveVip } from "@/lib/vip";
 
 export const runtime = "nodejs";
 
@@ -14451,7 +14920,7 @@ export async function POST(req: Request) {
     const userDocRef = db.collection("users").doc(uid);
     const userDoc = await userDocRef.get();
     const userData = userDoc.exists ? userDoc.data() : null;
-    const isVIP = !!userData?.isVIP;
+    const isVIP = hasActiveVip(userData);
     const currentQuantity = typeof userData?.itemQuantity === "number" ? userData.itemQuantity : 0;
     const limit = isVIP ? 30 : 15;
 
@@ -14733,6 +15202,434 @@ export async function POST(req: Request) {
   } catch (e: any) {
     console.error(e);
     return NextResponse.json({ ok: false, message: e?.message || "Label failed" }, { status: 500 });
+  }
+}
+```
+
+
+---
+# src/app/api/vip/order/route.ts
+```text
+// src/app/api/vip/order/route.ts
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import { toDateSafe } from "@/lib/vip";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] || "";
+}
+
+export async function GET(req: Request) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing Authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const admin = getAdmin();
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+
+    const { searchParams } = new URL(req.url);
+    const orderId = searchParams.get("orderId");
+
+    if (!orderId) {
+      return NextResponse.json({ error: "Thiếu orderId" }, { status: 400 });
+    }
+
+    const db = admin.firestore();
+    const orderRef = db.collection("vipOrders").doc(orderId);
+    const orderSnap = await orderRef.get();
+
+    if (!orderSnap.exists) {
+      return NextResponse.json({ error: "Không tìm thấy đơn VIP." }, { status: 404 });
+    }
+
+    const data = orderSnap.data();
+    if (!data || data.uid !== uid) {
+      return NextResponse.json({ error: "Không có quyền xem đơn này." }, { status: 403 });
+    }
+
+    return NextResponse.json({
+      id: orderSnap.id,
+      uid: data.uid,
+      email: data.email || "",
+      planCode: data.planCode || null,
+      amount: data.amount || 0,
+      orderCode: data.orderCode || "",
+      paymentMethod: data.paymentMethod || null,
+      status: data.status || "created",
+      createdAt: toDateSafe(data.createdAt)?.toISOString() || null,
+      markedPaidAt: toDateSafe(data.markedPaidAt)?.toISOString() || null,
+      approvedAt: toDateSafe(data.approvedAt)?.toISOString() || null,
+    });
+  } catch (err) {
+    console.error("get vip order error:", err);
+    return NextResponse.json(
+      { error: "Không thể tải đơn VIP." },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/vip/mark-paid/route.ts
+```text
+// src/app/api/vip/mark-paid/route.ts
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] || "";
+}
+
+export async function POST(req: Request) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing Authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const orderId = typeof body.orderId === "string" ? body.orderId : "";
+    const paymentMethod = body.paymentMethod === "momo" || body.paymentMethod === "mb"
+      ? body.paymentMethod
+      : null;
+
+    if (!orderId || !paymentMethod) {
+      return NextResponse.json({ error: "Thiếu dữ liệu." }, { status: 400 });
+    }
+
+    const admin = getAdmin();
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+
+    const db = admin.firestore();
+    const orderRef = db.collection("vipOrders").doc(orderId);
+    const orderSnap = await orderRef.get();
+
+    if (!orderSnap.exists) {
+      return NextResponse.json({ error: "Không tìm thấy đơn VIP." }, { status: 404 });
+    }
+
+    const data = orderSnap.data();
+    if (!data || data.uid !== uid) {
+      return NextResponse.json({ error: "Không có quyền cập nhật đơn này." }, { status: 403 });
+    }
+
+    if (data.status === "approved") {
+      return NextResponse.json({ ok: true, message: "Đơn đã được duyệt." });
+    }
+
+    await orderRef.update({
+      paymentMethod,
+      status: "pending",
+      markedPaidAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: "Đã ghi nhận yêu cầu thanh toán, đang chờ admin duyệt.",
+    });
+  } catch (err) {
+    console.error("mark vip paid error:", err);
+    return NextResponse.json(
+      { error: "Không thể cập nhật trạng thái thanh toán." },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/vip/admin/approve/route.ts
+```text
+// src/app/api/vip/admin/approve/route.ts
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import {
+  VIP_DURATION_DAYS,
+  VIP_PLAN_CODE,
+  addDays,
+  toDateSafe,
+} from "@/lib/vip";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] || "";
+}
+
+function isVipAdminEmail(email?: string | null) {
+  const allow = (process.env.VIP_ADMIN_EMAILS || "")
+    .split(",")
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+
+  return !!email && allow.includes(email.toLowerCase());
+}
+
+export async function POST(req: Request) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing Authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const orderId = typeof body.orderId === "string" ? body.orderId : "";
+
+    if (!orderId) {
+      return NextResponse.json({ error: "Thiếu orderId." }, { status: 400 });
+    }
+
+    const admin = getAdmin();
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    if (!isVipAdminEmail(decoded.email)) {
+      return NextResponse.json({ error: "Bạn không phải admin VIP." }, { status: 403 });
+    }
+
+    const db = admin.firestore();
+    const orderRef = db.collection("vipOrders").doc(orderId);
+    const orderSnap = await orderRef.get();
+
+    if (!orderSnap.exists) {
+      return NextResponse.json({ error: "Không tìm thấy đơn VIP." }, { status: 404 });
+    }
+
+    const orderData = orderSnap.data();
+    if (!orderData) {
+      return NextResponse.json({ error: "Dữ liệu đơn không hợp lệ." }, { status: 400 });
+    }
+
+    if (orderData.status === "approved") {
+      return NextResponse.json({ ok: true, message: "Đơn đã được duyệt từ trước." });
+    }
+
+    const userRef = db.collection("users").doc(orderData.uid);
+    const userSnap = await userRef.get();
+    const userData = userSnap.exists ? userSnap.data() : null;
+
+    const now = new Date();
+    const currentVipEnd = toDateSafe(userData?.vipExpiresAt);
+    const baseDate =
+      currentVipEnd && currentVipEnd.getTime() > now.getTime() ? currentVipEnd : now;
+
+    const nextVipExpiresAt = addDays(baseDate, VIP_DURATION_DAYS);
+
+    const batch = db.batch();
+
+    batch.set(
+      userRef,
+      {
+        isVIP: true,
+        vipPlan: VIP_PLAN_CODE,
+        vipActivatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        vipExpiresAt: nextVipExpiresAt,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    batch.update(orderRef, {
+      status: "approved",
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      approvedBy: decoded.email || decoded.uid,
+      vipExpiresAt: nextVipExpiresAt,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+
+    return NextResponse.json({
+      ok: true,
+      message: "Đã duyệt đơn và bật VIP.",
+      vipExpiresAt: nextVipExpiresAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("approve vip order error:", err);
+    return NextResponse.json(
+      { error: "Không thể duyệt đơn VIP." },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/vip/admin/list/route.ts
+```text
+// src/app/api/vip/admin/list/route.ts
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import { toDateSafe } from "@/lib/vip";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] || "";
+}
+
+function isVipAdminEmail(email?: string | null) {
+  const allow = (process.env.VIP_ADMIN_EMAILS || "")
+    .split(",")
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+
+  return !!email && allow.includes(email.toLowerCase());
+}
+
+export async function GET(req: Request) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing Authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const admin = getAdmin();
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    if (!isVipAdminEmail(decoded.email)) {
+      return NextResponse.json({ error: "Bạn không phải admin VIP." }, { status: 403 });
+    }
+
+    const db = admin.firestore();
+    const snap = await db.collection("vipOrders").orderBy("createdAt", "desc").limit(50).get();
+
+    const orders = snap.docs.map((doc) => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        uid: data.uid || "",
+        email: data.email || "",
+        orderCode: data.orderCode || "",
+        planCode: data.planCode || "",
+        amount: data.amount || 0,
+        paymentMethod: data.paymentMethod || null,
+        status: data.status || "created",
+        createdAt: toDateSafe(data.createdAt)?.toISOString() || null,
+        markedPaidAt: toDateSafe(data.markedPaidAt)?.toISOString() || null,
+        approvedAt: toDateSafe(data.approvedAt)?.toISOString() || null,
+      };
+    });
+
+    return NextResponse.json({ ok: true, orders });
+  } catch (err) {
+    console.error("list vip orders error:", err);
+    return NextResponse.json(
+      { error: "Không thể tải danh sách đơn VIP." },
+      { status: 500 }
+    );
+  }
+}
+```
+
+
+---
+# src/app/api/vip/create-order/route.ts
+```text
+// src/app/api/vip/create-order/route.ts
+import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/firebaseAdmin";
+import {
+  VIP_PLAN_CODE,
+  VIP_PRICE,
+  buildVipOrderCode,
+  hasActiveVip,
+} from "@/lib/vip";
+
+export const runtime = "nodejs";
+
+function getBearerToken(req: Request) {
+  const h = req.headers.get("authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m?.[1] || "";
+}
+
+export async function POST(req: Request) {
+  try {
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing Authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const admin = getAdmin();
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+    const email = decoded.email || "";
+
+    const db = admin.firestore();
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    const userData = userSnap.exists ? userSnap.data() : null;
+
+    if (hasActiveVip(userData)) {
+      return NextResponse.json(
+        { error: "Tài khoản của bạn đang là VIP rồi." },
+        { status: 400 }
+      );
+    }
+
+    const orderCode = buildVipOrderCode();
+
+    const orderRef = await db.collection("vipOrders").add({
+      uid,
+      email,
+      planCode: VIP_PLAN_CODE,
+      amount: VIP_PRICE,
+      orderCode,
+      paymentMethod: null,
+      status: "created",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return NextResponse.json({
+      ok: true,
+      orderId: orderRef.id,
+      orderCode,
+      amount: VIP_PRICE,
+    });
+  } catch (err) {
+    console.error("create vip order error:", err);
+    return NextResponse.json(
+      { error: "Không thể tạo đơn VIP." },
+      { status: 500 }
+    );
   }
 }
 ```
@@ -15223,6 +16120,7 @@ import { getAdmin } from "@/lib/firebaseAdmin";
 import { generateVisualGemini } from "@/lib/llm/geminiVisual";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getUserProfile, type UserProfile } from "@/lib/profile";
+import { hasActiveVip } from "@/lib/vip";
 
 export const runtime = "nodejs";
 
@@ -15326,7 +16224,7 @@ export async function POST(req: Request) {
 
         if (isEvent) {
           // --- VIP & QUOTA CHECK ---
-          const isVIP = !!userProfile?.isVIP;
+          const isVIP = hasActiveVip(userProfile);
           const limit = isVIP ? 5 : 1;
           const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
@@ -15533,6 +16431,7 @@ export async function POST(req: Request) {
 ```text
 import Header from "@/components/Header";
 import Link from "next/link";
+import VipBuyButton from "@/components/VipBuyButton";
 
 export default function Services() {
     return (
@@ -15625,10 +16524,7 @@ export default function Services() {
                                     Số lượt gợi ý trang phục: 5 lần/ ngày
                                 </li>
                             </ul>
-
-                            <button className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl">
-                                Mua Vip Thôi Nào !
-                            </button>
+                            <VipBuyButton />
                         </div>
                     </div>
                 </section>
@@ -16237,6 +17133,7 @@ import { useState, useEffect } from "react";
 import {
     getUserAccount,
     getUserProfile,
+    hasActiveVip,
     type UserAccount,
     type UserProfile,
 } from "@/lib/profile";
@@ -16262,6 +17159,7 @@ export default function Header() {
     const resolvedEmail = account?.email || user?.email;
     const resolvedDisplayName = account?.displayName || user?.displayName;
     const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
+    const vipActive = hasActiveVip(account ?? profile ?? null);
 
     useEffect(() => {
         if (!user) return;
@@ -16325,12 +17223,18 @@ export default function Header() {
                             <>
                                 {(account || profile) && (
 
-                                    <div className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${(account?.isVIP ?? profile?.isVIP) ? 'bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-white/10 text-white/80 border-white/20'}`}>
-                                        {(account?.isVIP ?? profile?.isVIP) ? (
+                                    <div
+                                        className={`hidden sm:flex px-4 py-1.5 text-sm font-bold rounded-lg border items-center gap-1.5 ${
+                                            vipActive
+                                                ? "bg-gradient-to-r from-yellow-400 to-amber-600 text-white border-yellow-300/50 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                                                : "bg-white/10 text-white/80 border-white/20"
+                                        }`}
+                                    >
+                                        {vipActive ? (
                                             <>
                                                 <span className="text-base leading-none">♛</span> VIP
                                             </>
-                                        ) : 'Thường'}
+                                        ) : "Thường"}
                                     </div>
                                 )}
                                 <button
@@ -16589,6 +17493,69 @@ export default function ProfileDrawer({
   );
 }
 
+```
+
+
+---
+# src/components/VipBuyButton.tsx
+```text
+// src/components/VipBuyButton.tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
+
+export default function VipBuyButton() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [creating, setCreating] = useState(false);
+
+  const onBuy = async () => {
+    try {
+      if (loading) return;
+
+      if (!user) {
+        router.push("/auth/login?next=/services");
+        return;
+      }
+
+      setCreating(true);
+
+      const token = await user.getIdToken();
+      const res = await fetch("/api/vip/create-order", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Không thể tạo đơn VIP.");
+        return;
+      }
+
+      router.push(`/vip/checkout?orderId=${data.orderId}`);
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi khi tạo đơn VIP.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={onBuy}
+      disabled={creating || loading}
+      className="w-full text-center bg-gradient-to-r from-blue-500 to-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:from-blue-600 hover:to-pink-600 transition-colors shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      {creating ? "Đang tạo đơn..." : "Mua Vip Thôi Nào !"}
+    </button>
+  );
+}
 ```
 
 
@@ -18658,8 +19625,10 @@ export type OutfitResponse = z.infer<typeof OutfitResponseSchema>;
 ---
 # src/lib/profile.ts
 ```text
+// src/lib/profile.ts
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { hasActiveVip as hasActiveVipBase, toDateSafe } from "@/lib/vip";
 
 export type Gender = "male" | "female";
 
@@ -18669,7 +19638,12 @@ export type UserAccount = {
   email?: string | null;
   createdAt?: unknown;
   updatedAt?: unknown;
+
   isVIP?: boolean;
+  vipPlan?: string | null;
+  vipActivatedAt?: unknown;
+  vipExpiresAt?: unknown | null;
+
   itemQuantity?: number;
   outfitGenerationsToday?: number;
   outfitGenerationDate?: string;
@@ -18691,6 +19665,14 @@ type UserDoc = UserAccount & Partial<UserMetrics>;
 
 function isValidGender(x: unknown): x is Gender {
   return x === "male" || x === "female";
+}
+
+export function hasActiveVip(account?: UserAccount | null) {
+  return hasActiveVipBase(account);
+}
+
+export function getVipExpiresAt(account?: UserAccount | null) {
+  return toDateSafe(account?.vipExpiresAt);
 }
 
 export async function getUserAccount(uid: string) {
@@ -18734,7 +19716,67 @@ export async function upsertUserProfile(uid: string, profile: UserProfile) {
     { merge: true }
   );
 }
+```
 
+
+---
+# src/lib/vip.ts
+```text
+// src/lib/vip.ts
+export const VIP_PLAN_CODE = "vip_monthly";
+export const VIP_PRICE = 25000;
+export const VIP_DURATION_DAYS = 30;
+
+export type PaymentMethod = "momo" | "mb";
+export type VipOrderStatus = "created" | "pending" | "approved" | "rejected";
+
+export function buildVipOrderCode() {
+  const now = new Date();
+
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+
+  return `VIP-${y}${m}${d}-${hh}${mm}${ss}-${rand}`;
+}
+
+export function addDays(base: Date, days: number) {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export function toDateSafe(value: unknown): Date | null {
+  if (!value) return null;
+
+  if (value instanceof Date) return value;
+
+  if (typeof (value as { toDate?: unknown })?.toDate === "function") {
+    return (value as { toDate: () => Date }).toDate();
+  }
+
+  const d = new Date(value as string | number);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export function hasActiveVip(
+  account?: { isVIP?: boolean; vipExpiresAt?: unknown | null } | null
+) {
+  if (!account?.isVIP) return false;
+
+  const expiresAt = toDateSafe(account.vipExpiresAt);
+
+  // Backward-compatible với user cũ chỉ có isVIP=true mà chưa có vipExpiresAt
+  if (!expiresAt) return true;
+
+  return expiresAt.getTime() > Date.now();
+}
 ```
 
 
