@@ -40,10 +40,10 @@
 - [🌟 Why this project matters](#-why-this-project-matters)
 - [🚀 Features](#-features)
 - [🧠 AI Pipeline](#-ai-pipeline)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [🏗️ System Architecture](#️-system-architecture)
+- [🛠️ Tech Stack](#-tech-stack)
+- [🏗️ System Architecture](#-system-architecture)
 - [📦 Project Structure](#-project-structure)
-- [⚙️ How the system works](#️-how-the-system-works)
+- [⚙️ How the system works](#-how-the-system-works)
 - [🚀 Quick Start](#-quick-start)
 - [🔐 Environment Variables](#-environment-variables)
 - [🐳 Run with Docker Compose](#-run-with-docker-compose)
@@ -452,7 +452,11 @@ FIREBASE_PRIVATE_KEY=
 
 # AI Service
 AI_SERVICE_URL=http://127.0.0.1:8000
+# Optional: override label endpoint (defaults to ${AI_SERVICE_URL}/label)
+AI_LABEL_URL=
 LABEL_STRATEGY=service
+# Only used when LABEL_STRATEGY=hybrid
+LABEL_HYBRID_MIN_CONF=0.35
 AI_LABEL_BACKEND=clip
 
 # Cloudinary
@@ -471,11 +475,27 @@ EMAIL_SECURE=true
 # Gemini / AI
 GEMINI_API_KEY=
 GEMINI_API_KEY_KT=
+# Optional: override Gemini model name
+GEMINI_MODEL=gemini-3.1-flash-lite-preview
 INFIP_API_KEY=
 
 # VIP
+# Comma-separated list of admin emails
 VIP_ADMIN_EMAILS=your-admin@email.com
+
+# VIP payment display (optional, used in the checkout UI)
+NEXT_PUBLIC_VIP_MOMO_QR_IMAGE=/payments/momo-qr.png
+NEXT_PUBLIC_VIP_MOMO_NAME=CHU TAI KHOAN
+NEXT_PUBLIC_VIP_MOMO_PHONE=0900000000
+NEXT_PUBLIC_VIP_MB_BANK_CODE=MB
+NEXT_PUBLIC_VIP_MB_ACCOUNT_NO=
+NEXT_PUBLIC_VIP_MB_ACCOUNT_NAME=CHU TAI KHOAN
 ```
+
+Notes:
+
+- `FIREBASE_PRIVATE_KEY` usually contains newlines. In `.env.local`, store it as a single line (replace real newlines with `\n`).
+- When running via `docker-compose.yml`, the `web` container overrides `AI_SERVICE_URL` to `http://ai-service:8000`.
 
 Optional environment variables for the AI service:
 
@@ -546,6 +566,7 @@ After startup:
 
 - `POST /api/wardrobe/upload`
 - `POST /api/wardrobe/parse`
+- `POST /api/wardrobe/confirm`
 - `POST /api/wardrobe/label-item`
 - `GET /api/wardrobe/list`
 - `DELETE /api/wardrobe/delete`
@@ -560,6 +581,7 @@ After startup:
 
 - `POST /api/auth/forgot-password/send-code`
 - `POST /api/auth/forgot-password/reset`
+- `POST /api/auth/sync-email`
 
 ### VIP
 
@@ -567,6 +589,7 @@ After startup:
 - `POST /api/vip/mark-paid`
 - `GET /api/vip/order`
 - `POST /api/vip/admin/approve`
+- `GET /api/vip/admin/list`
 
 ### AI Service
 
@@ -644,19 +667,7 @@ To contribute:
 
 ## 📄 License
 
-Choose the license that matches your project and replace this section accordingly.
-
-Example:
-
-```text
-MIT License
-```
-
-or
-
-```text
-GNU General Public License v3.0
-```
+MIT License. See `LICENSE`.
 
 ---
 
