@@ -1,6 +1,6 @@
 export default function Footer() {
     return (
-        <footer className="bg-gray-800 text-white mt-auto py-6">
+        <footer className="bg-gray-800 text-white mt-auto py-6 ">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 ml-25">
                     <div>
@@ -9,22 +9,22 @@ export default function Footer() {
                             Nền tảng trợ lý thời trang thông minh
                         </p>
                     </div>
-                    <div className="pl-10">
+                    <div className="">
                         <h4 className="text-lg font-semibold mb-4">Liên kết</h4>
                         <ul className="space-y-2 text-gray-400">
                             <li>
-                                <a href="/dashboard" className="hover:text-white transition">
-                                    Bảng điều khiển
+                                <a href="/" className="hover:text-white transition">
+                                    Trang chủ
                                 </a>
                             </li>
                             <li>
-                                <a href="/wardrobe" className="hover:text-white transition">
-                                    Tủ quần áo
+                                <a href="/services" className="hover:text-white transition">
+                                    Dịch vụ
                                 </a>
                             </li>
                             <li>
-                                <a href="/outfit-suggest" className="hover:text-white transition">
-                                    Gợi ý trang phục
+                                <a href="/about" className="hover:text-white transition">
+                                    Về chúng tôi
                                 </a>
                             </li>
                         </ul>

@@ -10,6 +10,24 @@ import Header from "@/components/Header";
 import GoogleLoginButton from "@/components/GoogleLoginButton";
 import { FiArrowRight, FiLock, FiUser } from "react-icons/fi";
 
+function firebaseMsg(err: unknown) {
+  const e = err as AuthError;
+  const code = (e?.code ?? "").toString();
+
+  switch (code) {
+    case "auth/invalid-credential":
+      return "Sai mật khẩu !";
+    case "auth/user-not-found":
+      return "Tài khoản không tồn tại.";
+    case "auth/too-many-requests":
+      return "Tài khoản tạm thời bị khóa do sai quá nhiều lần. Vui lòng thử lại sau.";
+    case "auth/network-request-failed":
+      return "Lỗi mạng. Kiểm tra kết nối internet.";
+    default:
+      return e?.message || "Đăng nhập thất bại.";
+  }
+}
+
 async function getLoginEmails(username: string) {
   const fallbackEmail = `${username}@adw.local`;
 
@@ -22,7 +40,7 @@ async function getLoginEmails(username: string) {
     ? (usernameSnap.data()?.email as string | undefined)?.trim().toLowerCase()
     : "";
 
-  return Array.from(new Set([mappedEmail, fallbackEmail].filter(Boolean)));
+  return Array.from(new Set([mappedEmail, fallbackEmail].filter(Boolean) as string[]));
 }
 
 export default function Login() {
@@ -30,17 +48,19 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onLogin = async () => {
+    setError("");
     if (!username || !pass) {
-      alert("Nhập tên đăng nhập và mật khẩu");
+      setError("Nhập tên đăng nhập và mật khẩu");
       return;
     }
 
     setLoading(true);
 
     if (!auth) {
-      alert("Firebase chưa được khởi tạo!");
+      setError("Firebase chưa được khởi tạo!");
       setLoading(false);
       return;
     }
@@ -71,7 +91,7 @@ export default function Login() {
 
       throw lastError;
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Login failed");
+      setError(firebaseMsg(e));
     } finally {
       setLoading(false);
     }
@@ -86,40 +106,39 @@ export default function Login() {
       <Header />
 
       <section className="wrap">
-        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
-          <div className="relative w-full max-w-[575px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
+          <div className="relative w-full max-w-[440px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="mb-4 flex justify-center">
+              <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/adw-logo-clean.png"
                   alt="AI Digital Wardrobe"
-                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  className="h-auto w-[180px] object-contain md:w-[200px]"
                   draggable={false}
                 />
               </div>
 
               <div className="text-center">
-                <h1 className="login-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                <h1 className="login-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Đăng nhập
                 </h1>
 
                 <p className="mx-auto mt-1 max-w-[420px] text-sm leading-7 text-white/60 md:text-[15px]">
-                  {/* Tiếp tục quản lý tủ đồ, nhận gợi ý outfit thông minh và đồng bộ
-                  trải nghiệm thời trang số của bạn. */}
+
                 </p>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
-                <div className="space-y-4">
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -132,10 +151,10 @@ export default function Login() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -156,10 +175,12 @@ export default function Login() {
                     </Link>
                   </div>
 
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+
                   <button
                     onClick={onLogin}
                     disabled={loading}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                     {!loading && (
@@ -168,7 +189,7 @@ export default function Login() {
                   </button>
                 </div>
 
-                <div className="my-5 flex items-center gap-4">
+                <div className="my-3 flex items-center gap-4">
                   <div className="h-px flex-1 bg-white/10" />
                   <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
                     Hoặc
@@ -178,7 +199,7 @@ export default function Login() {
 
                 <GoogleLoginButton />
 
-                <p className="mt-4 text-center text-sm text-white/55">
+                <p className="mt-3 text-center text-sm text-white/55">
                   Chưa có tài khoản?{" "}
                   <Link
                     href="/auth/register"

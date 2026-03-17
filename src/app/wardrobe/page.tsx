@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ConfirmModal from "@/components/ConfirmModal";
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 
 type WardrobeItem = {
   id: string;
@@ -58,6 +59,7 @@ export default function WardrobePage() {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingPublicId, setPendingPublicId] = useState<string | undefined>(undefined);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const [activeCat, setActiveCat] = useState<CatKey>("ao");
 
@@ -139,14 +141,14 @@ export default function WardrobePage() {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data?.message || "Xóa thất bại");
+        setAlertMsg(data?.message || "Xóa thất bại");
         return;
       }
 
       setItems((prev) => prev.filter((it) => it.id !== id));
     } catch (e) {
       console.error(e);
-      alert("Xóa thất bại (lỗi mạng hoặc API).");
+      setAlertMsg("Xóa thất bại (lỗi mạng hoặc API).");
     } finally {
       setDeletingId(null);
       setConfirmLoading(false);
@@ -229,6 +231,7 @@ export default function WardrobePage() {
           loading={confirmLoading}
         />
       </div>
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </main>
   );
 }

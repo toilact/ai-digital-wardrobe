@@ -95,7 +95,6 @@ export default function Dashboard() {
                 <div className="meta">
                   <span className="pill bg-white/10 text-white/80 border-white/10">PNG alpha</span>
                   <span className="pill bg-white/10 text-white/80 border-white/10">Mask clean</span>
-                  <span className="pill bg-white/10 text-white/80 border-white/10">Crop gọn</span>
                 </div>
 
                 <div className="actions mt-4">

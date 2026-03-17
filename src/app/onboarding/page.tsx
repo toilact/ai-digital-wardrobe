@@ -9,6 +9,7 @@ import {
   type UserAccount,
   upsertUserProfile,
 } from "@/lib/profile";
+import AlertModal from "@/components/AlertModal";
 
 function emailPrefix(email?: string | null) {
   return (email || "").split("@")[0] || "";
@@ -170,6 +171,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [account, setAccount] = useState<UserAccount | null>(null);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const [gender, setGender] = useState<Gender>("male");
   const [age, setAge] = useState<number>(18);
@@ -240,7 +242,7 @@ export default function OnboardingPage() {
   const onSave = async () => {
     if (!user) return;
     const err = validate();
-    if (err) return alert(err);
+    if (err) return setAlertMsg(err);
 
     setSaving(true);
     try {
@@ -256,7 +258,7 @@ export default function OnboardingPage() {
       router.replace("/dashboard");
     } catch (e) {
       console.error(e);
-      alert("Lưu thông tin thất bại.");
+      setAlertMsg("Lưu thông tin thất bại.");
     } finally {
       setSaving(false);
     }
@@ -416,6 +418,7 @@ export default function OnboardingPage() {
           </div>
         </div>
       </main>
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </div>
   );
 }

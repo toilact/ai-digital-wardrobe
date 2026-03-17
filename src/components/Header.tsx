@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import ProfileDrawer from "./ProfileDrawer";
 import { useState, useEffect } from "react";
+import AlertModal from "./AlertModal";
 import {
     getUserAccount,
     getUserProfile,
@@ -10,6 +11,8 @@ import {
     type UserAccount,
     type UserProfile,
 } from "@/lib/profile";
+
+import { FiMoreVertical } from "react-icons/fi";
 
 function emailPrefix(email?: string | null) {
     return (email || "").split("@")[0] || "";
@@ -26,8 +29,10 @@ function initialsFrom(name?: string | null, email?: string | null) {
 export default function Header() {
     const { user } = useAuth();
     const [profileOpen, setProfileOpen] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [account, setAccount] = useState<UserAccount | null>(null);
+    const [alertMsg, setAlertMsg] = useState("");
 
     const resolvedEmail = account?.email || user?.email;
     const resolvedDisplayName = account?.displayName || user?.displayName;
@@ -68,7 +73,7 @@ export default function Header() {
                             onClick={(e) => {
                                 if (!user) {
                                     e.preventDefault();
-                                    alert("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
+                                    setAlertMsg("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
                                 }
                             }}
                         >
@@ -82,15 +87,7 @@ export default function Header() {
                         </Link>
                     </nav>
 
-                    {/* Menu mobile (hiện ở màn hình nhỏ) */}
-                    <nav className="md:hidden flex space-x-4">
-                        <Link href="/" className="text-white/80 hover:text-white text-sm">
-                            Trang chủ
-                        </Link>
-                        {/* Ẩn bớt trên mobile cho gọn hoặc thêm menu dropdown */}
-                    </nav>
-
-                    {/* Bên phải: Nút Bắt đầu hoặc avatar */}
+                    {/* Bên phải: Nút Bắt đầu hoặc avatar + Mobile Menu */}
                     <div className="text-white z-10 flex items-center justify-end gap-3">
                         {user ? (
                             <>
@@ -132,8 +129,42 @@ export default function Header() {
                                 Bắt đầu
                             </Link>
                         )}
+
+                        {/* Nút 3 chấm mobile */}
+                        <button
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="md:hidden p-2 -mr-2 text-white/80 hover:text-white transition-colors"
+                            aria-label="Toggle mobile menu"
+                        >
+                            <FiMoreVertical size={24} />
+                        </button>
                     </div>
                 </div>
+
+                {/* Mobile Dropdown Menu */}
+                {mobileMenuOpen && (
+                    <div className="md:hidden border-t border-white/10 bg-black/80 backdrop-blur-xl absolute w-full left-0 top-full shadow-2xl">
+                        <div className="flex flex-col py-4 px-6 space-y-4">
+                            <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white font-medium text-lg">Trang chủ</Link>
+                            <Link
+                                href="/dashboard"
+                                onClick={(e) => {
+                                    if (!user) {
+                                        e.preventDefault();
+                                        setAlertMsg("Vui lòng đăng nhập để truy cập Tủ đồ thông minh");
+                                    } else {
+                                        setMobileMenuOpen(false);
+                                    }
+                                }}
+                                className="text-white/80 hover:text-white font-medium text-lg"
+                            >
+                                Tủ đồ thông minh
+                            </Link>
+                            <Link href="/services" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white font-medium text-lg">Dịch vụ</Link>
+                            <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="text-white/80 hover:text-white font-medium text-lg">Về chúng tôi</Link>
+                        </div>
+                    </div>
+                )}
             </header>
 
             {/* ProfileDrawer */}
@@ -149,6 +180,7 @@ export default function Header() {
                 account={user ? account : null}
                 profile={user ? profile : null}
             />
+            <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
         </>
     );
 }

@@ -14,7 +14,7 @@ export default function RootLayout({
 
         <AuthProvider>
 
-          <div className="dashboard-container flex-1">
+          <div className="dashboard-container flex-1 pb-10">
             <div>{children}</div>
           </div>
 

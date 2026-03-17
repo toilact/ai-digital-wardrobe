@@ -59,14 +59,14 @@ const teamAreas = [
     label: "Platform & Reliability",
     title: "Đảm bảo nền tảng vận hành ổn định, an toàn và sẵn sàng mở rộng",
     description:
-      "Phía sau giao diện là hạ tầng được thiết kế để xử lý dữ liệu, đồng bộ trải nghiệm và giữ cho hệ thống luôn đáng tin cậy.",
+      "Phía sau giao diện là hạ tầng được thiết kế để xử lý dữ liệu, tối ưu hóa trải nghiệm và đảm bảo tính bảo mật luôn đáng tin cậy.",
     accent: "from-emerald-500/25 via-lime-400/10 to-transparent",
   },
 ];
 
 const principles = [
   "Thiết kế tính năng dựa trên nhu cầu thật của người dùng, không chạy theo công nghệ vì xu hướng.",
-  "Ưu tiên lời gợi ý rõ ràng, hữu ích và có thể áp dụng ngay trong đời sống hằng ngày.",
+  "Ưu tiên lời gợi ý rõ ràng, hữu ích cùng với hình ảnh minh họa trực quan để có thể giúp người dùng hình dung dễ dàng hơn outfit mình sẽ mặc.",
   "Kết hợp thời trang, dữ liệu và AI theo cách dễ hiểu, gần gũi và thực tế.",
 ];
 
@@ -86,7 +86,7 @@ export default function About() {
                 AI-powered fashion platform
               </div>
 
-              <h1 className="max-w-4xl text-5xl font-bold leading-tight md:text-6xl">
+              <h1 className="max-w-4xl text-3xl font-bold leading-tight md:text-4xl">
                 <span className="grad-text">Chúng tôi xây dựng AI Digital Wardrobe</span>
                 <span className="block mt-3 text-white/92">
                   để việc quản lý tủ đồ và chọn trang phục trở nên thông minh, tinh gọn và truyền cảm hứng hơn mỗi ngày.
@@ -123,10 +123,7 @@ export default function About() {
                       Trở thành trợ lý thời trang cá nhân đáng tin cậy cho cuộc sống hiện đại.
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-                    <div className="text-xs text-white/45">Focus</div>
-                    <div className="text-lg font-semibold text-white/90">Style x AI</div>
-                  </div>
+
                 </div>
                 <p className="mt-5 text-sm leading-7 text-white/65">
                   Chúng tôi theo đuổi một trải nghiệm nơi AI không thay thế gu thẩm mỹ của bạn, mà giúp bạn khai mở nó một cách nhanh hơn và chính xác hơn.
@@ -144,9 +141,9 @@ export default function About() {
 
                 <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-emerald-500/18 via-white/5 to-transparent p-5 backdrop-blur-xl">
                   <div className="text-sm text-white/50">Giá trị mang lại</div>
-                  <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít ma sát hơn</div>
+                  <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít thời gian hơn</div>
                   <p className="mt-3 text-sm leading-7 text-white/62">
-                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp mặc hằng ngày.
+                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp đặc biệt.
                   </p>
                 </div>
               </div>
@@ -170,9 +167,8 @@ export default function About() {
                   mặc gì cho đúng lúc và tận dụng tối đa những lựa chọn sẵn có.
                 </p>
                 <p>
-                  AI Digital Wardrobe ra đời để kết nối ba yếu tố thường bị tách rời: dữ liệu về món đồ, bối cảnh sử dụng thực tế
-                  và gu thẩm mỹ cá nhân. Khi ba yếu tố này được đặt cùng nhau, việc chọn outfit trở nên nhanh hơn, chính xác hơn
-                  và bền vững hơn.
+                  AI Digital Wardrobe ra đời để kết nối ba yếu tố thường bị tách rời: dữ liệu trang phục hiện có, bối cảnh sử dụng thực tế
+                  và gu thẩm mỹ cá nhân. Khi ba yếu tố này được đặt cùng nhau, việc chọn outfit trở nên nhanh hơn và chính xác hơn bao giơ hết.
                 </p>
               </div>
             </div>
@@ -264,7 +260,7 @@ export default function About() {
                   Nếu bạn quan tâm đến tương lai của thời trang cá nhân hóa bằng AI, chúng tôi rất sẵn lòng kết nối.
                 </h2>
                 <p className="mt-5 max-w-2xl text-lg leading-8 text-white/66">
-                  AI Digital Wardrobe luôn chào đón những cuộc trò chuyện về sản phẩm, trải nghiệm người dùng và những ý tưởng có thể làm cho việc mặc đẹp trở nên thông minh hơn.
+                  AI Digital Wardrobe luôn chào đón và ghi nhận những ý kiến đóng góp về sản phẩm, trải nghiệm người dùng và những ý tưởng có thể làm cho việc mặc đẹp trở nên thông minh hơn.
                 </p>
 
                 <div className="mt-8 flex flex-wrap gap-3">

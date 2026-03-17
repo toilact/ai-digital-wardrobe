@@ -46,24 +46,26 @@ export default function RegisterPage() {
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onRegister = async () => {
+    setError("");
     const uname = username.trim().toLowerCase();
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!uname) return alert("Nhập tên đăng nhập.");
+    if (!uname) return setError("Nhập tên đăng nhập.");
     if (!/^[a-z0-9_-]{3,32}$/.test(uname)) {
-      return alert(
+      return setError(
         "Tên đăng nhập chỉ gồm chữ thường, số, gạch dưới hoặc gạch ngang (3-32 ký tự)."
       );
     }
 
-    if (!normalizedEmail) return alert("Nhập email.");
-    if (!isValidEmail(normalizedEmail)) return alert("Email không hợp lệ.");
+    if (!normalizedEmail) return setError("Nhập email.");
+    if (!isValidEmail(normalizedEmail)) return setError("Email không hợp lệ.");
 
-    if (!pass) return alert("Nhập mật khẩu.");
-    if (pass.length < 6) return alert("Mật khẩu phải từ 6 ký tự trở lên.");
-    if (pass !== confirm) return alert("Mật khẩu nhập lại không khớp.");
+    if (!pass) return setError("Nhập mật khẩu.");
+    if (pass.length < 6) return setError("Mật khẩu phải từ 6 ký tự trở lên.");
+    if (pass !== confirm) return setError("Mật khẩu nhập lại không khớp.");
 
     setLoading(true);
 
@@ -76,7 +78,7 @@ export default function RegisterPage() {
       const unameSnap = await getDoc(unameRef);
 
       if (unameSnap.exists()) {
-        alert("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
+        setError("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
         return;
       }
 
@@ -113,7 +115,7 @@ export default function RegisterPage() {
 
       router.replace("/onboarding");
     } catch (err) {
-      alert(firebaseMsg(err));
+      setError(firebaseMsg(err));
       console.error(err);
     } finally {
       setLoading(false);
@@ -129,24 +131,24 @@ export default function RegisterPage() {
       <Header />
 
       <section className="wrap">
-        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
-          <div className="relative w-full max-w-[620px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
+          <div className="relative w-full max-w-[480px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="mb-4 flex justify-center">
+              <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/adw-logo-clean.png"
                   alt="AI Digital Wardrobe"
-                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  className="h-auto w-[180px] object-contain md:w-[200px]"
                   draggable={false}
                 />
               </div>
 
               <div className="text-center">
-                <h1 className="register-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                <h1 className="register-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Đăng ký
                 </h1>
 
@@ -156,13 +158,13 @@ export default function RegisterPage() {
                 </p>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
-                <div className="space-y-4">
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên hiển thị <span className="text-white/40">(tuỳ chọn)</span>
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -175,10 +177,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -192,10 +194,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Email
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiAtSign className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="email"
@@ -209,10 +211,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -226,10 +228,10 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Nhập lại mật khẩu
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiCheckCircle className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -242,16 +244,18 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+
                   <button
                     onClick={onRegister}
                     disabled={loading}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
                   </button>
                 </div>
 
-                <p className="mt-5 text-center text-sm text-white/55">
+                <p className="mt-3 text-center text-sm text-white/55">
                   Đã có tài khoản?{" "}
                   <Link
                     href="/auth/login"
