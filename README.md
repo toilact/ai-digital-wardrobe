@@ -45,6 +45,7 @@
 - [📦 Project Structure](#-project-structure)
 - [⚙️ How the system works](#-how-the-system-works)
 - [🚀 Quick Start](#-quick-start)
+- [⬇️ Download MobileSAM Checkpoint](#%EF%B8%8F-download-mobilesam-checkpoint)
 - [🔐 Environment Variables](#-environment-variables)
 - [🐳 Run with Docker Compose](#-run-with-docker-compose)
 - [💻 Run locally without Docker](#-run-locally-without-docker)
@@ -406,6 +407,7 @@ Before running the project, make sure you have:
 - a **Firebase project**
 - a **Cloudinary account**
 - an SMTP email account or Gmail App Password
+- the **MobileSAM checkpoint** file (`mobile_sam.pt`)
 
 ### 1. Clone the repository
 
@@ -426,6 +428,53 @@ npm install
 cd ai-service
 pip install -r requirements.txt
 cd ..
+```
+
+---
+
+## ⬇️ Download MobileSAM Checkpoint
+
+The AI service uses **MobileSAM** for clothing segmentation.  
+Before running the project, you need to download the MobileSAM checkpoint file manually.
+
+### Required checkpoint
+
+- **File name:** `mobile_sam.pt`
+
+### Where to place it
+
+Create the checkpoint folder if it does not exist, then place the file here:
+
+```bash
+ai-service/checkpoints/mobile_sam.pt
+```
+
+### Example
+
+```bash
+mkdir -p ai-service/checkpoints
+# Then move your downloaded file into:
+# ai-service/checkpoints/mobile_sam.pt
+```
+
+### Important notes
+
+- The filename should remain exactly **`mobile_sam.pt`**
+- If the checkpoint is missing, MobileSAM-based segmentation may not work correctly
+- In that case, the AI service may fall back to other masking logic depending on your configuration
+
+### Checkpoint path used by the service
+
+By default, the AI service expects:
+
+```env
+SAM_CHECKPOINT=/app/checkpoints/mobile_sam.pt
+```
+
+When running locally from the `ai-service` folder, make sure the file also exists inside:
+
+```bash
+ai-service/checkpoints/mobile_sam.pt
 ```
 
 ---
@@ -539,6 +588,12 @@ PNG_COMPRESS_LEVEL=3
 ---
 
 ## 🐳 Run with Docker Compose
+
+Make sure the checkpoint file exists before starting Docker:
+
+```bash
+ai-service/checkpoints/mobile_sam.pt
+```
 
 To run the full system with Docker:
 
