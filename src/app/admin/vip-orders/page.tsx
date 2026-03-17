@@ -2,6 +2,7 @@
 "use client";
 
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffect, useState } from "react";
 
@@ -23,6 +24,7 @@ export default function AdminVipOrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<VipOrder[]>([]);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const loadOrders = async () => {
     try {
@@ -39,14 +41,14 @@ export default function AdminVipOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể tải đơn VIP.");
+        setAlertMsg(data.error || "Không thể tải đơn VIP.");
         return;
       }
 
       setOrders(data.orders || []);
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi tải danh sách đơn VIP.");
+      setAlertMsg("Có lỗi khi tải danh sách đơn VIP.");
     } finally {
       setLoading(false);
     }
@@ -78,21 +80,22 @@ export default function AdminVipOrdersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể duyệt đơn VIP.");
+        setAlertMsg(data.error || "Không thể duyệt đơn VIP.");
         return;
       }
 
-      alert("Đã bật VIP thành công.");
+      setAlertMsg("Đã bật VIP thành công.");
       await loadOrders();
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi duyệt đơn VIP.");
+      setAlertMsg("Có lỗi khi duyệt đơn VIP.");
     }
   };
 
   return (
     <main>
       <Header />
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
       <div className="wrap py-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl font-bold grad-text mb-6 text-center">

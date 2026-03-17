@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import AlertModal from "./AlertModal";
 
 type ParsedItem = {
   type: string;
@@ -35,6 +36,7 @@ export default function WardrobeUploader({
 
   const [parsedItems, setParsedItems] = useState<ParsedItem[]>([]);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [alertMsg, setAlertMsg] = useState("");
 
   // click-point per source file
   const [points, setPoints] = useState<Record<number, { x: number; y: number }>>({});
@@ -132,7 +134,7 @@ export default function WardrobeUploader({
     if (!user) return;
 
     const indices = typeof index === "number" ? [index] : files.map((_, i) => i);
-    if (indices.length === 0) return alert("Không có ảnh để tách.");
+    if (indices.length === 0) return setAlertMsg("Không có ảnh để tách.");
 
     setParsing(true);
     onUploadingChange?.(true);
@@ -235,7 +237,7 @@ export default function WardrobeUploader({
       })();
     } catch (e) {
       console.error(e);
-      alert("Tách đồ thất bại (lỗi mạng hoặc API).");
+      setAlertMsg("Tách đồ thất bại (lỗi mạng hoặc API).");
     } finally {
       setParsing(false);
       onUploadingChange?.(false);
@@ -248,7 +250,7 @@ export default function WardrobeUploader({
 
   const onUploadSelected = async () => {
     if (!user) return;
-    if (parsedItems.length === 0) return alert("Bạn cần tách đồ trước khi upload.");
+    if (parsedItems.length === 0) return setAlertMsg("Bạn cần tách đồ trước khi upload.");
 
     const picked = parsedItems
       .map((it, idx) => ({ it, idx }))
@@ -260,7 +262,7 @@ export default function WardrobeUploader({
           : it.image_png_base64,
       }));
 
-    if (picked.length === 0) return alert("Bạn chưa chọn item nào để thêm vào tủ.");
+    if (picked.length === 0) return setAlertMsg("Bạn chưa chọn item nào để thêm vào tủ.");
 
     setUploading(true);
     onUploadingChange?.(true);
@@ -278,7 +280,7 @@ export default function WardrobeUploader({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data?.message || "Thêm vào tủ thất bại.");
+        setAlertMsg(data?.message || "Thêm vào tủ thất bại.");
         console.error("CONFIRM FAIL:", data);
         return;
       }
@@ -290,7 +292,7 @@ export default function WardrobeUploader({
       onUploadSuccess?.();
     } catch (e) {
       console.error(e);
-      alert("Thêm vào tủ thất bại (lỗi mạng hoặc API).");
+      setAlertMsg("Thêm vào tủ thất bại (lỗi mạng hoặc API).");
     } finally {
       setUploading(false);
       onUploadingChange?.(false);
@@ -471,6 +473,7 @@ export default function WardrobeUploader({
           </div>
         </div>
       )}
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </div>
   );
 }

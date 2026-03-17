@@ -1,8 +1,14 @@
+"use client";
+
 import Header from "@/components/Header";
 import Link from "next/link";
 import VipBuyButton from "@/components/VipBuyButton";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Services() {
+    const router = useRouter();
+    const { user } = useAuth();
     return (
         <main>
             <Header />
@@ -45,9 +51,12 @@ export default function Services() {
                                 </li>
                             </ul>
 
-                            <Link href="/auth/register" className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors">
-                                Đăng ký ngay
-                            </Link>
+                            <button
+                                onClick={() => router.push(user ? "/dashboard" : "/auth/register")}
+                                className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
+                            >
+                                Trải nghiệm ngay
+                            </button>
                         </div>
 
                         {/* Tài khoản VIP */}

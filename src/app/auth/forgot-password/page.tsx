@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -18,12 +19,16 @@ export default function ForgotPasswordPage() {
   const [loadingReset, setLoadingReset] = useState(false);
   const [sent, setSent] = useState(false);
   const [message, setMessage] = useState("");
+  const [errorSend, setErrorSend] = useState("");
+  const [errorReset, setErrorReset] = useState("");
+  const [alertMsg, setAlertMsg] = useState("");
 
   const onSendCode = async () => {
+    setErrorSend("");
     const uname = username.trim().toLowerCase();
 
     if (!uname) {
-      alert("Nhập tên đăng nhập.");
+      setErrorSend("Nhập tên đăng nhập.");
       return;
     }
 
@@ -49,23 +54,25 @@ export default function ForgotPasswordPage() {
           "Nếu tài khoản tồn tại và đã có email đăng ký, mã xác nhận đã được gửi."
       );
     } catch (err: any) {
-      alert(err?.message || "Không gửi được mã xác nhận.");
+      setErrorSend(err?.message || "Không gửi được mã xác nhận.");
     } finally {
       setLoadingSend(false);
     }
   };
 
   const onResetPassword = async () => {
+    setErrorReset("");
+    setMessage("");
     const uname = username.trim().toLowerCase();
 
-    if (!uname) return alert("Nhập tên đăng nhập.");
-    if (!code) return alert("Nhập mã xác nhận.");
-    if (!newPassword) return alert("Nhập mật khẩu mới.");
+    if (!uname) return setErrorReset("Nhập tên đăng nhập.");
+    if (!code) return setErrorReset("Nhập mã xác nhận.");
+    if (!newPassword) return setErrorReset("Nhập mật khẩu mới.");
     if (newPassword.length < 6) {
-      return alert("Mật khẩu mới phải có ít nhất 6 ký tự.");
+      return setErrorReset("Mật khẩu mới phải có ít nhất 6 ký tự.");
     }
     if (newPassword !== confirmPassword) {
-      return alert("Mật khẩu nhập lại không khớp.");
+      return setErrorReset("Mật khẩu nhập lại không khớp.");
     }
 
     setLoadingReset(true);
@@ -87,10 +94,9 @@ export default function ForgotPasswordPage() {
         throw new Error(data?.error || "Không đặt lại được mật khẩu.");
       }
 
-      alert("Đặt lại mật khẩu thành công. Hãy đăng nhập lại.");
-      router.push("/auth/login");
+      setAlertMsg("Đặt lại mật khẩu thành công. Hãy đăng nhập lại.");
     } catch (err: any) {
-      alert(err?.message || "Không đặt lại được mật khẩu.");
+      setErrorReset(err?.message || "Không đặt lại được mật khẩu.");
     } finally {
       setLoadingReset(false);
     }
@@ -103,26 +109,37 @@ export default function ForgotPasswordPage() {
       <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
 
       <Header />
+      <AlertModal 
+        isOpen={!!alertMsg} 
+        message={alertMsg} 
+        onClose={() => {
+          const msg = alertMsg;
+          setAlertMsg("");
+          if (msg.includes("thành công")) {
+            router.push("/auth/login");
+          }
+        }} 
+      />
 
       <section className="wrap">
-        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-3 md:py-4">
-          <div className="relative w-full max-w-[575px] overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
+        <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
+          <div className="relative w-full max-w-[440px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="mb-4 flex justify-center">
+              <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/adw-logo-clean.png"
                   alt="AI Digital Wardrobe"
-                  className="h-auto w-[220px] object-contain md:w-[238px]"
+                  className="h-auto w-[180px] object-contain md:w-[200px]"
                   draggable={false}
                 />
               </div>
 
               <div className="text-center">
-                <h1 className="forgot-title mt-2 text-[40px] font-semibold tracking-tight md:text-[34px]">
+                <h1 className="forgot-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Quên mật khẩu
                 </h1>
 
@@ -132,13 +149,13 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] md:p-5">
-                <div className="space-y-4">
+              <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
+                <div className="space-y-3">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiUser className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -150,10 +167,12 @@ export default function ForgotPasswordPage() {
                     </div>
                   </div>
 
+                  {errorSend && <p className="text-sm text-red-500">{errorSend}</p>}
+
                   <button
                     onClick={onSendCode}
                     disabled={loadingSend}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(59,130,246,.28)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(99,102,241,.30)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loadingSend ? (
                       "Đang gửi mã..."
@@ -168,12 +187,12 @@ export default function ForgotPasswordPage() {
                   </button>
 
                   {message ? (
-                    <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-4 py-3 text-sm leading-7 text-emerald-200/90">
+                    <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-sm leading-6 text-emerald-200/90">
                       {message}
                     </div>
                   ) : null}
 
-                  <div className="my-2 flex items-center gap-4">
+                  <div className="my-1 flex items-center gap-4">
                     <div className="h-px flex-1 bg-white/10" />
                     <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
                       Cập nhật mật khẩu
@@ -182,10 +201,10 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mã xác nhận
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiKey className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="text"
@@ -198,10 +217,10 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu mới
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -214,10 +233,10 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-white/75">
+                    <label className="mb-1 block text-sm font-medium text-white/75">
                       Nhập lại mật khẩu mới
                     </label>
-                    <div className="group flex h-13 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-14">
+                    <div className="group flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] md:h-12">
                       <FiLock className="mr-3 shrink-0 text-lg text-white/35 group-focus-within:text-cyan-200" />
                       <input
                         type="password"
@@ -229,10 +248,12 @@ export default function ForgotPasswordPage() {
                     </div>
                   </div>
 
+                  {errorReset && <p className="text-sm text-red-500">{errorReset}</p>}
+
                   <button
                     onClick={onResetPassword}
                     disabled={loadingReset}
-                    className="group flex h-13 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(16,185,129,.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(20,184,166,.24)] disabled:cursor-not-allowed disabled:opacity-60 md:h-14"
+                    className="group flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-base font-semibold text-white shadow-[0_12px_35px_rgba(16,185,129,.22)] transition hover:scale-[1.01] hover:shadow-[0_18px_45px_rgba(20,184,166,.24)] disabled:cursor-not-allowed disabled:opacity-60 md:h-12"
                   >
                     {loadingReset ? "Đang cập nhật..." : "Tiếp tục"}
                     {!loadingReset && (
@@ -241,7 +262,7 @@ export default function ForgotPasswordPage() {
                   </button>
                 </div>
 
-                <p className="mt-5 text-center text-sm text-white/55">
+                <p className="mt-3 text-center text-sm text-white/55">
                   Nhớ lại mật khẩu rồi?{" "}
                   <Link
                     href="/auth/login"

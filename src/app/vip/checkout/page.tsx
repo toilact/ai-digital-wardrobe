@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Header from "@/components/Header";
+import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -32,6 +33,7 @@ export default function VipCheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState<VipOrder | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "mb" | null>(null);
+  const [alertMsg, setAlertMsg] = useState("");
 
   const momoQrImage =
     process.env.NEXT_PUBLIC_VIP_MOMO_QR_IMAGE || "/payments/momo-qr.png";
@@ -63,8 +65,8 @@ export default function VipCheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể tải đơn VIP.");
-        router.replace("/services");
+        setAlertMsg(data.error || "Không thể tải đơn VIP.");
+        setTimeout(() => router.replace("/services"), 2000);
         return;
       }
 
@@ -74,8 +76,8 @@ export default function VipCheckoutPage() {
       }
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi tải đơn VIP.");
-      router.replace("/services");
+      setAlertMsg("Có lỗi khi tải đơn VIP.");
+      setTimeout(() => router.replace("/services"), 2000);
     } finally {
       setLoading(false);
     }
@@ -110,7 +112,7 @@ export default function VipCheckoutPage() {
   const onMarkPaid = async () => {
     try {
       if (!user || !orderId || !paymentMethod) {
-        alert("Vui lòng chọn phương thức thanh toán.");
+        setAlertMsg("Vui lòng chọn phương thức thanh toán.");
         return;
       }
 
@@ -132,15 +134,15 @@ export default function VipCheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Không thể ghi nhận thanh toán.");
+        setAlertMsg(data.error || "Không thể ghi nhận thanh toán.");
         return;
       }
 
-      alert("Đã ghi nhận. Admin sẽ duyệt giao dịch của bạn.");
+      setAlertMsg("Đã ghi nhận. Admin sẽ duyệt giao dịch của bạn.");
       await loadOrder();
     } catch (err) {
       console.error(err);
-      alert("Có lỗi khi xác nhận đã chuyển khoản.");
+      setAlertMsg("Có lỗi khi xác nhận đã chuyển khoản.");
     } finally {
       setSubmitting(false);
     }
@@ -149,6 +151,7 @@ export default function VipCheckoutPage() {
   return (
     <main>
       <Header />
+      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
       <div className="wrap py-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl font-bold grad-text mb-4 text-center">
