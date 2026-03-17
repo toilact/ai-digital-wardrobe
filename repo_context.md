@@ -56,43 +56,687 @@ ENTRYPOINT ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]
 ---
 # README.md
 ```text
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <img loading="lazy" src="./public/adw-logo-clean.png" alt="AI Digital Wardrobe Logo" height="150">
+</p>
 
-## Getting Started
+<h1 align="center">AI Digital Wardrobe</h1>
 
-First, run the development server:
+<p align="center">
+  An AI-powered digital wardrobe platform that helps users digitize personal clothing items, manage wardrobe inventories, and receive context-aware styling suggestions based on their wardrobe, body profile, and everyday use cases.
+</p>
+
+<p align="center">
+  <a href="#-quick-start"><strong>Get Started »</strong></a>
+  <br/>
+  <br/>
+  <a href="#-features">✨ Features</a>
+  |
+  <a href="#-system-architecture">🏗️ Architecture</a>
+  |
+  <a href="#-project-structure">📦 Project Structure</a>
+  |
+  <a href="#-environment-variables">🔐 Environment</a>
+  |
+  <a href="#-license">📄 License</a>
+</p>
+
+<p align="center">
+  <img loading="lazy" src="https://img.shields.io/badge/Next.js-16.1.6-black?logo=next.js&logoColor=white" alt="Next.js"/>
+  <img loading="lazy" src="https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img loading="lazy" src="https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage-ffca28?logo=firebase&logoColor=black" alt="Firebase"/>
+  <img loading="lazy" src="https://img.shields.io/badge/AI-MobileSAM%20%7C%20CLIP%20%7C%20Gemini-blueviolet" alt="AI Stack"/>
+  <img loading="lazy" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose"/>
+  <img loading="lazy" src="https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript"/>
+</p>
+
+---
+
+## 📚 Table of Contents
+
+- [✨ Overview](#-overview)
+- [🌟 Why this project matters](#-why-this-project-matters)
+- [🚀 Features](#-features)
+- [🧠 AI Pipeline](#-ai-pipeline)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [🏗️ System Architecture](#️-system-architecture)
+- [📦 Project Structure](#-project-structure)
+- [⚙️ How the system works](#️-how-the-system-works)
+- [🚀 Quick Start](#-quick-start)
+- [🔐 Environment Variables](#-environment-variables)
+- [🐳 Run with Docker Compose](#-run-with-docker-compose)
+- [💻 Run locally without Docker](#-run-locally-without-docker)
+- [📡 Important API Routes](#-important-api-routes)
+- [🧪 Example User Flows](#-example-user-flows)
+- [📌 Project Status](#-project-status)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🙌 Acknowledgements](#-acknowledgements)
+
+---
+
+## ✨ Overview
+
+**AI Digital Wardrobe** is a full-stack fashion technology platform designed to make wardrobe management smarter, more visual, and more practical in daily life.
+
+Instead of treating clothing as static photos in a gallery, the system transforms a personal wardrobe into structured digital data. Users can upload clothing images, extract individual items with AI-powered segmentation, organize them into categories, and receive outfit suggestions tailored to different contexts such as school, work, dating, traveling, or special events.
+
+The project combines:
+
+- **Computer vision** for clothing extraction and classification
+- **Generative AI** for styling guidance and outfit recommendation
+- **User profile intelligence** for body-aware personalization
+- **Cloud-based persistence** for wardrobe, account, and conversation history management
+
+---
+
+## 🌟 Why this project matters
+
+Choosing clothes is a repeated daily decision. Most users already own enough items, but still struggle to:
+
+- remember what they actually have
+- combine pieces effectively
+- dress appropriately for a situation
+- make better use of existing clothes before buying more
+
+AI Digital Wardrobe addresses that gap by combining wardrobe data, body profile information, and AI-assisted fashion support in one unified platform.
+
+---
+
+## 🚀 Features
+
+### 1. Digital wardrobe management
+
+- Upload clothing images directly from the browser
+- Extract single garments from source images
+- Save wardrobe items to the user account
+- Browse wardrobe items in a categorized visual layout
+- Delete items that are no longer needed
+
+### 2. AI-powered clothing parsing
+
+- Image cutout service built with **FastAPI**
+- Supports **MobileSAM**-based segmentation
+- Falls back to **GrabCut / automatic masking** when prompt-based segmentation is unavailable
+- Returns clean PNG cutouts and optional mask metadata
+- Auto-labels items into categories such as:
+  - Tops
+  - Pants
+  - Skirts
+  - Dresses
+  - Shoes
+  - Others
+
+### 3. Smart outfit suggestion
+
+- AI stylist chat for natural fashion interaction
+- Outfit recommendations based on:
+  - occasion
+  - destination
+  - weather
+  - style preference
+  - selected wardrobe items
+  - user body profile
+- Supports both:
+  - conversational fashion assistance
+  - structured outfit generation flow
+- Can generate accompanying visual outfit output through an external image generation pipeline
+
+### 4. Personalized onboarding
+
+Users can provide body-related information to improve recommendation quality:
+
+- gender
+- age
+- height
+- weight
+- bust
+- waist
+- hip
+
+This enables more realistic and context-aware styling suggestions.
+
+### 5. Authentication and account system
+
+- Email/password authentication
+- Google sign-in
+- Firebase-backed account and session handling
+- User profile persistence in Firestore
+- Support utilities for account synchronization flows
+
+### 6. Forgot password via email verification
+
+- Username-based password reset flow
+- Secure 6-digit verification code
+- Expiration handling
+- Wrong-attempt limiting
+- Password update through Firebase Admin
+- Email delivery via SMTP/Nodemailer
+
+### 7. Chat history persistence
+
+- Stores conversation history per user
+- Supports conversation titles, timestamps, and image references
+- Keeps wardrobe stylist interactions reusable across sessions
+
+### 8. VIP subscription flow
+
+- Free and VIP plans
+- VIP monthly plan
+- Manual payment confirmation flow
+- Admin approval workflow
+- VIP expiration management
+- Different outfit-generation limits by plan
+
+---
+
+## 🧠 AI Pipeline
+
+### Clothing parsing flow
+
+1. The user uploads a clothing image
+2. The web app sends the image to the AI service
+3. The AI service performs segmentation using:
+   - **MobileSAM**
+   - or fallback **GrabCut**
+4. The cutout image is converted into PNG
+5. Auto-labeling predicts the garment category with **CLIP**
+6. The web app allows the user to review and confirm the result
+7. The final wardrobe item is stored in cloud storage and database
+
+### Outfit recommendation flow
+
+1. The user opens the wardrobe stylist
+2. The user sends a fashion request in natural language
+3. The system checks context and user profile
+4. Gemini-based logic determines whether the request is:
+   - a general chat request
+   - or an outfit generation request
+5. Selected wardrobe items are analyzed
+6. A styling note and outfit suggestion are returned
+7. An optional generated outfit image can be produced through the generation pipeline
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+- **Next.js 16**
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS 4**
+- **React Icons**
+
+### Backend / AI Service
+
+- **FastAPI**
+- **Uvicorn**
+- **Python 3.10**
+- **OpenCV**
+- **Pillow**
+- **NumPy**
+- **PyTorch**
+
+### AI / ML
+
+- **MobileSAM** for interactive segmentation
+- **GrabCut fallback** for automatic cutout
+- **open_clip_torch / CLIP** for garment category prediction
+- **Gemini** for stylist intelligence and structured outfit reasoning
+- External image generation API for visual outfit rendering
+
+### Platform Services
+
+- **Firebase Auth**
+- **Firestore**
+- **Firebase Storage**
+- **Firebase Admin SDK**
+- **Cloudinary**
+- **Nodemailer**
+- **Docker Compose**
+
+---
+
+## 🏗️ System Architecture
+
+```text
+┌───────────────────────────────────────────────────────────────┐
+│                        Next.js Frontend                       │
+│  - Auth UI                                                   │
+│  - Dashboard                                                 │
+│  - Wardrobe Upload                                           │
+│  - Wardrobe Browser                                          │
+│  - Stylist Chat                                              │
+│  - VIP / Payment UI                                          │
+└───────────────┬───────────────────────────────────────────────┘
+                │
+                │ HTTP / API Routes
+                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                    Next.js Server Routes                      │
+│  - /api/wardrobe/*                                           │
+│  - /api/outfit-suggest                                       │
+│  - /api/chat-history                                         │
+│  - /api/auth/forgot-password/*                               │
+│  - /api/vip/*                                                │
+└───────────────┬───────────────────────────────┬───────────────┘
+                │                               │
+                │                               │
+                ▼                               ▼
+┌──────────────────────────────┐   ┌────────────────────────────┐
+│        Firebase Stack        │   │      AI FastAPI Service    │
+│  - Auth                      │   │  - /parse                  │
+│  - Firestore                 │   │  - /cutout                 │
+│  - Storage                   │   │  - /label                  │
+│  - Admin SDK                 │   │  - /health                 │
+└──────────────────────────────┘   └──────────────┬─────────────┘
+                                                  │
+                                                  ▼
+                                   ┌────────────────────────────┐
+                                   │    CV / AI Components      │
+                                   │  - MobileSAM               │
+                                   │  - GrabCut fallback        │
+                                   │  - CLIP auto-label         │
+                                   │  - Gemini styling logic    │
+                                   └────────────────────────────┘
+```
+
+---
+
+## 📦 Project Structure
+
+The repository is organized so that new contributors can quickly understand what each part of the system is responsible for.
+
+```text
+AI-Digital-Wardrobe/
+├── src/
+│   ├── app/                         # Next.js App Router
+│   │   ├── api/                     # Server routes / backend logic in Next.js
+│   │   │   ├── auth/                # Login, registration, forgot password
+│   │   │   ├── wardrobe/            # Upload, parse, confirm, list, delete items
+│   │   │   ├── vip/                 # VIP order creation, payment, admin approval
+│   │   │   ├── chat-history/        # Save / load stylist chat history
+│   │   │   └── outfit-suggest/      # AI outfit recommendation logic
+│   │   ├── about/                   # About page
+│   │   ├── admin/                   # Admin pages and VIP approval views
+│   │   ├── auth/                    # Login / signup / forgot password pages
+│   │   ├── dashboard/               # User dashboard
+│   │   ├── onboarding/              # Body profile and personalization flow
+│   │   ├── outfit-suggest/          # Stylist chat page
+│   │   ├── services/                # Services and pricing pages
+│   │   ├── vip/                     # VIP checkout flow
+│   │   └── wardrobe/                # Wardrobe management pages
+│   │
+│   ├── components/                  # Reusable UI components
+│   │   ├── Header.tsx
+│   │   ├── Footer.tsx
+│   │   ├── WardrobeStylistChat.tsx
+│   │   ├── GoogleLoginButton.tsx
+│   │   ├── ProfileDrawer.tsx
+│   │   └── ...
+│   │
+│   ├── lib/                         # Config, helpers, and shared service logic
+│   │   ├── firebase.ts              # Firebase client SDK
+│   │   ├── firebaseAdmin.ts         # Firebase Admin SDK
+│   │   ├── mailer.ts                # Email sending for reset password
+│   │   ├── vip.ts                   # VIP logic and expiration handling
+│   │   ├── profile.ts               # User profile utilities
+│   │   └── ai/                      # AI helper logic / label / outfit utilities
+│   │
+│   └── app/globals.css              # Global styles
+│
+├── public/                          # Static assets, icons, and logo
+│
+├── ai-service/                      # FastAPI-based AI service
+│   ├── app.py                       # AI service entry point
+│   ├── Dockerfile                   # Docker image for AI service
+│   ├── requirements.txt             # Python dependencies
+│   ├── checkpoints/                 # MobileSAM and model checkpoint files
+│   ├── modules/                     # Helper model modules
+│   └── networks/                    # Supporting network definitions
+│
+├── Dockerfile                       # Dockerfile for Next.js web app
+├── docker-compose.yml               # Orchestration for web + ai-service
+├── package.json                     # Frontend dependencies and scripts
+├── package-lock.json
+├── next.config.ts                   # Next.js configuration
+├── tsconfig.json                    # TypeScript configuration
+└── README.md
+```
+
+### Structure at a glance
+
+- **`src/app`** contains the pages users interact with and the server routes used by the web application.
+- **`src/app/api`** acts as the backend layer inside Next.js, connecting Firebase, Cloudinary, email services, and the AI service.
+- **`src/components`** contains reusable UI pieces to keep the codebase modular and maintainable.
+- **`src/lib`** centralizes shared configuration and business logic.
+- **`ai-service`** is a separate service responsible for computer vision and image-processing tasks.
+- **`docker-compose.yml`** makes it easy to run the full system with one command.
+
+---
+
+## ⚙️ How the system works
+
+The platform can be understood as three major layers:
+
+### 1. Web Application Layer
+
+This is where users interact with the system:
+
+- sign up and log in
+- manage wardrobe items
+- update body profile
+- talk to the AI stylist
+- purchase VIP plans
+
+### 2. AI Processing Layer
+
+This layer handles image-related intelligence:
+
+- receives clothing images
+- performs segmentation and cutout
+- generates transparent PNG outputs
+- predicts garment categories
+- returns structured results to the web app
+
+### 3. Cloud & Persistence Layer
+
+This layer stores user data and assets:
+
+- **Firebase Auth** for authentication
+- **Firestore** for profiles, wardrobe items, chat history, and VIP orders
+- **Cloudinary** for clothing image storage
+- **SMTP / Nodemailer** for email verification and reset flows
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+Before running the project, make sure you have:
+
+- **Node.js 20+**
+- **Python 3.10**
+- **npm**
+- **Docker Desktop**
+- a **Firebase project**
+- a **Cloudinary account**
+- an SMTP email account or Gmail App Password
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/toilact/ai-digital-wardrobe
+cd ai-digital-wardrobe
+```
+
+### 2. Install frontend dependencies
+
+```bash
+npm install
+```
+
+### 3. Install AI service dependencies
+
+```bash
+cd ai-service
+pip install -r requirements.txt
+cd ..
+```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env.local` file in the project root for the web app.
+
+Example:
+
+```env
+# Firebase Client
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+
+# Firebase Admin
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+
+# AI Service
+AI_SERVICE_URL=http://127.0.0.1:8000
+LABEL_STRATEGY=service
+AI_LABEL_BACKEND=clip
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# Email
+EMAIL_USER=
+EMAIL_APP_PASSWORD=
+EMAIL_FROM=
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=465
+EMAIL_SECURE=true
+
+# Gemini / AI
+GEMINI_API_KEY=
+GEMINI_API_KEY_KT=
+INFIP_API_KEY=
+
+# VIP
+VIP_ADMIN_EMAILS=your-admin@email.com
+```
+
+Optional environment variables for the AI service:
+
+```env
+ENABLE_SAM=1
+SAM_MODEL_TYPE=vit_t
+SAM_CHECKPOINT=/app/checkpoints/mobile_sam.pt
+SAM_MAX_SIDE=768
+SAM_USE_FP16=0
+CUTOUT_MAX_CONCURRENCY=1
+TORCH_NUM_THREADS=1
+
+ENABLE_AUTO_LABEL=1
+PRELOAD_CLIP=1
+AUTO_LABEL_BACKEND=clip
+AUTO_LABEL_INCLUDE_COLOR=0
+CLIP_DEVICE=cpu
+CLIP_MODEL_NAME=ViT-B-32
+CLIP_PRETRAINED=laion2b_s34b_b79k
+
+PRODUCT_MAX_SIDE=1280
+MAX_UPLOAD_MB=8
+PNG_COMPRESS_LEVEL=3
+```
+
+---
+
+## 🐳 Run with Docker Compose
+
+To run the full system with Docker:
+
+```bash
+docker compose up --build
+```
+
+After startup:
+
+- **Web app**: `http://localhost`
+- **AI service**: `http://localhost:8000`
+
+---
+
+## 💻 Run locally without Docker
+
+### Start frontend
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Start AI service
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd ai-service
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+After startup:
 
-## Learn More
+- **Frontend**: `http://localhost:3000`
+- **AI service**: `http://localhost:8000`
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📡 Important API Routes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Wardrobe
 
-## Deploy on Vercel
+- `POST /api/wardrobe/upload`
+- `POST /api/wardrobe/parse`
+- `POST /api/wardrobe/label-item`
+- `GET /api/wardrobe/list`
+- `DELETE /api/wardrobe/delete`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Chat & Outfit
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `GET /api/chat-history`
+- `PUT /api/chat-history`
+- `POST /api/outfit-suggest`
 
+### Authentication
+
+- `POST /api/auth/forgot-password/send-code`
+- `POST /api/auth/forgot-password/reset`
+
+### VIP
+
+- `POST /api/vip/create-order`
+- `POST /api/vip/mark-paid`
+- `GET /api/vip/order`
+- `POST /api/vip/admin/approve`
+
+### AI Service
+
+- `POST /parse`
+- `POST /cutout`
+- `POST /label`
+- `GET /health`
+
+---
+
+## 🧪 Example User Flows
+
+### Upload a clothing item
+
+1. The user uploads an image from the browser
+2. The web app sends the image to the AI service
+3. The AI service performs cutout and parsing
+4. The AI predicts the item category
+5. The user reviews and confirms the result
+6. The final image is uploaded to Cloudinary
+7. Metadata is stored in Firestore
+
+### Ask for an outfit suggestion
+
+1. The user opens the stylist chat
+2. The user describes an occasion or desired style
+3. The system reads wardrobe items and profile context
+4. The AI returns an outfit suggestion
+5. The conversation is stored for later reuse
+
+### Buy a VIP plan
+
+1. The user creates a VIP order
+2. The user chooses a payment method
+3. The system stores the order as pending
+4. An admin reviews and approves the request
+5. The account becomes VIP until the expiration date
+
+---
+
+## 📌 Project Status
+
+This project is currently under active development and already includes the main end-to-end flows:
+
+- authentication
+- wardrobe item digitization
+- AI clothing parsing
+- outfit suggestion
+- chat history persistence
+- VIP subscription flow
+
+Planned improvements include:
+
+- automated test coverage
+- stronger admin permission controls
+- payment verification automation
+- better wardrobe search and filtering
+- more visual analytics for wardrobe usage
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome.
+
+To contribute:
+
+1. Fork the repository
+2. Create a new branch
+3. Make your changes
+4. Commit clearly
+5. Open a pull request with a short explanation and screenshots if the UI was updated
+
+---
+
+## 📄 License
+
+Choose the license that matches your project and replace this section accordingly.
+
+Example:
+
+```text
+MIT License
+```
+
+or
+
+```text
+GNU General Public License v3.0
+```
+
+---
+
+## 🙌 Acknowledgements
+
+This project is built on top of the following technologies and communities:
+
+- Next.js
+- React
+- FastAPI
+- Firebase
+- Cloudinary
+- MobileSAM
+- OpenCLIP
+- Gemini
+
+---
+
+<div align="center">
+  <strong>AI Digital Wardrobe</strong><br/>
+  A practical AI fashion platform for digitizing wardrobes, managing clothing items, and receiving smarter outfit suggestions every day.
+</div>
 ```
 
 
@@ -12176,100 +12820,236 @@ export default function RootLayout({
 # src/app/page.tsx
 ```text
 import Header from "@/components/Header";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <main>
+    <main className="min-h-screen pb-20 overflow-x-hidden">
       <Header />
-      <div className="wrap">
-        {/* Hero Section */}
-        <section className="text-center py-20">
-          <h1 className="text-5xl font-bold grad-text mb-4">
-            Chào mừng đến với AI Digital Wardrobe
-          </h1>
-          <p className="text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Tủ đồ thông minh giúp bạn quản lý quần áo dễ dàng hơn, số hóa tủ đồ cá nhân
-            và nhận gợi ý trang phục phù hợp bằng trí tuệ nhân tạo.
-          </p>
 
-          <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-8 max-w-4xl mx-auto shadow-xl text-left">
-            <h2 className="text-3xl font-semibold text-white mb-5 text-center">
-              Công dụng của AI Digital Wardrobe
-            </h2>
+      <div className="wrap space-y-24">
+        {/* 1. Hero Section */}
+        <section className="relative pt-13 pb-12 lg:pb-24">
+          <div className="absolute inset-x-0 top-1/2 -z-10 -translate-y-1/2 mx-auto h-72 w-[80%] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.15),rgba(236,72,153,0.1),transparent_70%)] blur-3xl" />
 
-            <div className="space-y-4 text-gray-300 text-lg leading-relaxed">
-              <p>
-                <span className="text-white font-semibold">AI Digital Wardrobe</span> là
-                ứng dụng hỗ trợ bạn <span className="text-white/90">quản lý tủ đồ cá nhân một cách hiện đại và tiện lợi</span>.
-                Thay vì phải nhớ mình có gì trong tủ, bạn có thể lưu trữ toàn bộ quần áo lên hệ thống để theo dõi dễ dàng hơn.
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+            <div className="text-center lg:text-left">
+              <h1 className="text-4xl md:text-5xl lg:text-[4.5rem] font-bold mb-6 leading-[1.15]">
+                <span className="grad-text">Chào mừng đến với  AI DIGITAL WARDROBE</span>
+              </h1>
+              <p className="text-xl text-white/75 max-w-2xl mx-auto lg:mx-0 leading-relaxed mb-10">
+                Trợ lý thời trang cá nhân của bạn. Chỉ với vài thao tác, tủ đồ vật lý sẽ được số hoá hoàn toàn, giúp bạn quản lý và chọn trang phục thông minh, nhẹ nhàng hơn mỗi ngày.
               </p>
+              <div className="flex justify-center lg:justify-start">
+                <Link
+                  href="/auth/login"
+                  className="inline-flex rounded-2xl bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 px-8 py-4 font-semibold text-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] transition hover:scale-[1.03] text-lg"
+                >
+                  Bắt đầu ngay
+                </Link>
+              </div>
+            </div>
 
-              <p>
-                Ứng dụng sử dụng <span className="text-white/90">trí tuệ nhân tạo</span> để
-                phân tích hình ảnh, nhận diện và phân loại từng món đồ. Nhờ đó, bạn có thể nhanh chóng tìm kiếm,
-                sắp xếp và quản lý trang phục theo nhu cầu sử dụng.
-              </p>
-
-              <p>
-                Không chỉ dừng lại ở việc lưu trữ, AI Digital Wardrobe còn giúp bạn
-                <span className="text-white/90"> gợi ý trang phục phù hợp</span> dựa trên hoàn cảnh,
-                phong cách mong muốn hoặc điều kiện thời tiết, giúp việc chọn đồ mỗi ngày trở nên nhanh hơn và dễ dàng hơn.
-              </p>
+            {/* Layer Ảnh Hero */}
+            <div className="relative aspect-square md:aspect-[4/3] lg:aspect-square w-full max-w-[500px] mx-auto rounded-3xl overflow-hidden group">
+              <div className="absolute inset-x-8 inset-y-0 bg-white/5 border border-white/10 rounded-3xl rotate-3 transition-transform duration-500 group-hover:rotate-6"></div>
+              <div className="absolute inset-x-4 inset-y-4 bg-white/10 border border-white/10 rounded-3xl -rotate-2 transition-transform duration-500 group-hover:-rotate-3 backdrop-blur-md"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-pink-500/20 border border-white/20 rounded-3xl flex items-center justify-center z-10 overflow-hidden shadow-2xl backdrop-blur-xl transition hover:border-white/30">
+                <img src="/home-page-image.png" alt="" />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Hướng dẫn sử dụng */}
+        {/* 2. Điểm mạnh */}
         <section className="py-12">
-          <h2 className="text-4xl font-bold text-white text-center mb-12">
-            Hướng dẫn sử dụng
-          </h2>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white/95">
+              Tất cả những gì bạn cần <br /> <span className="grad-text">để mặc đẹp</span>
+            </h2>
+            <p className="text-white/60 mt-4 max-w-xl mx-auto text-lg">
+              Trải nghiệm thời trang số hóa kết hợp công nghệ AI, giúp thấu hiểu cấu trúc tủ đồ thực tế.
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Bước 1 */}
-            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white text-2xl font-bold">1</span>
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-12">
+            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.2)]">
+              <div className="w-14 h-14 bg-gradient-to-br from-indigo-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
+                <span className="text-indigo-400 text-2xl">✨</span>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-4">Đăng ký tài khoản</h3>
-              <p className="text-gray-300">
-                Tạo tài khoản để bắt đầu sử dụng AI Digital Wardrobe. Bạn có thể đăng ký
-                bằng email hoặc tài khoản Google.
+              <h3 className="text-xl font-semibold text-white/92 mb-4">Số hóa bằng AI</h3>
+              <p className="text-white/65 leading-relaxed">
+                Chỉ cần chụp ảnh, AI sẽ tự động tách nền, nhận diện và đánh nhãn chính xác từng loại quần áo để lưu trữ có hệ thống.
               </p>
-              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
-                <span className="text-gray-400">Ảnh minh họa bước 1</span>
+            </div>
+
+            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.2)]">
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
+                <span className="text-emerald-400 text-2xl">📱</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white/92 mb-4">Tủ đồ kỹ thuật số</h3>
+              <p className="text-white/65 leading-relaxed">
+                Dễ dàng quan sát mọi trang phục mình có ngay trên điện thoại
+              </p>
+            </div>
+
+            <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition hover:border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.2)]">
+              <div className="w-14 h-14 bg-gradient-to-br from-pink-600/30 to-transparent rounded-2xl flex items-center justify-center mb-6 border border-white/10">
+                <span className="text-pink-400 text-2xl">💡</span>
+              </div>
+              <h3 className="text-xl font-semibold text-white/92 mb-4">Đề xuất thông minh</h3>
+              <p className="text-white/65 leading-relaxed">
+                AI Stylist gợi ý outfit phù hợp nhất dựa theo thông tin người dùng và sự kiện người dùng cung cấp.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              href="/auth/login"
+              className="inline-flex rounded-2xl border border-white/15 bg-white/10 px-8 py-3.5 font-semibold text-white/90 backdrop-blur-md transition hover:bg-white/15 hover:text-white"
+            >
+              Bắt đầu
+            </Link>
+          </div>
+        </section>
+
+        {/* 3. Ngừng tốn thời gian */}
+        <section className="py-8">
+          <div className="rounded-[36px] bg-gradient-to-r p-[1px] from-indigo-500/30 via-purple-500/30 to-emerald-500/30 w-full max-w-5xl mx-auto shadow-2xl overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-xl"></div>
+
+            <div className="rounded-[35px] bg-[#0a0f1c]/90 backdrop-blur-xl p-8 md:p-12 relative z-10">
+              <div className="grid md:grid-cols-[1fr_0.8fr] gap-10 items-center">
+
+                {/* Content */}
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-medium mb-6">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Tiết kiệm thời gian
+                  </div>
+
+                  <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight mb-8">
+                    Ngừng tốn thời gian <br className="hidden md:block" /> vào việc chọn outfit
+                  </h2>
+
+                  <div className="space-y-4">
+                    <div className="group/item flex bg-white/[0.03] p-5 rounded-2xl border border-white/5 gap-4 items-center transition-colors hover:bg-white/[0.06]">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20 relative overflow-hidden text-red-400 transition-transform group-hover/item:scale-110 duration-300">
+                        <span className="text-xl">✗</span>
+                        <div className="absolute inset-0 bg-red-500/20 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
+                      </div>
+                      <div className="space-y-1 relative">
+                        <div className="text-white/40 text-sm line-through decoration-white/20">Hơn 30 phút lưỡng lự chọn đồ</div>
+                        <div className="text-white font-medium text-lg bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">Gợi ý hoàn hảo trong 2 phút ⚡</div>
+                      </div>
+                    </div>
+
+                    <div className="group/item flex bg-white/[0.03] p-5 rounded-2xl border border-white/5 gap-4 items-center transition-colors hover:bg-white/[0.06]">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20 relative overflow-hidden text-red-400 transition-transform group-hover/item:scale-110 duration-300">
+                        <span className="text-xl">✗</span>
+                        <div className="absolute inset-0 bg-red-500/20 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"></div>
+                      </div>
+                      <div className="space-y-1 relative">
+                        <div className="text-white/40 text-sm line-through decoration-white/20">Mơ hồ không biết mặc lên sẽ thế nào</div>
+                        <div className="text-white font-medium text-lg bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400">Hình ảnh preview trực quan 👀</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-10">
+                    <Link
+                      href="/auth/login"
+                      className="inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-3.5 font-bold text-slate-900 shadow-[0_10px_20px_rgba(255,255,255,0.08)] transition-all hover:scale-105 hover:shadow-[0_15px_30px_rgba(255,255,255,0.15)] group/btn"
+                    >
+                      Bắt đầu ngay
+                      <span className="transition-transform group-hover/btn:translate-x-1">→</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Layer Ảnh gọn hơn */}
+                <div className="relative aspect-[4/5] w-full max-w-[340px] mx-auto rounded-3xl overflow-hidden group/image perspective-1000">
+                  <div className="absolute inset-x-6 inset-y-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 rounded-3xl rotate-6 transition-transform duration-700 group-hover/image:rotate-12"></div>
+                  <div className="absolute inset-x-3 inset-y-3 bg-gradient-to-br from-indigo-500/10 to-emerald-500/10 border border-white/10 rounded-3xl -rotate-3 transition-transform duration-700 group-hover/image:-rotate-6 backdrop-blur-md"></div>
+
+                  <div className="absolute inset-0 bg-[#12182b]/80 border border-white/20 rounded-3xl flex items-center justify-center z-10 overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all duration-500 hover:border-white/40 group-hover/image:scale-[1.02]">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent"></div>
+                    <div className="text-center p-6 relative">
+                      <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <span className="text-2xl">✨</span>
+                      </div>
+                      <span className="text-white/80 tracking-widest text-sm font-semibold block mb-1">AI STYLING</span>
+                      <span className="text-white/40 text-xs">Phân tích & Phối đồ</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Hướng dẫn sử dụng */}
+        <section className="py-12 pb-24 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-white/95 mb-4">
+            Số hóa tủ đồ của bạn <br /><span className="grad-text">chỉ với 3 bước</span>
+          </h2>
+          <p className="text-white/60 mb-16 max-w-xl mx-auto text-lg">
+
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-4">
+            {/* Bước 1 */}
+            <div className="group text-center">
+              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white/50 text-2xl font-bold group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-white/90 mb-3">Đăng ký tài khoản</h3>
+              <p className="text-white/50 text-sm md:text-base leading-relaxed mb-6 px-4">
+                Tạo tài khoản để bắt đầu sử dụng AI Digital Wardrobe. Bạn có thể đăng ký bằng email hoặc tài khoản Google.
+              </p>
+              <div className="h-48 rounded-3xl border border-white/10 bg-white/[0.02] flex items-center justify-center group-hover:border-white/20 transition-colors">
+                <img src="/login-page.png" alt="" />
               </div>
             </div>
 
             {/* Bước 2 */}
-            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white text-2xl font-bold">2</span>
+            <div className="group text-center">
+              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white/50 text-2xl font-bold group-hover:bg-pink-500 group-hover:text-white transition-colors duration-300">
+                2
               </div>
-              <h3 className="text-xl font-semibold text-white mb-4">Upload tủ đồ</h3>
-              <p className="text-gray-300">
-                Tải lên hình ảnh các món đồ trong tủ đồ của bạn. AI sẽ tự động phân loại
-                và gán nhãn cho từng món đồ.
+              <h3 className="text-xl font-bold text-white/90 mb-3">Upload tủ đồ</h3>
+              <p className="text-white/50 text-sm md:text-base leading-relaxed mb-6 px-4">
+                Tải lên hình ảnh các món đồ trong tủ đồ của bạn. AI sẽ tự động phân loại và gán nhãn cho từng món đồ.
               </p>
-              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
-                <span className="text-gray-400">Ảnh minh họa bước 2</span>
+              <div className="h-48 rounded-3xl border border-white/10 bg-white/[0.02] flex items-center justify-center group-hover:border-white/20 transition-colors">
+                <img src="/upload-page.png" alt="" />
               </div>
             </div>
 
             {/* Bước 3 */}
-            <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-2xl p-6 text-center shadow-lg hover:-translate-y-1">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white text-2xl font-bold">3</span>
+            <div className="group text-center">
+              <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-white/50 text-2xl font-bold group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+                3
               </div>
-              <h3 className="text-xl font-semibold text-white mb-4">Nhận gợi ý trang phục</h3>
-              <p className="text-gray-300">
-                Dựa trên thời tiết và sở thích của bạn, AI sẽ gợi ý các bộ trang phục phù hợp
-                từ chính tủ đồ của bạn.
+              <h3 className="text-xl font-bold text-white/90 mb-3">Nhận gợi ý trang phục</h3>
+              <p className="text-white/50 text-sm md:text-base leading-relaxed mb-6 px-4">
+                Dựa trên phong cách, sự kiện mà bạn cung cấp AI sẽ gợi ý các bộ trang phục phù hợp từ chính tủ đồ của bạn.
               </p>
-              <div className="mt-4 h-32 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
-                <span className="text-gray-400">Ảnh minh họa bước 3</span>
+              <div className="h-48 rounded-3xl border border-white/10 bg-white/[0.02] flex items-center justify-center group-hover:border-white/20 transition-colors">
+                <img src="/stylist-chat-page.png" alt="" />
               </div>
             </div>
+          </div>
+
+          <div className="mt-20">
+            <Link
+              href="/auth/login"
+              className="inline-flex rounded-full bg-gradient-to-r from-indigo-500 via-pink-500 to-emerald-500 px-10 py-5 font-bold text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition hover:scale-[1.03] text-lg"
+            >
+              Bắt đầu ngay
+            </Link>
           </div>
         </section>
       </div>
@@ -14100,14 +14880,14 @@ export default function About() {
               </div>
 
               <h1 className="max-w-4xl text-3xl font-bold leading-tight md:text-4xl">
-                <span className="grad-text">Chúng tôi xây dựng AI Digital Wardrobe</span>
-                <span className="block mt-3 text-white/92">
+                <span className="grad-text text-6xl">Chúng tôi xây dựng AI Digital Wardrobe </span>
+                <span className=" text-white/92 text-3xl ">
                   để việc quản lý tủ đồ và chọn trang phục trở nên thông minh, tinh gọn và truyền cảm hứng hơn mỗi ngày.
                 </span>
               </h1>
 
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/68">
-                AI Digital Wardrobe là nơi thời trang gặp công nghệ theo cách thực tế nhất: giúp bạn hiểu rõ tủ đồ của mình,
+                AI Digital Wardrobe là nơi giúp bạn hiểu rõ tủ đồ của mình,
                 đưa ra quyết định nhanh hơn và tận dụng tốt hơn những gì bạn đã sở hữu.
               </p>
 
@@ -14156,7 +14936,7 @@ export default function About() {
                   <div className="text-sm text-white/50">Giá trị mang lại</div>
                   <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít thời gian hơn</div>
                   <p className="mt-3 text-sm leading-7 text-white/62">
-                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp đặc biệt.
+                    Trợ lý AI giúp bạn phối đồ nhanh chóng và tự tin hơn trong mọi dịp chỉ với 2 phút.
                   </p>
                 </div>
               </div>
@@ -14170,7 +14950,7 @@ export default function About() {
               <div>
                 <div className="text-sm uppercase tracking-[0.22em] text-white/45">Sứ mệnh</div>
                 <h2 className="mt-3 text-3xl font-semibold leading-tight text-white/92 md:text-4xl">
-                  Đưa việc quản lý tủ đồ từ cảm tính sang một trải nghiệm có cấu trúc, thông minh và đầy cảm hứng.
+                  Đưa việc quản lý tủ đồ từ cảm tính sang một trải nghiệm có <span className="grad-text">cấu trúc, thông minh và đầy cảm hứng.</span>
                 </h2>
               </div>
 
@@ -14188,78 +14968,66 @@ export default function About() {
           </div>
         </section>
 
-        <section className="py-10 md:py-16">
-          <div className="mb-10 max-w-3xl">
-            <div className="text-sm uppercase tracking-[0.22em] text-white/45">Năng lực cốt lõi</div>
-            <h2 className="mt-3 text-4xl font-bold text-white/95">Điều làm nên AI Digital Wardrobe</h2>
-            <p className="mt-4 text-lg leading-8 text-white/62">
-              Chúng tôi không xây dựng một ứng dụng thời trang chỉ để trông đẹp. Chúng tôi xây dựng một công cụ hữu ích đủ để bạn muốn quay lại sử dụng mỗi ngày.
+        {/* --- Đội ngũ phát triển --- */}
+        <section className="py-16 md:py-28">
+          <div className="mb-16 text-center max-w-3xl mx-auto">
+            <div className="text-base uppercase tracking-[0.22em] text-indigo-400 font-semibold mb-2">Đội ngũ phát triển</div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white/95 leading-tight">
+              Những người xây dựng <br /> <span className="grad-text">AI Digital Wardrobe</span>
+            </h2>
+            <p className="mt-6 text-xl text-white/60 leading-relaxed">
+              Một tập thể nhỏ nhưng mang hoài bão lớn: thay đổi cách mọi người tương tác với thời trang hàng ngày.
             </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {capabilities.map((item) => (
-              <article
-                key={item.title}
-                className="group rounded-[28px] border border-white/10 bg-white/5 p-7 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-white/20"
-              >
-                <div className="text-sm font-semibold tracking-[0.18em] text-white/40">{item.eyebrow}</div>
-                <h3 className="mt-4 text-2xl font-semibold text-white/92">{item.title}</h3>
-                <p className="mt-4 text-base leading-8 text-white/62">{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="py-10 md:py-16">
-          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
-            <div>
-              <div className="text-sm uppercase tracking-[0.22em] text-white/45">Cách chúng tôi làm việc</div>
-              <h2 className="mt-3 text-4xl font-bold text-white/95">Một đội ngũ liên ngành, cùng tập trung vào một mục tiêu rõ ràng</h2>
-              <p className="mt-5 text-lg leading-8 text-white/64">
-                Chúng tôi kết hợp tư duy sản phẩm, công nghệ AI và kỹ thuật nền tảng để tạo ra trải nghiệm có chiều sâu,
-                thay vì chỉ thêm AI như một lớp trang trí.
-              </p>
-
-              <div className="mt-8 space-y-4">
-                {principles.map((principle) => (
-                  <div
-                    key={principle}
-                    className="flex items-start gap-4 rounded-2xl border border-white/10 bg-black/20 px-5 py-4"
-                  >
-                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-indigo-400 to-emerald-400" />
-                    <p className="text-white/70">{principle}</p>
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-10 max-w-5xl mx-auto px-4">
+            {/* Thành viên 1 */}
+            <div className="group rounded-[36px] bg-gradient-to-br from-white/[0.06] to-transparent border border-white/5 hover:border-white/15 p-8 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
+                <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-indigo-500/10 to-transparent p-1">
+                  <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-indigo-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-pink-500/20 mix-blend-overlay"></div>
+                    <span className="text-white/30 text-xs font-semibold tracking-widest">[ ẢNH ]</span>
                   </div>
-                ))}
+                </div>
+                
+                <div className="text-center sm:text-left pt-2">
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-2xl font-bold text-white/95 group-hover:text-indigo-200 transition-colors">Anh Phạm</h3>
+                    <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 uppercase tracking-wider">
+                      Developer
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed text-white/60">
+                    Sinh viên năm 2 đam mê công nghệ ứng dụng thực tế. Đóng vai trò xây dựng hệ thống nền tảng vững chắc và kết nối thông suốt với trí tuệ nhân tạo.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-5">
-              {teamAreas.map((area) => (
-                <article
-                  key={area.label}
-                  className={`rounded-[28px] border border-white/10 bg-gradient-to-br ${area.accent} p-6 backdrop-blur-xl`}
-                >
-                  <div className="text-sm uppercase tracking-[0.18em] text-white/48">{area.label}</div>
-                  <h3 className="mt-3 text-2xl font-semibold leading-tight text-white/92">{area.title}</h3>
-                  <p className="mt-4 text-base leading-8 text-white/64">{area.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-10 md:py-16">
-          <div className="grid gap-6 md:grid-cols-3">
-            {pillars.map((pillar) => (
-              <div
-                key={pillar.title}
-                className="rounded-[26px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-[0_18px_50px_rgba(0,0,0,.24)]"
-              >
-                <h3 className="text-xl font-semibold text-white/92">{pillar.title}</h3>
-                <p className="mt-4 leading-8 text-white/62">{pillar.description}</p>
+            {/* Thành viên 2 */}
+            <div className="group rounded-[36px] bg-gradient-to-br from-white/[0.06] to-transparent border border-white/5 hover:border-white/15 p-8 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
+                <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-pink-500/10 to-transparent p-1">
+                  <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-pink-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-emerald-500/20 mix-blend-overlay"></div>
+                    <span className="text-white/30 text-xs font-semibold tracking-widest">[ ẢNH ]</span>
+                  </div>
+                </div>
+                
+                <div className="text-center sm:text-left pt-2">
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-2xl font-bold text-white/95 group-hover:text-pink-200 transition-colors">Chí Thành</h3>
+                    <div className="inline-block px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-xs font-medium text-pink-400 uppercase tracking-wider">
+                      Developer
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed text-white/60">
+                    Sinh viên năm 2 đam mê công nghệ ứng dụng thực tế. Mang đến những giải pháp tối ưu hệ thống, cấu trúc lại luồng dữ liệu ứng dụng.
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </section>
 
