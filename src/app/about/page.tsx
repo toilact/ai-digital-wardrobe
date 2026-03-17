@@ -87,14 +87,14 @@ export default function About() {
               </div>
 
               <h1 className="max-w-4xl text-3xl font-bold leading-tight md:text-4xl">
-                <span className="grad-text">Chúng tôi xây dựng AI Digital Wardrobe</span>
-                <span className="block mt-3 text-white/92">
+                <span className="grad-text text-6xl">Chúng tôi xây dựng AI Digital Wardrobe </span>
+                <span className=" text-white/92 text-3xl ">
                   để việc quản lý tủ đồ và chọn trang phục trở nên thông minh, tinh gọn và truyền cảm hứng hơn mỗi ngày.
                 </span>
               </h1>
 
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/68">
-                AI Digital Wardrobe là nơi thời trang gặp công nghệ theo cách thực tế nhất: giúp bạn hiểu rõ tủ đồ của mình,
+                AI Digital Wardrobe là nơi giúp bạn hiểu rõ tủ đồ của mình,
                 đưa ra quyết định nhanh hơn và tận dụng tốt hơn những gì bạn đã sở hữu.
               </p>
 
@@ -143,7 +143,7 @@ export default function About() {
                   <div className="text-sm text-white/50">Giá trị mang lại</div>
                   <div className="mt-2 text-2xl font-semibold text-white/92">Mặc đẹp với ít thời gian hơn</div>
                   <p className="mt-3 text-sm leading-7 text-white/62">
-                    Ít thời gian phân vân hơn, nhiều quyết định tự tin hơn trong những dịp đặc biệt.
+                    Trợ lý AI giúp bạn phối đồ nhanh chóng và tự tin hơn trong mọi dịp chỉ với 2 phút.
                   </p>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export default function About() {
               <div>
                 <div className="text-sm uppercase tracking-[0.22em] text-white/45">Sứ mệnh</div>
                 <h2 className="mt-3 text-3xl font-semibold leading-tight text-white/92 md:text-4xl">
-                  Đưa việc quản lý tủ đồ từ cảm tính sang một trải nghiệm có cấu trúc, thông minh và đầy cảm hứng.
+                  Đưa việc quản lý tủ đồ từ cảm tính sang một trải nghiệm có <span className="grad-text">cấu trúc, thông minh và đầy cảm hứng.</span>
                 </h2>
               </div>
 
@@ -175,78 +175,66 @@ export default function About() {
           </div>
         </section>
 
-        <section className="py-10 md:py-16">
-          <div className="mb-10 max-w-3xl">
-            <div className="text-sm uppercase tracking-[0.22em] text-white/45">Năng lực cốt lõi</div>
-            <h2 className="mt-3 text-4xl font-bold text-white/95">Điều làm nên AI Digital Wardrobe</h2>
-            <p className="mt-4 text-lg leading-8 text-white/62">
-              Chúng tôi không xây dựng một ứng dụng thời trang chỉ để trông đẹp. Chúng tôi xây dựng một công cụ hữu ích đủ để bạn muốn quay lại sử dụng mỗi ngày.
+        {/* --- Đội ngũ phát triển --- */}
+        <section className="py-16 md:py-28">
+          <div className="mb-16 text-center max-w-3xl mx-auto">
+            <div className="text-base uppercase tracking-[0.22em] text-indigo-400 font-semibold mb-2">Đội ngũ phát triển</div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white/95 leading-tight">
+              Những người xây dựng <br /> <span className="grad-text">AI Digital Wardrobe</span>
+            </h2>
+            <p className="mt-6 text-xl text-white/60 leading-relaxed">
+              Một tập thể nhỏ nhưng mang hoài bão lớn: thay đổi cách mọi người tương tác với thời trang hàng ngày.
             </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {capabilities.map((item) => (
-              <article
-                key={item.title}
-                className="group rounded-[28px] border border-white/10 bg-white/5 p-7 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-white/20"
-              >
-                <div className="text-sm font-semibold tracking-[0.18em] text-white/40">{item.eyebrow}</div>
-                <h3 className="mt-4 text-2xl font-semibold text-white/92">{item.title}</h3>
-                <p className="mt-4 text-base leading-8 text-white/62">{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="py-10 md:py-16">
-          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
-            <div>
-              <div className="text-sm uppercase tracking-[0.22em] text-white/45">Cách chúng tôi làm việc</div>
-              <h2 className="mt-3 text-4xl font-bold text-white/95">Một đội ngũ liên ngành, cùng tập trung vào một mục tiêu rõ ràng</h2>
-              <p className="mt-5 text-lg leading-8 text-white/64">
-                Chúng tôi kết hợp tư duy sản phẩm, công nghệ AI và kỹ thuật nền tảng để tạo ra trải nghiệm có chiều sâu,
-                thay vì chỉ thêm AI như một lớp trang trí.
-              </p>
-
-              <div className="mt-8 space-y-4">
-                {principles.map((principle) => (
-                  <div
-                    key={principle}
-                    className="flex items-start gap-4 rounded-2xl border border-white/10 bg-black/20 px-5 py-4"
-                  >
-                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-indigo-400 to-emerald-400" />
-                    <p className="text-white/70">{principle}</p>
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-10 max-w-5xl mx-auto px-4">
+            {/* Thành viên 1 */}
+            <div className="group rounded-[36px] bg-gradient-to-br from-white/[0.06] to-transparent border border-white/5 hover:border-white/15 p-8 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
+                <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-indigo-500/10 to-transparent p-1">
+                  <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-indigo-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-pink-500/20 mix-blend-overlay"></div>
+                    <span className="text-white/30 text-xs font-semibold tracking-widest">[ ẢNH ]</span>
                   </div>
-                ))}
+                </div>
+                
+                <div className="text-center sm:text-left pt-2">
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-2xl font-bold text-white/95 group-hover:text-indigo-200 transition-colors">Anh Phạm</h3>
+                    <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-400 uppercase tracking-wider">
+                      Developer
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed text-white/60">
+                    Sinh viên năm 2 đam mê công nghệ ứng dụng thực tế. Đóng vai trò xây dựng hệ thống nền tảng vững chắc và kết nối thông suốt với trí tuệ nhân tạo.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-5">
-              {teamAreas.map((area) => (
-                <article
-                  key={area.label}
-                  className={`rounded-[28px] border border-white/10 bg-gradient-to-br ${area.accent} p-6 backdrop-blur-xl`}
-                >
-                  <div className="text-sm uppercase tracking-[0.18em] text-white/48">{area.label}</div>
-                  <h3 className="mt-3 text-2xl font-semibold leading-tight text-white/92">{area.title}</h3>
-                  <p className="mt-4 text-base leading-8 text-white/64">{area.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-10 md:py-16">
-          <div className="grid gap-6 md:grid-cols-3">
-            {pillars.map((pillar) => (
-              <div
-                key={pillar.title}
-                className="rounded-[26px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-[0_18px_50px_rgba(0,0,0,.24)]"
-              >
-                <h3 className="text-xl font-semibold text-white/92">{pillar.title}</h3>
-                <p className="mt-4 leading-8 text-white/62">{pillar.description}</p>
+            {/* Thành viên 2 */}
+            <div className="group rounded-[36px] bg-gradient-to-br from-white/[0.06] to-transparent border border-white/5 hover:border-white/15 p-8 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
+                <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-pink-500/10 to-transparent p-1">
+                  <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-pink-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-emerald-500/20 mix-blend-overlay"></div>
+                    <span className="text-white/30 text-xs font-semibold tracking-widest">[ ẢNH ]</span>
+                  </div>
+                </div>
+                
+                <div className="text-center sm:text-left pt-2">
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-2xl font-bold text-white/95 group-hover:text-pink-200 transition-colors">Chí Thành</h3>
+                    <div className="inline-block px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-xs font-medium text-pink-400 uppercase tracking-wider">
+                      Developer
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed text-white/60">
+                    Sinh viên năm 2 đam mê công nghệ ứng dụng thực tế. Mang đến những giải pháp tối ưu hệ thống, cấu trúc lại luồng dữ liệu ứng dụng.
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </section>
 
