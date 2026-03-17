@@ -410,7 +410,7 @@ Before running the project, make sure you have:
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/toilact/ai-digital-wardrobe
 cd ai-digital-wardrobe
 ```
 
