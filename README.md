@@ -2,7 +2,13 @@
   <img loading="lazy" src="./public/adw-logo-clean.png" alt="AI Digital Wardrobe Logo" height="150">
 </p>
 
-<h1 align="center">AI Digital Wardrobe</h1>
+<p align="center">
+  <img loading="lazy" src="./public/adw-logo-clean.png" alt="AI Digital Wardrobe Logo" height="150">
+</p>
+
+<p align="center">
+  <img loading="lazy" src="./public/readme-banner.jpg" alt="AI Digital Wardrobe Banner" width="100%">
+</p>
 
 <p align="center">
   An AI-powered digital wardrobe platform that helps users digitize personal clothing items, manage wardrobe inventories, and receive context-aware styling suggestions based on their wardrobe, body profile, and everyday use cases.
