@@ -1234,7 +1234,7 @@ export default function WardrobeStylistChat({
       );
     }
 
-    return <div className="h-[100svh] w-full overflow-hidden p-4 md:p-6">{loadingShell}</div>;
+    return <div className="h-full w-full overflow-hidden">{loadingShell}</div>;
   }
 
   const content = (
@@ -1267,7 +1267,7 @@ export default function WardrobeStylistChat({
   }
 
   return (
-    <div className="h-[100svh] w-full overflow-hidden p-4 md:p-6">
+    <div className="h-full w-full overflow-hidden">
       {content}
       {allSelectedModal}
       {messageImagesModal}

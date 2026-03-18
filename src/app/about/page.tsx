@@ -1,5 +1,8 @@
+"use client";
 import Link from "next/link";
 import StartButton from "@/components/StartButton";
+import { useState, useEffect } from "react";
+
 const pillars = [
   {
     title: "Cá nhân hóa thực sự",
@@ -65,11 +68,26 @@ const principles = [
   "Ưu tiên lời gợi ý rõ ràng, hữu ích cùng với hình ảnh minh họa trực quan để có thể giúp người dùng hình dung dễ dàng hơn outfit mình sẽ mặc.",
   "Kết hợp thời trang, dữ liệu và AI theo cách dễ hiểu, gần gũi và thực tế.",
 ];
+
 export default function About() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
-    <main className="pb-20">
+    <main className="min-h-screen relative text-white overflow-hidden pb-20">
+      {/* Background */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#070812] via-[#0b1020] to-[#0a0f18]" />
+      <div className="absolute inset-0 -z-10 opacity-50 bg-[radial-gradient(ellipse_1100px_600px_at_20%_-5%,rgba(99,102,241,0.28),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 opacity-45 bg-[radial-gradient(ellipse_800px_500px_at_80%_15%,rgba(236,72,153,0.18),transparent_60%)]" />
+      <div className="absolute inset-0 -z-10 opacity-[0.06] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
+
       <div className="wrap">
-        <section className="relative overflow-hidden py-16 md:py-24">
+        {/* Hero */}
+        <section className={`relative overflow-hidden py-16 md:py-24 transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
           <div className="absolute inset-x-0 top-8 -z-10 mx-auto h-72 w-[82%] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.22),rgba(236,72,153,0.12),transparent_70%)] blur-3xl" />
           <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
             <div>
@@ -134,7 +152,9 @@ export default function About() {
             </div>
           </div>
         </section>
-        <section className="py-10 md:py-16">
+
+        {/* Mission */}
+        <section className={`py-10 md:py-16 transition-all duration-700 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <div className="rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-[0_24px_80px_rgba(0,0,0,.36)] backdrop-blur-xl md:p-10">
             <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
               <div>
@@ -156,8 +176,9 @@ export default function About() {
             </div>
           </div>
         </section>
-        {/* --- Đội ngũ phát triển --- */}
-        <section className="py-16 md:py-28">
+
+        {/* Team */}
+        <section className={`py-16 md:py-28 transition-all duration-700 delay-300 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <div className="mb-16 text-center max-w-3xl mx-auto">
             <div className="text-base uppercase tracking-[0.22em] text-indigo-400 font-semibold mb-2">Đội ngũ phát triển</div>
             <h2 className="text-4xl md:text-5xl font-bold text-white/95 leading-tight">
@@ -174,6 +195,7 @@ export default function About() {
                 <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-indigo-500/10 to-transparent p-1">
                   <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-indigo-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-pink-500/20 mix-blend-overlay"></div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/dacanh.png" alt="" />
                   </div>
                 </div>
@@ -196,6 +218,7 @@ export default function About() {
                 <div className="w-32 h-32 shrink-0 rounded-full bg-gradient-to-br from-pink-500/10 to-transparent p-1">
                   <div className="w-full h-full rounded-full bg-[#151c2f] border border-white/10 overflow-hidden relative group-hover:border-pink-400/30 transition-colors duration-500 shadow-inner flex items-center justify-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-emerald-500/20 mix-blend-overlay"></div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/chithanh.png" alt="" />
                   </div>
                 </div>
@@ -214,7 +237,9 @@ export default function About() {
             </div>
           </div>
         </section>
-        <section className="py-12 md:py-20">
+
+        {/* Contact */}
+        <section className={`py-12 md:py-20 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(135deg,rgba(99,102,241,.16),rgba(236,72,153,.12),rgba(34,197,94,.12))] p-8 shadow-[0_26px_90px_rgba(0,0,0,.4)] backdrop-blur-xl md:p-10">
             <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
             <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">

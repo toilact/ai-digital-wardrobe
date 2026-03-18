@@ -103,7 +103,7 @@ export default function Header() {
                                 >
                                     {user.photoURL ? (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+                                        <img src={user.photoURL} alt="avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-sm font-semibold text-white/90">{initials}</span>
                                     )}

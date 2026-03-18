@@ -3,10 +3,7 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import {
-  type UserAccount,
-  upsertUserProfile,
-} from "@/lib/profile";
+import { upsertUserProfile } from "@/lib/profile";
 import AlertModal from "@/components/AlertModal";
 
 function emailPrefix(email?: string | null) {
@@ -15,151 +12,12 @@ function emailPrefix(email?: string | null) {
 
 type Gender = "male" | "female";
 
-function MetricCard({
-  code,
-  title,
-  range,
-  unit,
-  value,
-  onChange,
-  required,
-}: {
-  code: string;
-  title: string;
-  range: string;
-  unit: string;
-  value: number | "";
-  onChange: (v: number | "") => void;
-  required?: boolean;
-}) {
-  return (
-    <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
-      <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
-        <div className="pointer-events-none absolute -inset-24 opacity-40 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.35),transparent_60%)]" />
-
-        <div className="relative flex items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2">
-              <span className="text-[11px] tracking-[0.22em] text-white/55">{code}</span>
-              {required ? (
-                <span className="text-[11px] text-white/70 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
-                  REQUIRED
-                </span>
-              ) : (
-                <span className="text-[11px] text-white/55 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
-                  OPTIONAL
-                </span>
-              )}
-            </div>
-            <div className="mt-2 text-white/90 font-semibold">{title}</div>
-          </div>
-
-          <div className="text-[11px] text-white/50 px-2 py-1 rounded-full border border-white/10 bg-white/5">
-            {range}
-          </div>
-        </div>
-
-        <div className="relative mt-4 flex items-end gap-3">
-          <input
-            className="cy-num w-full bg-transparent outline-none border-0 text-[40px] leading-none font-semibold text-white tracking-wide tabular-nums
-                       focus:drop-shadow-[0_0_16px_rgba(56,189,248,.35)]"
-            type="number"
-            inputMode="numeric"
-            value={value}
-            onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-          />
-          <span className="mb-[6px] text-xs font-semibold text-white/70 px-3 py-1 rounded-full border border-white/10 bg-white/5">
-            {unit}
-          </span>
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-2xl opacity-70
-          [background:
-          linear-gradient(to_right,rgba(34,211,238,.55),transparent_35%)_top_left/28px_1px_no-repeat,
-          linear-gradient(to_bottom,rgba(34,211,238,.55),transparent_35%)_top_left/1px_28px_no-repeat,
-          linear-gradient(to_left,rgba(168,85,247,.55),transparent_35%)_top_right/28px_1px_no-repeat,
-          linear-gradient(to_bottom,rgba(168,85,247,.55),transparent_35%)_top_right/1px_28px_no-repeat,
-          linear-gradient(to_right,rgba(34,211,238,.28),transparent_35%)_bottom_left/28px_1px_no-repeat,
-          linear-gradient(to_top,rgba(34,211,238,.28),transparent_35%)_bottom_left/1px_28px_no-repeat,
-          linear-gradient(to_left,rgba(236,72,153,.28),transparent_35%)_bottom_right/28px_1px_no-repeat,
-          linear-gradient(to_top,rgba(236,72,153,.28),transparent_35%)_bottom_right/1px_28px_no-repeat]"
-        />
-      </div>
-    </div>
-  );
-}
-
-function GenderToggle({
-  value,
-  onChange,
-}: {
-  value: Gender;
-  onChange: (v: Gender) => void;
-}) {
-  return (
-    <div className="max-w-md mt-15">
-      <div className="rounded-2xl p-[1px] bg-gradient-to-br from-cyan-400/35 via-fuchsia-400/30 to-emerald-400/20">
-        <div className="relative cy-hud rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl px-5 py-4 shadow-[0_18px_55px_rgba(0,0,0,.35)] overflow-hidden">
-          <div className="pointer-events-none absolute -inset-24 opacity-30 blur-3xl bg-[radial-gradient(circle,rgba(56,189,248,.30),transparent_60%)]" />
-
-          <div className="relative flex items-start justify-between gap-3">
-            <div>
-              <div className="inline-flex items-center gap-2">
-                <span className="text-[11px] tracking-[0.22em] text-white/55">GENDER</span>
-                <span className="text-[11px] text-white/70 px-2 py-[2px] rounded-full border border-white/10 bg-white/5">
-                  REQUIRED
-                </span>
-              </div>
-              <div className="mt-2 text-white/90 font-semibold">Giới tính</div>
-            </div>
-
-            <div className="text-[11px] text-white/50 px-2 py-1 rounded-full border border-white/10 bg-white/5">
-              select
-            </div>
-          </div>
-
-          <div className="relative mt-4">
-            <div className="inline-flex w-full rounded-xl border border-white/10 bg-white/5 p-1">
-              <button
-                type="button"
-                onClick={() => onChange("male")}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === "male"
-                  ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
-                  : "text-white/60 hover:text-white/80"
-                  }`}
-              >
-                Nam
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChange("female")}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === "female"
-                  ? "bg-white/10 text-white border border-white/10 shadow-[0_0_18px_rgba(56,189,248,.18)]"
-                  : "text-white/60 hover:text-white/80"
-                  }`}
-              >
-                Nữ
-              </button>
-            </div>
-          </div>
-
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-2xl opacity-70
-            [background:
-            linear-gradient(to_right,rgba(34,211,238,.55),transparent_35%)_top_left/28px_1px_no-repeat,
-            linear-gradient(to_bottom,rgba(34,211,238,.55),transparent_35%)_top_left/1px_28px_no-repeat,
-            linear-gradient(to_left,rgba(168,85,247,.55),transparent_35%)_top_right/28px_1px_no-repeat,
-            linear-gradient(to_bottom,rgba(168,85,247,.55),transparent_35%)_top_right/1px_28px_no-repeat]"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+const STEPS = [
+  { key: "welcome", label: "Chào bạn" },
+  { key: "gender", label: "Giới tính" },
+  { key: "basics", label: "Thông tin cơ bản" },
+  { key: "measurements", label: "Số đo (tuỳ chọn)" },
+] as const;
 
 export default function OnboardingPage() {
   const { user, loading, profile, account, refreshProfile } = useAuth();
@@ -167,21 +25,21 @@ export default function OnboardingPage() {
 
   const [checking, setChecking] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [alertMsg, setAlertMsg] = useState("");
+  const [step, setStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const [gender, setGender] = useState<Gender>("male");
   const [age, setAge] = useState<number>(18);
   const [heightCm, setHeightCm] = useState<number>(165);
   const [weightKg, setWeightKg] = useState<number>(55);
 
-  const [bustCm, setBustCm] = useState<number | "">("");
-  const [waistCm, setWaistCm] = useState<number | "">("");
-  const [hipCm, setHipCm] = useState<number | "">("");
+  const [bustCm, setBustCm] = useState<number | "">(0);
+  const [waistCm, setWaistCm] = useState<number | "">(0);
+  const [hipCm, setHipCm] = useState<number | "">(0);
 
   useEffect(() => {
     if (!loading && !user) {
-      console.log("dong 180");
       router.replace("/");
     }
   }, [loading, user, router]);
@@ -192,19 +50,18 @@ export default function OnboardingPage() {
       setAge(profile.age || 18);
       setHeightCm(profile.heightCm || 165);
       setWeightKg(profile.weightKg || 55);
-
       if (profile.bustCm) setBustCm(profile.bustCm);
       if (profile.waistCm) setWaistCm(profile.waistCm);
       if (profile.hipCm) setHipCm(profile.hipCm);
     }
-    
-    // We only set checking to false either if loading is finished or profile is fetched
     if (!loading) {
       setChecking(false);
+      setTimeout(() => setMounted(true), 100);
     }
   }, [profile, loading]);
 
   const uname = account?.username || emailPrefix(account?.email || user?.email);
+  const displayName = account?.displayName || user?.displayName || uname;
 
   const ready = useMemo(() => {
     return age >= 10 && age <= 100 && heightCm >= 100 && heightCm <= 230 && weightKg >= 25 && weightKg <= 200;
@@ -215,7 +72,7 @@ export default function OnboardingPage() {
     if (age < 10 || age > 100) return "Tuổi không hợp lệ.";
     if (heightCm < 100 || heightCm > 230) return "Chiều cao không hợp lệ.";
     if (weightKg < 25 || weightKg > 200) return "Cân nặng không hợp lệ.";
-    const nums = [bustCm, waistCm, hipCm].filter((x) => x !== "") as number[];
+    const nums = [bustCm, waistCm, hipCm].filter((x) => x !== "" && x !== 0) as number[];
     if (nums.some((n) => n < 30 || n > 200)) return "Số đo 3 vòng không hợp lệ.";
     return null;
   };
@@ -246,160 +103,304 @@ export default function OnboardingPage() {
     }
   };
 
-  if (loading || checking) return <div className="p-6 text-white/70">Loading...</div>;
+  const nextStep = () => {
+    if (step === 2 && !ready) {
+      setAlertMsg("Vui lòng nhập thông tin hợp lệ trước khi tiếp tục.");
+      return;
+    }
+    if (step < STEPS.length - 1) setStep(step + 1);
+    else onSave();
+  };
+
+  const prevStep = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
+  if (loading || checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-indigo-400 rounded-full animate-spin" />
+          <span className="text-white/50 text-sm">Đang tải...</span>
+        </div>
+      </div>
+    );
+  }
   if (!user) return null;
 
   return (
     <div className="min-h-screen relative text-white overflow-hidden">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#0b1020] via-[#0a0f18] to-[#12061a]" />
-      <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,.25),transparent_55%)]" />
-      <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_85%_30%,rgba(168,85,247,.22),transparent_60%)]" />
-      <div className="absolute inset-0 -z-10 opacity-50 bg-[radial-gradient(circle_at_60%_85%,rgba(236,72,153,.16),transparent_60%)]" />
-      <div className="absolute inset-0 -z-10 opacity-[0.10] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
+      {/* Background */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#070812] via-[#0b1020] to-[#0a0f18]" />
+      <div className="absolute inset-0 -z-10 opacity-60 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,.22),transparent_55%)]" />
+      <div className="absolute inset-0 -z-10 opacity-55 bg-[radial-gradient(circle_at_85%_30%,rgba(168,85,247,.18),transparent_60%)]" />
+      <div className="absolute inset-0 -z-10 opacity-45 bg-[radial-gradient(circle_at_60%_85%,rgba(236,72,153,.14),transparent_60%)]" />
+      <div className="absolute inset-0 -z-10 opacity-[0.06] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
 
-      <header className="mx-auto w-full max-w-6xl px-6 pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-semibold leading-tight">
-              <span className="bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
-                AI Digital Wardrobe
-              </span>
-              <div className="mt-1 text-white/80 text-lg md:text-xl font-medium">
-                {checking ? "Loading..." : (age ? "Update Profile" : "Profile Init Console")}
-              </div>
-            </h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/55">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,.8)]" />
-                Secure session
-              </span>
-
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                UID: {user.uid.slice(0, 6)}…{user.uid.slice(-4)}
-              </span>
-
-              <span
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${ready
-                  ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"
-                  : "border-amber-300/20 bg-amber-400/10 text-amber-200"
-                  }`}
-              >
-                {ready ? "READY" : "CHECK"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end">
-              <div className="text-white/90 font-semibold">
-                Xin chào {account?.displayName || user.displayName || uname}
-              </div>
-              <div className="text-white/50 text-sm">@{uname}</div>
-            </div>
-          </div>
+      <div className="max-w-2xl mx-auto px-5 py-8 md:py-14">
+        {/* Header */}
+        <div className={`text-center mb-8 transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+          <h1 className="text-3xl md:text-4xl font-bold">
+            <span className="bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
+              Thiết lập hồ sơ
+            </span>
+          </h1>
+          <p className="text-white/50 mt-2 text-sm md:text-base">
+            Giúp AI hiểu bạn hơn để gợi ý outfit chuẩn xác nhất
+          </p>
         </div>
-      </header>
 
-      <main className="mx-auto w-full max-w-6xl px-6 pt-8 pb-10">
-        <div className="cy-hud-panel rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,.45)] overflow-hidden">
-          <div className="px-7 py-6 border-b border-white/10">
-            <div className="inline-flex items-center gap-2 text-xs tracking-[0.18em] text-white/60">
-              SYSTEM / PROFILE
-              <span className="px-2 py-[2px] rounded-full border border-white/10 bg-white/5 text-[11px] tracking-normal">
-                CORE REQUIRED
-              </span>
-            </div>
-            <div className="mt-3 text-2xl md:text-3xl font-semibold text-white">Nhập tất cả thông tin của bạn vào đây</div>
-
-          </div>
-
-          <div className="px-7">
-            <div className="mb-4">
-              <GenderToggle value={gender} onChange={setGender} />
-            </div>
-
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-              <MetricCard
-                code="AGE"
-                title="Tuổi"
-                range="10–100"
-                unit="years"
-                value={age}
-                onChange={(v) => setAge(v === "" ? 18 : v)}
-                required
-              />
-              <MetricCard
-                code="HEIGHT"
-                title="Chiều cao"
-                range="100–230"
-                unit="cm"
-                value={heightCm}
-                onChange={(v) => setHeightCm(v === "" ? 165 : v)}
-                required
-              />
-              <MetricCard
-                code="WEIGHT"
-                title="Cân nặng"
-                range="25–200"
-                unit="kg"
-                value={weightKg}
-                onChange={(v) => setWeightKg(v === "" ? 55 : v)}
-                required
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((s) => !s)}
-              className="mt-5 w-full flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/80 font-semibold hover:bg-white/10 transition"
-            >
-              <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,.7)]" />
-              Measurements (tuỳ chọn) • Mở số đo 3 vòng
-              <span className="ml-auto text-white/50">{advancedOpen ? "▾" : "▸"}</span>
-            </button>
-
-            {advancedOpen ? (
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <MetricCard code="BUST" title="Vòng 1" range="30–200" unit="cm" value={bustCm} onChange={setBustCm} />
-                <MetricCard code="WAIST" title="Vòng 2" range="30–200" unit="cm" value={waistCm} onChange={setWaistCm} />
-                <MetricCard code="HIP" title="Vòng 3" range="30–200" unit="cm" value={hipCm} onChange={setHipCm} />
-              </div>
-            ) : null}
-          </div>
-
-          <div className="sticky bottom-0 mt-6 border-t border-white/10 bg-[linear-gradient(to_top,rgba(9,12,20,.75),rgba(9,12,20,.25))] backdrop-blur-xl">
-            <div className="px-7 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
-              <div className="text-xs text-white/55 leading-relaxed">
-                {ready ? (
-                  <span>
-                    <span className="text-emerald-200 font-semibold">OK</span> • Lưu lại để AI bắt đầu gợi ý outfit.
-                  </span>
-                ) : (
-                  <span>
-                    <span className="text-amber-200 font-semibold">Chưa đủ</span> • Hãy nhập core metrics hợp lệ để tiếp tục.
-                  </span>
+        {/* Progress bar */}
+        <div className={`mb-8 transition-all duration-700 delay-100 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+          <div className="flex items-center justify-between mb-3">
+            {STEPS.map((s, i) => (
+              <div key={s.key} className="flex items-center">
+                <button
+                  onClick={() => { if (i <= step) setStep(i); }}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300
+                    ${i < step
+                      ? "bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-[0_0_12px_rgba(99,102,241,0.4)]"
+                      : i === step
+                        ? "bg-white/15 text-white border-2 border-indigo-400/60 shadow-[0_0_16px_rgba(99,102,241,0.25)]"
+                        : "bg-white/[0.06] text-white/30 border border-white/[0.08]"
+                    }`}
+                >
+                  {i < step ? "✓" : i + 1}
+                </button>
+                {i < STEPS.length - 1 && (
+                  <div className={`w-8 sm:w-16 md:w-20 h-0.5 mx-1 rounded transition-colors duration-300
+                    ${i < step ? "bg-gradient-to-r from-indigo-500 to-fuchsia-500" : "bg-white/[0.08]"}`}
+                  />
                 )}
               </div>
-
-              <button
-                onClick={onSave}
-                disabled={saving || !ready}
-                className="relative w-full sm:w-auto rounded-2xl px-5 py-3 font-semibold
-                           border border-cyan-300/25 bg-gradient-to-br from-indigo-500/35 via-fuchsia-500/25 to-cyan-400/20
-                           hover:border-cyan-300/40 hover:shadow-[0_18px_60px_rgba(0,0,0,.45)]
-                           transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {saving ? "Đang lưu..." : "Lưu & Tiếp tục"}
-              </button>
-            </div>
+            ))}
           </div>
-
-          <div className="px-7 pb-6 pt-3 text-[11px] text-white/40">
-            Tip: mày có thể để Measurements trống để demo nhanh, vẫn đủ “cyber vibe”.
+          <div className="text-center text-xs text-white/40">
+            Bước {step + 1}/{STEPS.length} — {STEPS[step].label}
           </div>
         </div>
-      </main>
+
+        {/* Step content card */}
+        <div className={`transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+          <div className="rounded-3xl p-[1px] bg-gradient-to-br from-indigo-500/25 via-fuchsia-500/15 to-cyan-500/20">
+            <div className="rounded-3xl bg-[#0c1025]/90 backdrop-blur-xl p-6 md:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+
+              {/* Step 0: Welcome */}
+              {step === 0 && (
+                <div className="text-center py-6">
+                  <div className="text-5xl mb-5">👋</div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white/92 mb-3">
+                    Xin chào, {displayName}!
+                  </h2>
+                  <p className="text-white/55 text-base leading-relaxed max-w-md mx-auto mb-6">
+                    Để AI có thể gợi ý trang phục phù hợp nhất, chúng mình cần biết thêm một chút về bạn. Chỉ mất khoảng <span className="text-cyan-300 font-semibold">30 giây</span> thôi!
+                  </p>
+                  <div className="flex flex-col gap-3 max-w-xs mx-auto text-left">
+                    <div className="flex items-center gap-3 text-sm text-white/65">
+                      <span className="w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/20 flex items-center justify-center text-xs">✨</span>
+                      Gợi ý outfit theo size thực tế
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-white/65">
+                      <span className="w-7 h-7 rounded-lg bg-fuchsia-500/15 border border-fuchsia-500/20 flex items-center justify-center text-xs">🎯</span>
+                      Phối đồ phù hợp vóc dáng
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-white/65">
+                      <span className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center text-xs">🔒</span>
+                      Thông tin được bảo mật hoàn toàn
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 1: Gender */}
+              {step === 1 && (
+                <div className="py-4">
+                  <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">⚧️</div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white/90 mb-2">Giới tính của bạn</h2>
+                    <p className="text-white/45 text-sm">Giúp AI đề xuất trang phục phù hợp hơn</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                    <button
+                      type="button"
+                      onClick={() => setGender("male")}
+                      className={`rounded-2xl p-6 text-center transition-all duration-300 border
+                        ${gender === "male"
+                          ? "bg-indigo-500/15 border-indigo-400/40 shadow-[0_0_20px_rgba(99,102,241,0.15)]"
+                          : "bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.14]"
+                        }`}
+                    >
+                      <div className="text-3xl mb-2">👨</div>
+                      <div className={`font-semibold ${gender === "male" ? "text-white" : "text-white/60"}`}>Nam</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender("female")}
+                      className={`rounded-2xl p-6 text-center transition-all duration-300 border
+                        ${gender === "female"
+                          ? "bg-fuchsia-500/15 border-fuchsia-400/40 shadow-[0_0_20px_rgba(236,72,153,0.15)]"
+                          : "bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.14]"
+                        }`}
+                    >
+                      <div className="text-3xl mb-2">👩</div>
+                      <div className={`font-semibold ${gender === "female" ? "text-white" : "text-white/60"}`}>Nữ</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Basic Info */}
+              {step === 2 && (
+                <div className="py-4">
+                  <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">📝</div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white/90 mb-2">Thông tin cơ bản</h2>
+                    <p className="text-white/45 text-sm">Nhập tuổi, chiều cao và cân nặng của bạn</p>
+                  </div>
+                  <div className="space-y-5 max-w-sm mx-auto">
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">
+                        🎂 Tuổi <span className="text-white/30">(10–100)</span>
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value === "" ? 18 : Number(e.target.value))}
+                        className="cy-num w-full rounded-xl bg-white/[0.05] border border-white/[0.10] px-4 py-3 text-lg font-semibold text-white
+                          outline-none focus:border-indigo-400/50 focus:bg-white/[0.07] transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">
+                        📏 Chiều cao <span className="text-white/30">(100–230 cm)</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={heightCm}
+                          onChange={(e) => setHeightCm(e.target.value === "" ? 165 : Number(e.target.value))}
+                          className="cy-num w-full rounded-xl bg-white/[0.05] border border-white/[0.10] px-4 py-3 pr-14 text-lg font-semibold text-white
+                            outline-none focus:border-indigo-400/50 focus:bg-white/[0.07] transition-all"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-white/40 font-medium">cm</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">
+                        ⚖️ Cân nặng <span className="text-white/30">(25–200 kg)</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={weightKg}
+                          onChange={(e) => setWeightKg(e.target.value === "" ? 55 : Number(e.target.value))}
+                          className="cy-num w-full rounded-xl bg-white/[0.05] border border-white/[0.10] px-4 py-3 pr-14 text-lg font-semibold text-white
+                            outline-none focus:border-indigo-400/50 focus:bg-white/[0.07] transition-all"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-white/40 font-medium">kg</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Measurements (optional) */}
+              {step === 3 && (
+                <div className="py-4">
+                  <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">📐</div>
+                    <h2 className="text-xl md:text-2xl font-bold text-white/90 mb-2">Số đo 3 vòng</h2>
+                    <p className="text-white/45 text-sm">Tuỳ chọn — bỏ qua nếu bạn không biết chính xác</p>
+                  </div>
+                  <div className="space-y-5 max-w-sm mx-auto">
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">
+                        Vòng 1 (Bust) <span className="text-white/30">cm</span>
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={bustCm}
+                        placeholder="Bỏ trống nếu không biết"
+                        onChange={(e) => setBustCm(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="cy-num w-full rounded-xl bg-white/[0.05] border border-white/[0.10] px-4 py-3 text-lg font-semibold text-white
+                          outline-none focus:border-indigo-400/50 focus:bg-white/[0.07] transition-all placeholder:text-white/25 placeholder:font-normal placeholder:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">
+                        Vòng 2 (Waist) <span className="text-white/30">cm</span>
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={waistCm}
+                        placeholder="Bỏ trống nếu không biết"
+                        onChange={(e) => setWaistCm(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="cy-num w-full rounded-xl bg-white/[0.05] border border-white/[0.10] px-4 py-3 text-lg font-semibold text-white
+                          outline-none focus:border-indigo-400/50 focus:bg-white/[0.07] transition-all placeholder:text-white/25 placeholder:font-normal placeholder:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-white/60 mb-2">
+                        Vòng 3 (Hip) <span className="text-white/30">cm</span>
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={hipCm}
+                        placeholder="Bỏ trống nếu không biết"
+                        onChange={(e) => setHipCm(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="cy-num w-full rounded-xl bg-white/[0.05] border border-white/[0.10] px-4 py-3 text-lg font-semibold text-white
+                          outline-none focus:border-indigo-400/50 focus:bg-white/[0.07] transition-all placeholder:text-white/25 placeholder:font-normal placeholder:text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation buttons */}
+              <div className="flex items-center justify-between mt-6 pt-5 border-t border-white/[0.06]">
+                <button
+                  onClick={prevStep}
+                  disabled={step === 0}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-white/[0.10] bg-white/[0.04] text-white/70
+                    hover:bg-white/[0.08] hover:border-white/[0.18] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ← Quay lại
+                </button>
+
+                <button
+                  onClick={nextStep}
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all
+                    border border-cyan-300/25 bg-gradient-to-br from-indigo-500/40 via-fuchsia-500/30 to-cyan-400/25
+                    hover:border-cyan-300/40 hover:shadow-[0_8px_24px_rgba(99,102,241,0.2)]
+                    disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                >
+                  {saving ? "Đang lưu..." : step === STEPS.length - 1 ? "Hoàn tất ✓" : "Tiếp tục →"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Skip link for step 3 */}
+        {step === 3 && (
+          <div className="text-center mt-4">
+            <button
+              onClick={onSave}
+              disabled={saving}
+              className="text-sm text-white/40 hover:text-white/60 transition-colors underline underline-offset-4"
+            >
+              Bỏ qua, lưu và tiếp tục
+            </button>
+          </div>
+        )}
+      </div>
       <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
     </div>
   );

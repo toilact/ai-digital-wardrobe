@@ -73,6 +73,17 @@
     }
 }
 
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 16px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
 .wrap {
     max-width: 1120px;
     margin: 0 auto;

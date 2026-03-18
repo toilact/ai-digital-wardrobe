@@ -3,20 +3,37 @@ import Link from "next/link";
 import VipBuyButton from "@/components/VipBuyButton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import { useState, useEffect } from "react";
+
 export default function Services() {
     const router = useRouter();
     const { user } = useAuth();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 50);
+        return () => clearTimeout(t);
+    }, []);
+
     return (
-        <main>
-                        <div className="wrap">
-                <section className="text-center py-10   ">
-                    <h1 className="text-5xl font-bold grad-text mb-4">
-                        Gói Dịch Vụ
-                    </h1>
-                    <p className="text-xl text-gray-300 mb-12">
-                        Chọn gói dịch vụ phù hợp nhất với nhu cầu quản lý tủ đồ của bạn
-                    </p>
-                    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <main className="min-h-screen relative text-white overflow-hidden">
+            {/* Background */}
+            <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#070812] via-[#0b1020] to-[#0a0f18]" />
+            <div className="absolute inset-0 -z-10 opacity-50 bg-[radial-gradient(ellipse_1100px_600px_at_20%_-5%,rgba(99,102,241,0.28),transparent_55%)]" />
+            <div className="absolute inset-0 -z-10 opacity-45 bg-[radial-gradient(ellipse_800px_500px_at_80%_15%,rgba(236,72,153,0.18),transparent_60%)]" />
+            <div className="absolute inset-0 -z-10 opacity-[0.06] [background-image:linear-gradient(to_right,rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:56px_56px]" />
+
+            <div className="wrap">
+                <section className="text-center py-10">
+                    <div className={`transition-all duration-700 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+                        <h1 className="text-5xl font-bold grad-text mb-4">
+                            Gói Dịch Vụ
+                        </h1>
+                        <p className="text-xl text-gray-300 mb-12">
+                            Chọn gói dịch vụ phù hợp nhất với nhu cầu quản lý tủ đồ của bạn
+                        </p>
+                    </div>
+                    <div className={`grid md:grid-cols-2 gap-8 max-w-5xl mx-auto transition-all duration-700 delay-200 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
                         {/* Tài khoản thường */}
                         <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-3xl p-8 flex flex-col text-left shadow-lg">
                             <h2 className="text-2xl font-bold text-white mb-2">Tài khoản Thường</h2>
