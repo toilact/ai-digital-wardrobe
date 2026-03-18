@@ -238,6 +238,22 @@ export default function About() {
           </div>
         </section>
 
+        {/* About Image Layer */}
+        <section className={`py-8 md:py-14 transition-all duration-700 delay-[400ms] ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
+          <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] p-3 shadow-[0_24px_80px_rgba(0,0,0,.32)] backdrop-blur-xl md:p-4">
+            <div className="absolute inset-x-10 top-0 h-32 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.18),rgba(236,72,153,0.08),transparent_72%)] blur-3xl" />
+            <div className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[#0a1020]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/about-image.jpg"
+                alt="AI Digital Wardrobe overview"
+                className="w-full h-auto object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#08101f]/45 via-transparent to-transparent pointer-events-none" />
+            </div>
+          </div>
+        </section>
+
         {/* Contact */}
         <section className={`py-12 md:py-20 transition-all duration-700 delay-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
           <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(135deg,rgba(99,102,241,.16),rgba(236,72,153,.12),rgba(34,197,94,.12))] p-8 shadow-[0_26px_90px_rgba(0,0,0,.4)] backdrop-blur-xl md:p-10">

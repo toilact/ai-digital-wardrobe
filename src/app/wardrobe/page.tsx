@@ -67,11 +67,19 @@ export default function WardrobePage() {
         console.error(e);
       } finally {
         setFetching(false);
-        setMounted(true);
       }
     };
     if (!loading && user) run();
   }, [loading, user]);
+
+  useEffect(() => {
+    if (loading || fetching) {
+      setMounted(false);
+      return;
+    }
+    const t = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(t);
+  }, [loading, fetching]);
 
   const grouped = useMemo(() => {
     const g: Record<CatKey, WardrobeItem[]> = { ao: [], quan: [], vay: [], dam: [], giay: [] };
@@ -195,8 +203,10 @@ export default function WardrobePage() {
               {activeList.map((it, idx) => (
                 <div
                   key={it.id}
-                  className="border border-white/10 bg-white/[0.03] rounded-xl overflow-hidden relative shadow-lg hover:border-white/20 transition-all group"
-                  style={{ animationDelay: `${idx * 60}ms` }}
+                  className={`border border-white/10 bg-white/[0.03] rounded-xl overflow-hidden relative shadow-lg hover:border-white/20 transition-all duration-700 group ${
+                    mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                  }`}
+                  style={{ transitionDelay: `${360 + idx * 70}ms` }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={it.imageUrl} alt="item" className="w-full h-64 object-contain p-2" />

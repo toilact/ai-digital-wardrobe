@@ -95,7 +95,7 @@ export default function WardrobeUploadPage() {
                     <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
                     WARDROBE SCAN STUDIO
                   </div>
-                  <h1 className="text-[clamp(1.6rem,3.6vw,2.6rem)] font-black leading-[1.02] tracking-[-0.02em] [font-family:'Space_Grotesk','Plus_Jakarta_Sans',ui-sans-serif] text-white">
+                  <h1 className="text-[clamp(1.6rem,3.6vw,2.6rem)] font-black leading-[1.02] tracking-[-0.02em]  text-white">
                     Upload vào tủ đồ
                   </h1>
                   <p className="mt-2 text-sm md:text-base text-white/60">

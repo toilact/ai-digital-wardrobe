@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { hasActiveVip } from "@/lib/profile";
 
@@ -75,6 +75,7 @@ const features = [
 export default function Dashboard() {
   const { user, loading, profile, account } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -85,6 +86,15 @@ export default function Dashboard() {
       }
     }
   }, [loading, user, profile, router]);
+
+  useEffect(() => {
+    if (loading || !user || !profile) {
+      setMounted(false);
+      return;
+    }
+    const t = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(t);
+  }, [loading, user, profile]);
 
   if (loading) {
     return (
@@ -100,7 +110,6 @@ export default function Dashboard() {
 
   const displayName = account?.displayName || user.displayName || emailPrefix(user.email);
   const vipActive = hasActiveVip(account ?? profile ?? null);
-  const mounted = !loading && !!user && !!profile;
 
 
   return (
@@ -157,16 +166,18 @@ export default function Dashboard() {
 
         {/* ── Feature Cards Grid ───────── */}
         <section className={`grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-7 transition-all duration-700 delay-300 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-          {features.map((f) => (
+          {features.map((f, idx) => (
             <Link
               key={f.href}
               href={f.href}
               className={`group relative rounded-[22px] overflow-hidden
                 border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm
                 shadow-[0_20px_60px_rgba(0,0,0,0.4)]
-                transition-all duration-400
+                transition-all duration-700
+                ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}
                 hover:border-white/[0.16] hover:-translate-y-2
                 ${f.borderGlow}`}
+              style={{ transitionDelay: `${360 + idx * 90}ms` }}
             >
               {/* Card top glow */}
               <div className={`absolute inset-0 -z-[1] opacity-0 group-hover:opacity-100 transition-opacity duration-500

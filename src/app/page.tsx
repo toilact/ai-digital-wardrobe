@@ -152,12 +152,8 @@ export default function Home() {
 
                   <div className="absolute inset-0 bg-[#12182b]/80 border border-white/20 rounded-3xl flex items-center justify-center z-10 overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all duration-500 hover:border-white/40 group-hover/image:scale-[1.02]">
                     <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent"></div>
-                    <div className="text-center p-6 relative">
-                      <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <span className="text-2xl">✨</span>
-                      </div>
-                      <span className="text-white/80 tracking-widest text-sm font-semibold block mb-1">AI STYLING</span>
-                      <span className="text-white/40 text-xs">Phân tích & Phối đồ</span>
+                    <div className="text-center relative">
+                      <img src="chat-image.png" alt="" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 </div>
