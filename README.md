@@ -3,10 +3,6 @@
 </p>
 
 <p align="center">
-  <img loading="lazy" src="./public/adw-logo-clean.png" alt="AI Digital Wardrobe Logo" height="150">
-</p>
-
-<p align="center">
   <img loading="lazy" src="./public/readme-banner.jpg" alt="AI Digital Wardrobe Banner" width="100%">
 </p>
 
