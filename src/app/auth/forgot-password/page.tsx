@@ -1,20 +1,15 @@
 "use client";
-
-import Header from "@/components/Header";
 import AlertModal from "@/components/AlertModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FiArrowRight, FiKey, FiLock, FiMail, FiUser } from "react-icons/fi";
-
 export default function ForgotPasswordPage() {
   const router = useRouter();
-
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [loadingSend, setLoadingSend] = useState(false);
   const [loadingReset, setLoadingReset] = useState(false);
   const [sent, setSent] = useState(false);
@@ -22,32 +17,25 @@ export default function ForgotPasswordPage() {
   const [errorSend, setErrorSend] = useState("");
   const [errorReset, setErrorReset] = useState("");
   const [alertMsg, setAlertMsg] = useState("");
-
   const onSendCode = async () => {
     setErrorSend("");
     const uname = username.trim().toLowerCase();
-
     if (!uname) {
       setErrorSend("Nhập tên đăng nhập.");
       return;
     }
-
     setLoadingSend(true);
     setMessage("");
-
     try {
       const res = await fetch("/api/auth/forgot-password/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: uname }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(data?.error || "Không gửi được mã xác nhận.");
       }
-
       setSent(true);
       setMessage(
         data?.message ||
@@ -59,12 +47,10 @@ export default function ForgotPasswordPage() {
       setLoadingSend(false);
     }
   };
-
   const onResetPassword = async () => {
     setErrorReset("");
     setMessage("");
     const uname = username.trim().toLowerCase();
-
     if (!uname) return setErrorReset("Nhập tên đăng nhập.");
     if (!code) return setErrorReset("Nhập mã xác nhận.");
     if (!newPassword) return setErrorReset("Nhập mật khẩu mới.");
@@ -74,9 +60,7 @@ export default function ForgotPasswordPage() {
     if (newPassword !== confirmPassword) {
       return setErrorReset("Mật khẩu nhập lại không khớp.");
     }
-
     setLoadingReset(true);
-
     try {
       const res = await fetch("/api/auth/forgot-password/reset", {
         method: "POST",
@@ -87,13 +71,10 @@ export default function ForgotPasswordPage() {
           newPassword,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(data?.error || "Không đặt lại được mật khẩu.");
       }
-
       setAlertMsg("Đặt lại mật khẩu thành công. Hãy đăng nhập lại.");
     } catch (err: any) {
       setErrorReset(err?.message || "Không đặt lại được mật khẩu.");
@@ -101,15 +82,12 @@ export default function ForgotPasswordPage() {
       setLoadingReset(false);
     }
   };
-
   return (
     <main className="relative overflow-hidden text-white">
       <div className="absolute inset-0 -z-20 bg-[linear-gradient(135deg,#060816_0%,#0a1224_42%,#14081f_100%)]" />
       <div className="absolute inset-0 -z-20 opacity-70 bg-[radial-gradient(circle_at_15%_18%,rgba(56,189,248,.18),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(217,70,239,.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(16,185,129,.10),transparent_32%)]" />
       <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
-
-      <Header />
-      <AlertModal 
+            <AlertModal 
         isOpen={!!alertMsg} 
         message={alertMsg} 
         onClose={() => {
@@ -120,13 +98,11 @@ export default function ForgotPasswordPage() {
           }
         }} 
       />
-
       <section className="wrap">
         <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
           <div className="relative w-full max-w-[440px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
-
             <div className="relative z-10">
               <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -137,18 +113,15 @@ export default function ForgotPasswordPage() {
                   draggable={false}
                 />
               </div>
-
               <div className="text-center">
                 <h1 className="forgot-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Quên mật khẩu
                 </h1>
-
                 <p className="mx-auto mt-1 max-w-[450px] text-sm leading-7 text-white/60 md:text-[15px]">
                   Nhập tên đăng nhập để nhận mã xác nhận qua email đã đăng ký,
                   sau đó đặt lại mật khẩu mới cho tài khoản của bạn.
                 </p>
               </div>
-
               <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
                 <div className="space-y-3">
                   <div>
@@ -166,9 +139,7 @@ export default function ForgotPasswordPage() {
                       />
                     </div>
                   </div>
-
                   {errorSend && <p className="text-sm text-red-500">{errorSend}</p>}
-
                   <button
                     onClick={onSendCode}
                     disabled={loadingSend}
@@ -185,13 +156,11 @@ export default function ForgotPasswordPage() {
                       </>
                     )}
                   </button>
-
                   {message ? (
                     <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-4 py-2 text-sm leading-6 text-emerald-200/90">
                       {message}
                     </div>
                   ) : null}
-
                   <div className="my-1 flex items-center gap-4">
                     <div className="h-px flex-1 bg-white/10" />
                     <span className="text-xs font-medium uppercase tracking-[0.24em] text-white/35">
@@ -199,7 +168,6 @@ export default function ForgotPasswordPage() {
                     </span>
                     <div className="h-px flex-1 bg-white/10" />
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Mã xác nhận
@@ -215,7 +183,6 @@ export default function ForgotPasswordPage() {
                       />
                     </div>
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu mới
@@ -231,7 +198,6 @@ export default function ForgotPasswordPage() {
                       />
                     </div>
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Nhập lại mật khẩu mới
@@ -247,9 +213,7 @@ export default function ForgotPasswordPage() {
                       />
                     </div>
                   </div>
-
                   {errorReset && <p className="text-sm text-red-500">{errorReset}</p>}
-
                   <button
                     onClick={onResetPassword}
                     disabled={loadingReset}
@@ -261,7 +225,6 @@ export default function ForgotPasswordPage() {
                     )}
                   </button>
                 </div>
-
                 <p className="mt-3 text-center text-sm text-white/55">
                   Nhớ lại mật khẩu rồi?{" "}
                   <Link
@@ -276,7 +239,6 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
       </section>
-
       <style jsx>{`
         .forgot-title {
           background: linear-gradient(
@@ -294,7 +256,6 @@ export default function ForgotPasswordPage() {
           animation: titleShine 5s ease-in-out infinite;
           filter: drop-shadow(0 0 10px rgba(103, 232, 249, 0.1));
         }
-
         @keyframes titleShine {
           0% {
             background-position: 0% 50%;

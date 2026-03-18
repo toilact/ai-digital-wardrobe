@@ -39,7 +39,7 @@ export async function generateVisualGemini(input: {
 
     const systemText = `
 ROLE:
-You are a professional Asian fashion stylist and prompt engineer.
+You are a professional ASIAN fashion stylist and prompt engineer.
 
 USER PROFILE:
 The user gender is: ${userGender}.
@@ -83,8 +83,8 @@ For each image:
 3) IMAGEN PROMPT:
 Create a highly detailed English prompt describing:
 - A featureless, faceless white plastic ${userGender} mannequin with a smooth surface (no human facial features, no eyes, no nose, no mouth).
-- The mannequin is made of solid opaque white plastic, matching ${userGender} body proportions .
-- Wearing EXACTLY the selected garments.
+- The mannequin is made of solid opaque white plastic, matching ${userGender} body proportions (add more details about the body proportions here).
+- Wearing EXACTLY the selected garments (demonstrate the details of the garments).
 - Full body shot from head to toe.
 - Standing upright in a rigid, neutral pose with arms relaxed at sides.
 - Professional studio lighting highlighting the plastic texture and garment fabric.

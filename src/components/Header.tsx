@@ -5,8 +5,6 @@ import ProfileDrawer from "./ProfileDrawer";
 import { useState, useEffect } from "react";
 import AlertModal from "./AlertModal";
 import {
-    getUserAccount,
-    getUserProfile,
     hasActiveVip,
     type UserAccount,
     type UserProfile,
@@ -27,11 +25,9 @@ function initialsFrom(name?: string | null, email?: string | null) {
 }
 
 export default function Header() {
-    const { user } = useAuth();
+    const { user, profile, account } = useAuth();
     const [profileOpen, setProfileOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [account, setAccount] = useState<UserAccount | null>(null);
     const [alertMsg, setAlertMsg] = useState("");
 
     const resolvedEmail = account?.email || user?.email;
@@ -39,23 +35,9 @@ export default function Header() {
     const initials = initialsFrom(resolvedDisplayName, resolvedEmail);
     const vipActive = hasActiveVip(account ?? profile ?? null);
 
-    useEffect(() => {
-        if (!user) return;
-
-        Promise.all([
-            getUserProfile(user.uid),
-            getUserAccount(user.uid),
-        ])
-            .then(([nextProfile, nextAccount]) => {
-                setProfile(nextProfile);
-                setAccount(nextAccount);
-            })
-            .catch(() => { });
-    }, [user]);
-
     return (
         <>
-            <header className="sticky top-0 z-40 bg-white/5 backdrop-blur-md border-b border-white/10 shadow-lg">
+            <header className="sticky top-0 z-40 bg-gray-800/60 backdrop-blur-md border-b border-white/10 shadow-lg">
                 <div className="flex justify-between items-center py-2 px-6 relative max-w-[1400px] mx-auto">
                     {/* Tên trang web bên trái */}
                     <div className="text-2xl font-bold grad-text z-10">

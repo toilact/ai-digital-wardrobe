@@ -1,18 +1,14 @@
 "use client";
-
-import Header from "@/components/Header";
 import Link from "next/link";
 import VipBuyButton from "@/components/VipBuyButton";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-
 export default function Services() {
     const router = useRouter();
     const { user } = useAuth();
     return (
         <main>
-            <Header />
-            <div className="wrap">
+                        <div className="wrap">
                 <section className="text-center py-10   ">
                     <h1 className="text-5xl font-bold grad-text mb-4">
                         Gói Dịch Vụ
@@ -20,7 +16,6 @@ export default function Services() {
                     <p className="text-xl text-gray-300 mb-12">
                         Chọn gói dịch vụ phù hợp nhất với nhu cầu quản lý tủ đồ của bạn
                     </p>
-
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                         {/* Tài khoản thường */}
                         <div className="bg-white/5 border border-white/10 backdrop-blur-lg hover:border-white/20 transition-all rounded-3xl p-8 flex flex-col text-left shadow-lg">
@@ -29,7 +24,6 @@ export default function Services() {
                             <p className="text-gray-300 mb-8 flex-1">
                                 Trải nghiệm các tính năng cơ bản của AI Digital Wardrobe để bắt đầu hành trình quản lý thời trang cá nhân.
                             </p>
-
                             <ul className="space-y-4 mb-8">
                                 <li className="flex items-start text-gray-300">
                                     <svg className="w-6 h-6 text-green-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -50,7 +44,6 @@ export default function Services() {
                                     Số lượt gợi ý trang phục: 1 lần/ ngày
                                 </li>
                             </ul>
-
                             <button
                                 onClick={() => router.push(user ? "/dashboard" : "/auth/login")}
                                 className="w-full text-center bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
@@ -58,7 +51,6 @@ export default function Services() {
                                 Trải nghiệm ngay
                             </button>
                         </div>
-
                         {/* Tài khoản VIP */}
                         <div className="relative bg-gradient-to-b from-blue-900/40 to-pink-900/20 border border-blue-500/30 backdrop-blur-lg hover:border-blue-400/50 transition-all rounded-3xl p-8 flex flex-col text-left shadow-[0_0_40px_rgba(59,130,246,0.15)] transform md:-translate-y-4">
                             <div className="absolute top-0 right-8 transform -translate-y-1/2">
@@ -66,7 +58,6 @@ export default function Services() {
                                     Phổ biến nhất
                                 </span>
                             </div>
-
                             <h2 className="text-2xl font-bold text-white mb-2">Tài khoản VIP</h2>
                             <div className="flex items-baseline mb-6">
                                 <span className="text-4xl font-bold grad-text">25.000đ</span>
@@ -75,7 +66,6 @@ export default function Services() {
                             <p className="text-gray-300 mb-8 flex-1">
                                 Mở khóa sức mạnh tối đa của AI với không gian mở rộng và gợi ý chuyên sâu.
                             </p>
-
                             <ul className="space-y-4 mb-8">
                                 <li className="flex items-start text-white/90">
                                     <svg className="w-6 h-6 text-pink-500 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

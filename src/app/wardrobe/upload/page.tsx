@@ -1,29 +1,22 @@
 "use client";
-
 import WardrobeUploader from "@/components/WardrobeUploader";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import Header from "@/components/Header";
-
 export default function WardrobeUploadPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-
   const [isUploading, setIsUploading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
   // ✅ Redirect phải nằm trong useEffect, không được router.replace trong render
   useEffect(() => {
     if (!loading && !user) {
       router.replace("/");
     }
   }, [loading, user, router]);
-
   // ✅ Hooks luôn phải chạy trước mọi return
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | null = null;
-
     if (showSuccess) {
       t = setTimeout(() => {
         setShowSuccess(false);
@@ -31,19 +24,15 @@ export default function WardrobeUploadPage() {
         router.push("/wardrobe");
       }, 1000);
     }
-
     return () => {
       if (t) clearTimeout(t);
     };
   }, [showSuccess, router]);
-
   if (loading) return <div className="p-6">Loading...</div>;
   if (!user) return null; // đang redirect
-
   return (
     <main>
-      <Header />
-      <div className="wrap">
+            <div className="wrap">
         <div className="dashboard-container">
           <div className="wrap pt-5">
             <header className="mb-5">
@@ -59,7 +48,6 @@ export default function WardrobeUploadPage() {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-400 via-fuchsia-400 to-emerald-300 bg-clip-text text-transparent">
                   Upload vào tủ đồ
                 </h1>
-
                 <button
                   onClick={() => router.push("/wardrobe")}
                   disabled={isUploading}
@@ -70,7 +58,6 @@ export default function WardrobeUploadPage() {
                 </button>
               </div>
             </header>
-
             <section style={{ marginTop: 18 }}>
               <div className="card">
                 <div className="content">
@@ -80,7 +67,6 @@ export default function WardrobeUploadPage() {
                       Chọn ảnh, AI sẽ tự tách từng item và bạn có thể lưu vào tủ đồ.
                     </p>
                   </div>
-
                   <WardrobeUploader
                     onUploadingChange={setIsUploading}
                     onUploadSuccess={() => setShowSuccess(true)}
@@ -88,7 +74,6 @@ export default function WardrobeUploadPage() {
                 </div>
               </div>
             </section>
-
             {/* full-screen overlay to block interactions while processing/parsing */}
             {isUploading && (
               <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto">

@@ -4,8 +4,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  getUserAccount,
-  getUserProfile,
   type UserAccount,
   upsertUserProfile,
 } from "@/lib/profile";
@@ -164,13 +162,12 @@ function GenderToggle({
 }
 
 export default function OnboardingPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile, account, refreshProfile } = useAuth();
   const router = useRouter();
 
   const [checking, setChecking] = useState(true);
   const [saving, setSaving] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [account, setAccount] = useState<UserAccount | null>(null);
   const [alertMsg, setAlertMsg] = useState("");
 
   const [gender, setGender] = useState<Gender>("male");
@@ -190,38 +187,22 @@ export default function OnboardingPage() {
   }, [loading, user, router]);
 
   useEffect(() => {
-    const run = async () => {
-      if (!user) return;
+    if (profile) {
+      setGender(profile.gender || "male");
+      setAge(profile.age || 18);
+      setHeightCm(profile.heightCm || 165);
+      setWeightKg(profile.weightKg || 55);
 
-      try {
-        const [accountDoc, p] = await Promise.all([
-          getUserAccount(user.uid),
-          getUserProfile(user.uid),
-        ]);
-
-        setAccount(accountDoc);
-
-        if (p) {
-          setGender(p.gender || "male");
-          setAge(p.age || 18);
-          setHeightCm(p.heightCm || 165);
-          setWeightKg(p.weightKg || 55);
-
-          if (p.bustCm) setBustCm(p.bustCm);
-          if (p.waistCm) setWaistCm(p.waistCm);
-          if (p.hipCm) setHipCm(p.hipCm);
-
-
-        }
-      } catch (e) {
-        console.error("Lỗi lấy profile:", e);
-      } finally {
-        setChecking(false);
-      }
-    };
-
-    if (!loading && user) run();
-  }, [loading, user]);
+      if (profile.bustCm) setBustCm(profile.bustCm);
+      if (profile.waistCm) setWaistCm(profile.waistCm);
+      if (profile.hipCm) setHipCm(profile.hipCm);
+    }
+    
+    // We only set checking to false either if loading is finished or profile is fetched
+    if (!loading) {
+      setChecking(false);
+    }
+  }, [profile, loading]);
 
   const uname = account?.username || emailPrefix(account?.email || user?.email);
 
@@ -255,6 +236,7 @@ export default function OnboardingPage() {
         waistCm: waistCm === "" ? 0 : waistCm,
         hipCm: hipCm === "" ? 0 : hipCm,
       });
+      await refreshProfile();
       router.replace("/dashboard");
     } catch (e) {
       console.error(e);

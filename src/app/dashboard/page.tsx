@@ -5,9 +5,7 @@ import LogoutButton from "@/components/LogoutButton";
 import ProfileDrawer from "@/components/ProfileDrawer";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getUserProfile, type UserProfile } from "@/lib/profile";
 import Link from "next/link";
-import Header from "@/components/Header";
 
 function emailPrefix(email?: string | null) {
   return (email || "").split("@")[0] || "";
@@ -22,51 +20,29 @@ function initialsFrom(name?: string | null, email?: string | null) {
 }
 
 export default function Dashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
   const router = useRouter();
-
-  const [checkingProfile, setCheckingProfile] = useState(true);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/");
-  }, [loading, user, router]);
-
-  useEffect(() => {
-    const run = async () => {
-      if (!user) return;
-
-      try {
-        const p = await getUserProfile(user.uid);
-
-        if (!p) {
-          router.replace("/onboarding");
-          return;
-        }
-
-        setProfile(p);
-        setCheckingProfile(false);
-      } catch (e) {
-        console.error(e);
+    if (!loading) {
+      if (!user) {
+        router.replace("/");
+      } else if (!profile) {
         router.replace("/onboarding");
-        return;
       }
-    };
+    }
+  }, [loading, user, profile, router]);
 
-    if (!loading && user) run();
-  }, [loading, user, router]);
-
-  if (loading || checkingProfile) return <div className="p-6">Loading...</div>;
-  if (!user) return null;
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!user || !profile) return null;
 
   const uname = emailPrefix(user.email);
   const initials = initialsFrom(user.displayName, user.email);
 
   return (
     <main>
-      <Header />
       <div className="wrap">
         <div className="dashboard-container pt-5">
           <div className="hero-left text-center">

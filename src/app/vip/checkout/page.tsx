@@ -1,14 +1,11 @@
 // src/app/vip/checkout/page.tsx
 "use client";
 /* eslint-disable @next/next/no-img-element */
-
-import Header from "@/components/Header";
 import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-
 type VipOrder = {
   id: string;
   uid: string;
@@ -22,39 +19,31 @@ type VipOrder = {
   markedPaidAt: string | null;
   approvedAt: string | null;
 };
-
 function VipCheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-
   const orderId = searchParams.get("orderId");
-
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState<VipOrder | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"momo" | "mb" | null>(null);
   const [alertMsg, setAlertMsg] = useState("");
-
   const momoQrImage =
     process.env.NEXT_PUBLIC_VIP_MOMO_QR_IMAGE || "/payments/momo-qr.png";
   const momoName = process.env.NEXT_PUBLIC_VIP_MOMO_NAME || "CHU TAI KHOAN";
   const momoPhone = process.env.NEXT_PUBLIC_VIP_MOMO_PHONE || "0900000000";
-
   const mbBankCode = process.env.NEXT_PUBLIC_VIP_MB_BANK_CODE || "MB";
   const mbAccountNo = process.env.NEXT_PUBLIC_VIP_MB_ACCOUNT_NO || "";
   const mbAccountName =
     process.env.NEXT_PUBLIC_VIP_MB_ACCOUNT_NAME || "CHU TAI KHOAN";
-
   const mbQrUrl = useMemo(() => {
     if (!order || !mbAccountNo) return "";
     return `https://img.vietqr.io/image/${mbBankCode}-${mbAccountNo}-compact2.png?amount=${order.amount}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=${encodeURIComponent(mbAccountName)}`;
   }, [order, mbBankCode, mbAccountNo, mbAccountName]);
-
   const loadOrder = useCallback(async () => {
     try {
       if (!user || !orderId) return;
-
       const token = await user.getIdToken();
       const res = await fetch(`/api/vip/order?orderId=${orderId}`, {
         headers: {
@@ -62,15 +51,12 @@ function VipCheckoutContent() {
         },
         cache: "no-store",
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setAlertMsg(data.error || "Không thể tải đơn VIP.");
         setTimeout(() => router.replace("/services"), 2000);
         return;
       }
-
       setOrder(data);
       if (data.paymentMethod) {
         setPaymentMethod(data.paymentMethod);
@@ -83,42 +69,32 @@ function VipCheckoutContent() {
       setLoading(false);
     }
   }, [user, orderId, router]);
-
   useEffect(() => {
     if (authLoading) return;
-
     if (!user) {
       router.replace("/auth/login?next=/services");
       return;
     }
-
     if (!orderId) {
       router.replace("/services");
       return;
     }
-
     void loadOrder();
   }, [authLoading, user, orderId, loadOrder, router]);
-
   useEffect(() => {
     if (!order || order.status !== "pending") return;
-
     const timer = setInterval(() => {
       void loadOrder();
     }, 5000);
-
     return () => clearInterval(timer);
   }, [order, loadOrder]);
-
   const onMarkPaid = async () => {
     try {
       if (!user || !orderId || !paymentMethod) {
         setAlertMsg("Vui lòng chọn phương thức thanh toán.");
         return;
       }
-
       setSubmitting(true);
-
       const token = await user.getIdToken();
       const res = await fetch("/api/vip/mark-paid", {
         method: "POST",
@@ -131,14 +107,11 @@ function VipCheckoutContent() {
           paymentMethod,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setAlertMsg(data.error || "Không thể ghi nhận thanh toán.");
         return;
       }
-
       setAlertMsg("Đã ghi nhận. Admin sẽ duyệt giao dịch của bạn.");
       await loadOrder();
     } catch (err) {
@@ -148,11 +121,9 @@ function VipCheckoutContent() {
       setSubmitting(false);
     }
   };
-
   return (
     <main>
-      <Header />
-      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
+            <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
       <div className="wrap py-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl font-bold grad-text mb-4 text-center">
@@ -161,7 +132,6 @@ function VipCheckoutContent() {
           <p className="text-gray-300 text-center mb-10">
             Chọn phương thức thanh toán, quét QR và chuyển khoản đúng nội dung.
           </p>
-
           {loading ? (
             <div className="text-center text-white">Đang tải đơn VIP...</div>
           ) : !order ? (
@@ -170,7 +140,6 @@ function VipCheckoutContent() {
             <div className="grid md:grid-cols-2 gap-8">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
                 <h2 className="text-2xl font-semibold text-white mb-5">Thông tin đơn</h2>
-
                 <div className="space-y-3 text-gray-200">
                   <div>
                     <span className="font-semibold">Mã đơn:</span> {order.orderCode}
@@ -190,13 +159,11 @@ function VipCheckoutContent() {
                     {order.status === "rejected" && "Đã bị từ chối"}
                   </div>
                 </div>
-
                 {order.status !== "approved" && (
                   <>
                     <h3 className="text-xl font-semibold text-white mt-8 mb-4">
                       Chọn phương thức
                     </h3>
-
                     <div className="grid grid-cols-2 gap-4">
                       <button
                         onClick={() => setPaymentMethod("momo")}
@@ -208,7 +175,6 @@ function VipCheckoutContent() {
                       >
                         MoMo
                       </button>
-
                       <button
                         onClick={() => setPaymentMethod("mb")}
                         className={`rounded-2xl border p-4 text-white transition ${
@@ -222,13 +188,11 @@ function VipCheckoutContent() {
                     </div>
                   </>
                 )}
-
                 {order.status === "approved" && (
                   <>
                     <div className="mt-8 rounded-2xl bg-green-500/15 border border-green-500/30 p-4 text-green-300">
                       Gói VIP đã được kích hoạt cho tài khoản của bạn.
                     </div>
-
                     <button
                       onClick={() => router.push("/dashboard")}
                       className="mt-4 w-full rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
@@ -238,16 +202,13 @@ function VipCheckoutContent() {
                   </>
                 )}
               </div>
-
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
                 <h2 className="text-2xl font-semibold text-white mb-5">Quét mã thanh toán</h2>
-
                 {!paymentMethod && order.status !== "approved" && (
                   <div className="text-gray-300">
                     Hãy chọn MoMo hoặc MB để hiện QR thanh toán.
                   </div>
                 )}
-
                 {paymentMethod === "momo" && order.status !== "approved" && (
                   <div className="space-y-4">
                     <img
@@ -255,7 +216,6 @@ function VipCheckoutContent() {
                       alt="MoMo QR"
                       className="w-full max-w-xs mx-auto rounded-2xl bg-white p-3"
                     />
-
                     <div className="space-y-2 text-gray-200">
                       <div><span className="font-semibold">Ví:</span> MoMo</div>
                       <div><span className="font-semibold">Tên:</span> {momoName}</div>
@@ -265,7 +225,6 @@ function VipCheckoutContent() {
                     </div>
                   </div>
                 )}
-
                 {paymentMethod === "mb" && order.status !== "approved" && (
                   <div className="space-y-4">
                     {mbQrUrl ? (
@@ -279,7 +238,6 @@ function VipCheckoutContent() {
                         Bạn chưa cấu hình NEXT_PUBLIC_VIP_MB_ACCOUNT_NO.
                       </div>
                     )}
-
                     <div className="space-y-2 text-gray-200">
                       <div><span className="font-semibold">Ngân hàng:</span> MB Bank</div>
                       <div><span className="font-semibold">Số tài khoản:</span> {mbAccountNo}</div>
@@ -289,7 +247,6 @@ function VipCheckoutContent() {
                     </div>
                   </div>
                 )}
-
                 {order.status !== "approved" && (
                   <button
                     onClick={onMarkPaid}
@@ -299,7 +256,6 @@ function VipCheckoutContent() {
                     {submitting ? "Đang ghi nhận..." : "Tôi đã chuyển khoản"}
                   </button>
                 )}
-
                 {order.status === "pending" && (
                   <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-yellow-200">
                     Hệ thống đang chờ admin duyệt. Trang này sẽ tự cập nhật khi VIP được bật.
@@ -313,7 +269,6 @@ function VipCheckoutContent() {
     </main>
   );
 }
-
 export default function VipCheckoutPage() {
   return (
     <Suspense fallback={<div className="text-white text-center py-20">Đang tải...</div>}>

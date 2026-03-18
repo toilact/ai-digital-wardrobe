@@ -1,12 +1,9 @@
-import Header from "@/components/Header";
 import Link from "next/link";
 import StartButton from "@/components/StartButton";
 
 export default function Home() {
   return (
     <main className="min-h-screen pb-20 overflow-x-hidden">
-      <Header />
-
       <div className="wrap space-y-24">
         {/* 1. Hero Section */}
         <section className="relative pt-13 pb-12 lg:pb-24">
@@ -31,11 +28,7 @@ export default function Home() {
 
             {/* Layer Ảnh Hero */}
             <div className="relative aspect-square md:aspect-[4/3] lg:aspect-square w-full max-w-[500px] mx-auto rounded-3xl overflow-hidden group">
-              <div className="absolute inset-x-8 inset-y-0 bg-white/5 border border-white/10 rounded-3xl rotate-3 transition-transform duration-500 group-hover:rotate-6"></div>
-              <div className="absolute inset-x-4 inset-y-4 bg-white/10 border border-white/10 rounded-3xl -rotate-2 transition-transform duration-500 group-hover:-rotate-3 backdrop-blur-md"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-pink-500/20 border border-white/20 rounded-3xl flex items-center justify-center z-10 overflow-hidden shadow-2xl backdrop-blur-xl transition hover:border-white/30">
-                <img src="/home-page-image.png" alt="" />
-              </div>
+              <img src="/home-page.png" alt="" />
             </div>
           </div>
         </section>

@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,13 +9,10 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import Header from "@/components/Header";
 import { FiAtSign, FiCheckCircle, FiLock, FiUser } from "react-icons/fi";
-
 function firebaseMsg(err: unknown) {
   const e = err as AuthError;
   const code = (e?.code ?? "").toString();
-
   switch (code) {
     case "auth/email-already-in-use":
       return "Tài khoản này đã được sử dụng. Hãy đăng nhập hoặc dùng thông tin khác.";
@@ -32,14 +28,11 @@ function firebaseMsg(err: unknown) {
       return e?.message || "Đăng ký thất bại (không rõ lý do).";
   }
 }
-
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
-
 export default function RegisterPage() {
   const router = useRouter();
-
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -47,58 +40,46 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const onRegister = async () => {
     setError("");
     const uname = username.trim().toLowerCase();
     const normalizedEmail = email.trim().toLowerCase();
-
     if (!uname) return setError("Nhập tên đăng nhập.");
     if (!/^[a-z0-9_-]{3,32}$/.test(uname)) {
       return setError(
         "Tên đăng nhập chỉ gồm chữ thường, số, gạch dưới hoặc gạch ngang (3-32 ký tự)."
       );
     }
-
     if (!normalizedEmail) return setError("Nhập email.");
     if (!isValidEmail(normalizedEmail)) return setError("Email không hợp lệ.");
-
     if (!pass) return setError("Nhập mật khẩu.");
     if (pass.length < 6) return setError("Mật khẩu phải từ 6 ký tự trở lên.");
     if (pass !== confirm) return setError("Mật khẩu nhập lại không khớp.");
-
     setLoading(true);
-
     try {
       if (!db || !auth) {
         throw new Error("Firebase chưa được khởi tạo!");
       }
-
       const unameRef = doc(db, "usernames", uname);
       const unameSnap = await getDoc(unameRef);
-
       if (unameSnap.exists()) {
         setError("Tên đăng nhập đã được sử dụng. Hãy chọn tên khác.");
         return;
       }
-
       const cred = await createUserWithEmailAndPassword(
         auth,
         normalizedEmail,
         pass
       );
-
       const displayName = name.trim();
       if (displayName) {
         await updateProfile(cred.user, { displayName });
       }
-
       await setDoc(unameRef, {
         uid: cred.user.uid,
         email: normalizedEmail,
         createdAt: serverTimestamp(),
       });
-
       await setDoc(doc(db, "users", cred.user.uid), {
         username: uname,
         displayName: displayName || null,
@@ -112,7 +93,6 @@ export default function RegisterPage() {
         outfitGenerationsToday: 0,
         outfitGenerationDate: "",
       });
-
       router.replace("/onboarding");
     } catch (err) {
       setError(firebaseMsg(err));
@@ -121,21 +101,16 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-
   return (
     <main className="relative overflow-hidden text-white">
       <div className="absolute inset-0 -z-20 bg-[linear-gradient(135deg,#060816_0%,#0a1224_42%,#14081f_100%)]" />
       <div className="absolute inset-0 -z-20 opacity-70 bg-[radial-gradient(circle_at_15%_18%,rgba(56,189,248,.18),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(217,70,239,.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(16,185,129,.10),transparent_32%)]" />
       <div className="absolute inset-0 -z-20 opacity-[0.07] [background-image:linear-gradient(to_right,rgba(255,255,255,.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.07)_1px,transparent_1px)] [background-size:58px_58px]" />
-
-      <Header />
-
       <section className="wrap">
         <div className="mx-auto flex min-h-[calc(100svh-165px)] items-center justify-center px-4 py-2 md:py-3">
           <div className="relative w-full max-w-[480px] overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.05] p-5 shadow-[0_28px_90px_rgba(0,0,0,.42)] backdrop-blur-2xl md:p-6">
             <div className="pointer-events-none absolute -left-12 top-0 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
-
             <div className="relative z-10">
               <div className="mb-2 flex justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -146,18 +121,15 @@ export default function RegisterPage() {
                   draggable={false}
                 />
               </div>
-
               <div className="text-center">
                 <h1 className="register-title mt-1 text-[28px] font-semibold tracking-tight md:text-[32px]">
                   Đăng ký
                 </h1>
-
                 <p className="mx-auto mt-1 max-w-[460px] text-sm leading-7 text-white/60 md:text-[15px]">
                   Tạo tài khoản để bắt đầu xây dựng tủ đồ số, nhận gợi ý outfit
                   và cá nhân hóa trải nghiệm AI Digital Wardrobe.
                 </p>
               </div>
-
               <div className="mt-4 rounded-[20px] border border-white/10 bg-black/15 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.04)]">
                 <div className="space-y-3">
                   <div>
@@ -175,7 +147,6 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Tên đăng nhập
@@ -192,7 +163,6 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Email
@@ -209,7 +179,6 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Mật khẩu
@@ -226,7 +195,6 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
-
                   <div>
                     <label className="mb-1 block text-sm font-medium text-white/75">
                       Nhập lại mật khẩu
@@ -243,9 +211,7 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
-
                   {error && <p className="text-sm text-red-500">{error}</p>}
-
                   <button
                     onClick={onRegister}
                     disabled={loading}
@@ -254,7 +220,6 @@ export default function RegisterPage() {
                     {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
                   </button>
                 </div>
-
                 <p className="mt-3 text-center text-sm text-white/55">
                   Đã có tài khoản?{" "}
                   <Link
@@ -269,7 +234,6 @@ export default function RegisterPage() {
           </div>
         </div>
       </section>
-
       <style jsx>{`
         .register-title {
           background: linear-gradient(
@@ -287,7 +251,6 @@ export default function RegisterPage() {
           animation: titleShine 5s ease-in-out infinite;
           filter: drop-shadow(0 0 10px rgba(103, 232, 249, 0.1));
         }
-
         @keyframes titleShine {
           0% {
             background-position: 0% 50%;

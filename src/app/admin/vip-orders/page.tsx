@@ -1,11 +1,8 @@
 // src/app/admin/vip-orders/page.tsx
 "use client";
-
-import Header from "@/components/Header";
 import AlertModal from "@/components/AlertModal";
 import { useAuth } from "@/lib/AuthContext";
 import { useEffect, useState } from "react";
-
 type VipOrder = {
   id: string;
   uid: string;
@@ -19,17 +16,14 @@ type VipOrder = {
   markedPaidAt: string | null;
   approvedAt: string | null;
 };
-
 export default function AdminVipOrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<VipOrder[]>([]);
   const [alertMsg, setAlertMsg] = useState("");
-
   const loadOrders = async () => {
     try {
       if (!user) return;
-
       const token = await user.getIdToken();
       const res = await fetch("/api/vip/admin/list", {
         headers: {
@@ -37,14 +31,11 @@ export default function AdminVipOrdersPage() {
         },
         cache: "no-store",
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setAlertMsg(data.error || "Không thể tải đơn VIP.");
         return;
       }
-
       setOrders(data.orders || []);
     } catch (err) {
       console.error(err);
@@ -53,7 +44,6 @@ export default function AdminVipOrdersPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -62,11 +52,9 @@ export default function AdminVipOrdersPage() {
     }
     void loadOrders();
   }, [authLoading, user]);
-
   const approveOrder = async (orderId: string) => {
     try {
       if (!user) return;
-
       const token = await user.getIdToken();
       const res = await fetch("/api/vip/admin/approve", {
         method: "POST",
@@ -76,14 +64,11 @@ export default function AdminVipOrdersPage() {
         },
         body: JSON.stringify({ orderId }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setAlertMsg(data.error || "Không thể duyệt đơn VIP.");
         return;
       }
-
       setAlertMsg("Đã bật VIP thành công.");
       await loadOrders();
     } catch (err) {
@@ -91,17 +76,14 @@ export default function AdminVipOrdersPage() {
       setAlertMsg("Có lỗi khi duyệt đơn VIP.");
     }
   };
-
   return (
     <main>
-      <Header />
-      <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
+            <AlertModal isOpen={!!alertMsg} message={alertMsg} onClose={() => setAlertMsg("")} />
       <div className="wrap py-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl font-bold grad-text mb-6 text-center">
             Admin - Duyệt đơn VIP
           </h1>
-
           {authLoading || loading ? (
             <div className="text-center text-white">Đang tải...</div>
           ) : !user ? (
@@ -125,7 +107,6 @@ export default function AdminVipOrdersPage() {
                     <div><span className="font-semibold">Tạo lúc:</span> {order.createdAt || "-"}</div>
                     <div><span className="font-semibold">Báo đã chuyển:</span> {order.markedPaidAt || "-"}</div>
                   </div>
-
                   {order.status !== "approved" && (
                     <button
                       onClick={() => approveOrder(order.id)}

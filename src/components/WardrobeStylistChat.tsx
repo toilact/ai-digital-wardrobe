@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { FiMoreVertical } from "react-icons/fi";
 
 type Role = "user" | "assistant";
 type Msg = { id: string; role: Role; content: string; ts: number; images?: string[] };
@@ -805,7 +806,7 @@ export default function WardrobeStylistChat({
               mode === "page" && "lg:hidden"
             )}
           >
-            Lịch sử
+            <FiMoreVertical size={24} />
           </button>
 
           <div className="flex items-center gap-3 min-w-0">
@@ -1091,9 +1092,9 @@ export default function WardrobeStylistChat({
   ) : null;
 
   const zoomImageModal = zoomImage ? (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setZoomImage(null)} />
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col items-center justify-center">
+      <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl flex-col items-center justify-center mt-16">
         <button
           onClick={() => setZoomImage(null)}
           className="absolute -right-4 -top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg transition hover:bg-white/20 md:-right-6 md:-top-6"
@@ -1106,7 +1107,7 @@ export default function WardrobeStylistChat({
         <img
           src={zoomImage}
           alt="zoomed-outfit"
-          className="max-h-[85vh] w-full rounded-xl border border-white/10 bg-black object-contain shadow-2xl"
+          className="h-[500px] rounded-xl border border-white/10 bg-black object-contain shadow-2xl"
         />
       </div>
     </div>
