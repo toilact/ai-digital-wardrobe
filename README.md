@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img loading="lazy" src="./public/readme-banner.png" alt="AI Digital Wardrobe Banner" width="100%">
+  <img loading="lazy" src="./public/readme-banner.png" alt="AI Digital Wardrobe Banner" width="78%">
 </p>
 
 <p align="center">
