@@ -1266,7 +1266,7 @@ async def label_endpoint(req: LabelRequest):
         if "color" in out:
             label["color"] = out["color"]
 
-        return JSONResponse({"ok": True, "label": label})
+        return JSONResponse({"ok": True, "label": label, "embedding": _clip_embedding(pil_rgba)})
     except Exception as e:
         return JSONResponse({"ok": False, "message": str(e)}, status_code=400)
 
