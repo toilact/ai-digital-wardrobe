@@ -1,6 +1,7 @@
 // src/app/api/wardrobe/label-item/route.ts
 import { NextResponse } from "next/server";
 import { labelWardrobeItemSimpleFromPngBase64 } from "@/lib/ai/labelItem";
+import { geminiSemanticTags } from "@/lib/ai/semanticTags";
 
 export const runtime = "nodejs";
 
@@ -19,16 +20,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: "Missing pngBase64" }, { status: 400 });
     }
 
-    const label = await labelWardrobeItemSimpleFromPngBase64(pngBase64, {
-      categoryHint: body?.hintCategory,
-      confidenceHint: body?.hintConfidence ?? null,
-    });
+    const [label, semantic] = await Promise.all([
+      labelWardrobeItemSimpleFromPngBase64(pngBase64, {
+        categoryHint: body?.hintCategory,
+        confidenceHint: body?.hintConfidence ?? null,
+      }),
+      geminiSemanticTags(pngBase64),
+    ]);
 
     return NextResponse.json({
       ok: true,
       label: {
         category: label.category,
         confidence: label.confidence ?? null,
+        formality: semantic.formality,
+        styleTags: semantic.styleTags,
+        warmth: semantic.warmth,
       },
     });
   } catch (e: any) {

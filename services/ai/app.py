@@ -11,6 +11,7 @@ import asyncio
 import cv2
 import numpy as np
 from PIL import Image
+from garment_parse import parse_garments
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -420,6 +421,18 @@ def _clip_predict_category(pil_rgba: Image.Image) -> dict | None:
         "backend": "clip",
         "top": top,
     }
+
+def _clip_embedding(pil_rgba: Image.Image) -> list:
+    if not _ensure_clip_loaded():
+        return []
+    # Ghép RGBA lên nền xám trung tính giống _clip_predict_category
+    bg = Image.new("RGB", pil_rgba.size, (127, 127, 127))
+    bg.paste(pil_rgba, mask=pil_rgba.split()[-1])
+    img_tensor = _clip_preprocess(bg).unsqueeze(0).to(CLIP_DEVICE)
+    with torch.no_grad():
+        feat = _clip_model.encode_image(img_tensor)
+        feat = feat / feat.norm(dim=-1, keepdim=True)
+    return feat[0].cpu().float().tolist()
 
 # -----------------------------
 # Config (tune bằng ENV)
@@ -1185,6 +1198,33 @@ async def parse(file: UploadFile = File(...)):
         return_mask=False,
     )
 
+@app.post("/parse-person")
+async def parse_person(file: UploadFile = File(...)):
+    try:
+        data = await file.read()
+        if not data:
+            return JSONResponse({"ok": False, "message": "Empty file"}, status_code=400)
+        img_rgb = _read_upload_image_rgb(data)
+        garments = parse_garments(img_rgb)
+        items = []
+        for g in garments:
+            png_bytes, alpha_final, _mask, meta = _build_cutout(img_rgb, g["mask01"], crop=True)
+            pil_rgba = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+            _c = _dominant_color_vi(pil_rgba)
+            _colors = {"hex": _c["colorHex"], "nameVi": _c["color"]} if "colorHex" in _c else None
+            items.append({
+                "slot": g["slot"],
+                "category": g["category"],
+                "image_png_base64": base64.b64encode(png_bytes).decode("ascii"),
+                "colors": _colors,
+                "embedding": _clip_embedding(pil_rgba),
+                "embeddingModel": "clip-vit-b32",
+                "bbox": meta.get("roi", [0, 0, img_rgb.shape[1], img_rgb.shape[0]]),
+            })
+        return {"ok": True, "items": items}
+    except Exception as e:
+        return JSONResponse({"ok": False, "message": str(e)}, status_code=500)
+
 from pydantic import BaseModel
 
 class LabelRequest(BaseModel):
@@ -1228,7 +1268,7 @@ async def label_endpoint(req: LabelRequest):
         if "color" in out:
             label["color"] = out["color"]
 
-        return JSONResponse({"ok": True, "label": label})
+        return JSONResponse({"ok": True, "label": label, "embedding": _clip_embedding(pil_rgba)})
     except Exception as e:
         return JSONResponse({"ok": False, "message": str(e)}, status_code=400)
 

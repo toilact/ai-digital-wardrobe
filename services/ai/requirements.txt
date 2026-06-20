@@ -21,3 +21,5 @@ open_clip_torch>=2.26.0
 timm>=0.9
 ftfy>=6.1
 regex>=2024.0
+transformers==4.44.2
+pytest==8.3.3
