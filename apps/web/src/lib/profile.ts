@@ -1,7 +1,7 @@
 // src/lib/profile.ts
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { hasActiveVip as hasActiveVipBase, toDateSafe } from "@/lib/vip";
+import { hasActiveVip as hasActiveVipBase, toDateSafe } from "@adw/shared";
 
 export type Gender = "male" | "female";
 

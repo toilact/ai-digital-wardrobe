@@ -1,7 +1,7 @@
 // src/app/api/vip/order/route.ts
 import { NextResponse } from "next/server";
 import { getAdmin } from "@/lib/firebaseAdmin";
-import { toDateSafe } from "@/lib/vip";
+import { toDateSafe } from "@adw/shared";
 
 export const runtime = "nodejs";
 

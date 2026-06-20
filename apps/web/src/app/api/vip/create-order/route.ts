@@ -6,7 +6,7 @@ import {
   VIP_PRICE,
   buildVipOrderCode,
   hasActiveVip,
-} from "@/lib/vip";
+} from "@adw/shared";
 
 export const runtime = "nodejs";
 

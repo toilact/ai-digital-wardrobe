@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
-import { hasActiveVip } from "@/lib/vip";
+import { hasActiveVip } from "@adw/shared";
 
 export const runtime = "nodejs";
 

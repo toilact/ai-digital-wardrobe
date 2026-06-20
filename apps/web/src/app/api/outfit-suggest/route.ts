@@ -3,7 +3,7 @@ import { getAdmin } from "@/lib/firebaseAdmin";
 import { generateVisualGemini } from "@/lib/llm/geminiVisual";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getUserProfile, type UserProfile } from "@/lib/profile";
-import { hasActiveVip } from "@/lib/vip";
+import { hasActiveVip } from "@adw/shared";
 
 export const runtime = "nodejs";
 

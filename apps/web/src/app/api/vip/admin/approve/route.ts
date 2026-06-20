@@ -6,7 +6,7 @@ import {
   VIP_PLAN_CODE,
   addDays,
   toDateSafe,
-} from "@/lib/vip";
+} from "@adw/shared";
 
 export const runtime = "nodejs";
 
