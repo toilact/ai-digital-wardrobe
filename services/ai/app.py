@@ -421,6 +421,18 @@ def _clip_predict_category(pil_rgba: Image.Image) -> dict | None:
         "top": top,
     }
 
+def _clip_embedding(pil_rgba: Image.Image) -> list:
+    if not _ensure_clip_loaded():
+        return []
+    # Ghép RGBA lên nền xám trung tính giống _clip_predict_category
+    bg = Image.new("RGB", pil_rgba.size, (127, 127, 127))
+    bg.paste(pil_rgba, mask=pil_rgba.split()[-1])
+    img_tensor = _clip_preprocess(bg).unsqueeze(0).to(CLIP_DEVICE)
+    with torch.no_grad():
+        feat = _clip_model.encode_image(img_tensor)
+        feat = feat / feat.norm(dim=-1, keepdim=True)
+    return feat[0].cpu().float().tolist()
+
 # -----------------------------
 # Config (tune bằng ENV)
 # -----------------------------
