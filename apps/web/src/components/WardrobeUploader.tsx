@@ -50,6 +50,45 @@ function stripDataUrl(s: string): string {
   return s?.includes(",") ? s.split(",")[1] : s;
 }
 
+// Fill formality/styleTags/warmth from label-item for KEPT items (bounded concurrency).
+async function fillSemanticTags(idToken: string, items: ReviewItem[]): Promise<ReviewItem[]> {
+  const result = items.slice();
+  const indices = result.map((_, i) => i).filter((i) => result[i].keep);
+  const CONCURRENCY = 3;
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(CONCURRENCY, indices.length) }, async () => {
+    while (true) {
+      const k = cursor++;
+      if (k >= indices.length) break;
+      const i = indices[k];
+      try {
+        const res = await fetch("/api/wardrobe/label-item", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ image_png_base64: stripDataUrl(result[i].image_png_base64) }),
+        });
+        if (!res.ok) continue;
+        const data = await res.json().catch(() => ({}));
+        const lbl = data?.label;
+        if (!lbl) continue;
+        result[i] = {
+          ...result[i],
+          formality: typeof lbl.formality === "number" ? lbl.formality : result[i].formality,
+          styleTags: Array.isArray(lbl.styleTags) ? lbl.styleTags : result[i].styleTags,
+          warmth: typeof lbl.warmth === "number" ? lbl.warmth : result[i].warmth,
+        };
+      } catch {
+        // Tolerate failures — keep defaults.
+      }
+    }
+  });
+  await Promise.all(workers);
+  return result;
+}
+
 /* ── Parsing overlay ───────────────────────── */
 function ParsingOverlay({ active, label }: { active: boolean; label: string }) {
   if (!active) return null;
@@ -451,49 +490,9 @@ export default function WardrobeUploader({
     setReviewItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   };
 
-  // Fill formality/styleTags/warmth from label-item for KEPT items (bounded concurrency).
-  const fillSemanticTags = async (idToken: string, items: ReviewItem[]): Promise<ReviewItem[]> => {
-    const result = items.slice();
-    const indices = result.map((_, i) => i).filter((i) => result[i].keep);
-    const CONCURRENCY = 3;
-    let cursor = 0;
-    const workers = Array.from({ length: Math.min(CONCURRENCY, indices.length) }, async () => {
-      while (true) {
-        const k = cursor++;
-        if (k >= indices.length) break;
-        const i = indices[k];
-        try {
-          const res = await fetch("/api/wardrobe/label-item", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ image_png_base64: stripDataUrl(result[i].image_png_base64) }),
-          });
-          if (!res.ok) continue;
-          const data = await res.json().catch(() => ({}));
-          const lbl = data?.label;
-          if (!lbl) continue;
-          result[i] = {
-            ...result[i],
-            formality: typeof lbl.formality === "number" ? lbl.formality : result[i].formality,
-            styleTags: Array.isArray(lbl.styleTags) ? lbl.styleTags : result[i].styleTags,
-            warmth: typeof lbl.warmth === "number" ? lbl.warmth : result[i].warmth,
-          };
-        } catch {
-          // Tolerate failures — keep defaults.
-        }
-      }
-    });
-    await Promise.all(workers);
-    return result;
-  };
-
   const onSavePersonItems = async () => {
     if (!user) return;
-    const kept = reviewItems.filter((it) => it.keep);
-    if (kept.length === 0) return setAlertMsg("Bạn chưa giữ lại món đồ nào để lưu.");
+    if (reviewItems.filter((it) => it.keep).length === 0) return setAlertMsg("Bạn chưa giữ lại món đồ nào để lưu.");
 
     setUploading(true);
     onUploadingChange?.(true);
@@ -668,6 +667,7 @@ export default function WardrobeUploader({
                         : "border-white/[0.08] bg-white/[0.02] opacity-60"
                       }`}
                   >
+                    {/* TODO: "Sửa mask" SAM-click refinement deferred — /api/wardrobe/parse returns fresh cutouts with no clean mapping back to a single review-grid garment. See .superpowers/sdd/task-10-report.md for rationale. */}
                     <div className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -756,7 +756,7 @@ export default function WardrobeUploader({
                       {parsing ? "Đang tách…" : "✦ Tách đồ"}
                     </button>
                     <button
-                      onClick={onSavePersonItems}
+                      onClick={() => void onSavePersonItems()}
                       disabled={reviewItems.length === 0 || keptCount === 0 || uploading || parsing}
                       className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all
                         border border-cyan-300/30 bg-gradient-to-br from-indigo-500/40 via-fuchsia-500/30 to-cyan-400/25 text-white
