@@ -4,6 +4,8 @@ import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
 import { hasActiveVip } from "@adw/shared";
 import { withTimeout } from "@/lib/wardrobe/withTimeout";
+import { WardrobeItemInputSchema, type WardrobeItemInput } from "@/lib/wardrobe/itemSchema";
+import { buildItemDoc } from "@/lib/wardrobe/buildItemDoc";
 
 export const runtime = "nodejs";
 
@@ -76,35 +78,8 @@ function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
 
 type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày" | "Khác";
 
-function normalizeCategory(raw: string): CatKey {
-  const s = (raw || "").trim().toLowerCase();
-
-  if (["ao", "áo", "shirt", "top", "tshirt", "tee", "hoodie", "jacket", "coat", "sweater", "blouse"].some((k) => s.includes(k))) {
-    return "Áo";
-  }
-  if (["quan", "quần", "pants", "trousers", "jeans", "shorts"].some((k) => s.includes(k))) {
-    return "Quần";
-  }
-  if (["vay", "váy", "skirt"].some((k) => s.includes(k))) {
-    return "Váy";
-  }
-  if (["dam", "đầm", "dress", "gown", "onepiece"].some((k) => s.includes(k))) {
-    return "Đầm";
-  }
-  if (["giay", "giày", "shoe", "shoes", "sneaker", "boot", "boots", "sandal"].some((k) => s.includes(k))) {
-    return "Giày";
-  }
-  return "Khác";
-}
-
-type InputItem = {
-  type?: string;
-  image_png_base64?: string;
-};
-
 type PreparedUpload = {
-  rawType: string;
-  category: CatKey;
+  validatedInput: WardrobeItemInput;
   imageUrl: string;
   cloudinaryPublicId: string;
 };
@@ -145,48 +120,56 @@ export async function POST(req: Request) {
     const uid = decoded.uid;
 
     const body = await req.json().catch(() => ({} as any));
-    const items = Array.isArray(body?.items) ? (body.items as InputItem[]) : [];
+    const rawItems: unknown[] = Array.isArray(body?.items) ? body.items : [];
 
-    if (items.length === 0) {
+    if (rawItems.length === 0) {
       return NextResponse.json({ ok: false, message: "Missing items" }, { status: 400 });
     }
 
-    const prepared = await mapLimit(items, 1, async (it, idx) => {
-      const rawType = String(it?.type || "unknown");
-      const category = normalizeCategory(rawType);
+    // Validate all items upfront before any upload work
+    const validatedItems: WardrobeItemInput[] = [];
+    for (let i = 0; i < rawItems.length; i++) {
+      const result = WardrobeItemInputSchema.safeParse(rawItems[i]);
+      if (!result.success) {
+        return NextResponse.json(
+          { ok: false, message: `Invalid item at index ${i}: ${result.error.issues.map((e) => e.message).join("; ")}` },
+          { status: 400 }
+        );
+      }
+      validatedItems.push(result.data);
+    }
 
-      const b64 =
-        typeof it?.image_png_base64 === "string"
-          ? (it.image_png_base64.includes(",") ? it.image_png_base64.split(",")[1] : it.image_png_base64)
-          : "";
+    const asciiCategories: Record<CatKey, string> = {
+      "Áo": "ao",
+      "Quần": "quan",
+      "Váy": "vay",
+      "Đầm": "dam",
+      "Giày": "giay",
+      "Khác": "khac",
+    };
 
-      if (!b64) throw new Error(`Missing image_png_base64 at item ${idx}`);
+    const prepared = await mapLimit(validatedItems, 1, async (validatedInput, idx) => {
+      const b64 = validatedInput.image_png_base64.includes(",")
+        ? validatedInput.image_png_base64.split(",")[1]
+        : validatedInput.image_png_base64;
 
       const originalBuffer = Buffer.from(b64, "base64");
       const optimizedBuffer = await optimizeTransparentImage(originalBuffer);
 
+      const folderCategory = asciiCategories[validatedInput.category as CatKey] || "khac";
+      const folder = `wardrobe/${uid}/${folderCategory}`;
+
       console.log("[confirm] uploading", {
         idx,
-        category,
+        category: validatedInput.category,
         originalKB: Math.round(originalBuffer.length / 1024),
         optimizedKB: Math.round(optimizedBuffer.length / 1024),
       });
 
-      const asciiCategories: Record<CatKey, string> = {
-        "Áo": "ao",
-        "Quần": "quan",
-        "Váy": "vay",
-        "Đầm": "dam",
-        "Giày": "giay",
-        "Khác": "khac",
-      };
-      const folderCategory = asciiCategories[category] || "khac";
-      const folder = `wardrobe/${uid}/${folderCategory}`;
       const { secure_url, public_id } = await uploadBufferToCloudinary(optimizedBuffer, folder);
 
       return {
-        rawType,
-        category,
+        validatedInput,
         imageUrl: secure_url,
         cloudinaryPublicId: public_id,
       } satisfies PreparedUpload;
@@ -202,7 +185,7 @@ export async function POST(req: Request) {
     const currentQuantity = typeof userData?.itemQuantity === "number" ? userData.itemQuantity : 0;
     const limit = isVIP ? 30 : 15;
 
-    if (currentQuantity + items.length > limit) {
+    if (currentQuantity + validatedItems.length > limit) {
       return NextResponse.json(
         { ok: false, message: `Vượt quá giới hạn lưu trữ. ${isVIP ? 'Tài khoản VIP' : 'Tài khoản thường'} tối đa được lưu ${limit} món đồ.` },
         { status: 400 }
@@ -215,13 +198,9 @@ export async function POST(req: Request) {
     for (const up of prepared) {
       const docRef = db.collection("wardrobeItems").doc();
       const doc = {
-        uid,
-        category: up.category,
-        rawType: up.rawType,
-        imageUrl: up.imageUrl,
-        cloudinaryPublicId: up.cloudinaryPublicId,
+        ...buildItemDoc(uid, up.validatedInput, up.imageUrl, up.cloudinaryPublicId),
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        source: "sam+label",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
       batch.set(docRef, doc);
@@ -229,6 +208,7 @@ export async function POST(req: Request) {
         id: docRef.id,
         ...doc,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
     }
 
