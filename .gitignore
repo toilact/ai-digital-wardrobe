@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -15,6 +16,7 @@
 
 # next.js
 /.next/
+**/.next/
 /out/
 
 # production
@@ -40,17 +42,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 # Python
-ai-service/.venv/
+services/ai/.venv/
 **/__pycache__/
 *.pyc
 
 # ML / artifacts
-ai-service/checkpoints/
+services/ai/checkpoints/
 *.pt
 *.pth
 *.onnx
 
 # OS/Editor
 .DS_Store
-ai-service/checkpoints/
 *.pth

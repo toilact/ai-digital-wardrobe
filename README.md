@@ -291,69 +291,58 @@ This enables more realistic and context-aware styling suggestions.
 The repository is organized so that new contributors can quickly understand what each part of the system is responsible for.
 
 ```text
-AI-Digital-Wardrobe/
-├── src/
-│   ├── app/                         # Next.js App Router
-│   │   ├── api/                     # Server routes / backend logic in Next.js
-│   │   │   ├── auth/                # Login, registration, forgot password
-│   │   │   ├── wardrobe/            # Upload, parse, confirm, list, delete items
-│   │   │   ├── vip/                 # VIP order creation, payment, admin approval
-│   │   │   ├── chat-history/        # Save / load stylist chat history
-│   │   │   └── outfit-suggest/      # AI outfit recommendation logic
-│   │   ├── about/                   # About page
-│   │   ├── admin/                   # Admin pages and VIP approval views
-│   │   ├── auth/                    # Login / signup / forgot password pages
-│   │   ├── dashboard/               # User dashboard
-│   │   ├── onboarding/              # Body profile and personalization flow
-│   │   ├── outfit-suggest/          # Stylist chat page
-│   │   ├── services/                # Services and pricing pages
-│   │   ├── vip/                     # VIP checkout flow
-│   │   └── wardrobe/                # Wardrobe management pages
-│   │
-│   ├── components/                  # Reusable UI components
-│   │   ├── Header.tsx
-│   │   ├── Footer.tsx
-│   │   ├── WardrobeStylistChat.tsx
-│   │   ├── GoogleLoginButton.tsx
-│   │   ├── ProfileDrawer.tsx
-│   │   └── ...
-│   │
-│   ├── lib/                         # Config, helpers, and shared service logic
-│   │   ├── firebase.ts              # Firebase client SDK
-│   │   ├── firebaseAdmin.ts         # Firebase Admin SDK
-│   │   ├── mailer.ts                # Email sending for reset password
-│   │   ├── vip.ts                   # VIP logic and expiration handling
-│   │   ├── profile.ts               # User profile utilities
-│   │   └── ai/                      # AI helper logic / label / outfit utilities
-│   │
-│   └── app/globals.css              # Global styles
+ai-digital-wardrobe/                 # monorepo root
+├── apps/
+│   └── web/                         # Next.js web application
+│       ├── src/
+│       │   ├── app/                 # Next.js App Router
+│       │   │   ├── api/             # Server routes / backend logic
+│       │   │   │   ├── auth/        # Login, registration, forgot password
+│       │   │   │   ├── wardrobe/    # Upload, parse, confirm, list, delete items
+│       │   │   │   ├── vip/         # VIP order creation, payment, admin approval
+│       │   │   │   ├── chat-history/ # Save / load stylist chat history
+│       │   │   │   └── outfit-suggest/ # AI outfit recommendation logic
+│       │   │   ├── about/           # About page
+│       │   │   ├── admin/           # Admin pages and VIP approval views
+│       │   │   ├── auth/            # Login / signup / forgot password pages
+│       │   │   ├── dashboard/       # User dashboard
+│       │   │   ├── onboarding/      # Body profile and personalization flow
+│       │   │   ├── outfit-suggest/  # Stylist chat page
+│       │   │   ├── services/        # Services and pricing pages
+│       │   │   ├── vip/             # VIP checkout flow
+│       │   │   └── wardrobe/        # Wardrobe management pages
+│       │   ├── components/          # Reusable UI components
+│       │   └── lib/                 # Config, helpers, and shared service logic
+│       ├── public/                  # Static assets, icons, and logo
+│       ├── Dockerfile               # Dockerfile for Next.js web app (monorepo build)
+│       ├── next.config.ts           # Next.js configuration
+│       └── package.json
 │
-├── public/                          # Static assets, icons, and logo
+├── services/
+│   └── ai/                          # FastAPI-based AI service
+│       ├── app.py                   # AI service entry point
+│       ├── Dockerfile               # Docker image for AI service
+│       ├── requirements.txt         # Python dependencies
+│       ├── checkpoints/             # MobileSAM and model checkpoint files
+│       ├── modules/                 # Helper model modules
+│       └── networks/                # Supporting network definitions
 │
-├── ai-service/                      # FastAPI-based AI service
-│   ├── app.py                       # AI service entry point
-│   ├── Dockerfile                   # Docker image for AI service
-│   ├── requirements.txt             # Python dependencies
-│   ├── checkpoints/                 # MobileSAM and model checkpoint files
-│   ├── modules/                     # Helper model modules
-│   └── networks/                    # Supporting network definitions
+├── packages/
+│   └── shared/                      # Shared TypeScript types and utilities
 │
-├── Dockerfile                       # Dockerfile for Next.js web app
 ├── docker-compose.yml               # Orchestration for web + ai-service
-├── package.json                     # Frontend dependencies and scripts
-├── package-lock.json
-├── next.config.ts                   # Next.js configuration
-├── tsconfig.json                    # TypeScript configuration
+├── pnpm-workspace.yaml              # pnpm workspace configuration
+├── turbo.json                       # Turborepo pipeline configuration
+├── package.json                     # Root package (workspace root)
 └── README.md
 ```
 
 ### Structure at a glance
 
-- **`src/app`** contains the pages users interact with and the server routes used by the web application.
-- **`src/app/api`** acts as the backend layer inside Next.js, connecting Firebase, Cloudinary, email services, and the AI service.
-- **`src/components`** contains reusable UI pieces to keep the codebase modular and maintainable.
-- **`src/lib`** centralizes shared configuration and business logic.
-- **`ai-service`** is a separate service responsible for computer vision and image-processing tasks.
+- **`apps/web`** contains the Next.js application: pages, server routes, components, and lib utilities.
+- **`apps/web/src/app/api`** acts as the backend layer inside Next.js, connecting Firebase, Cloudinary, email services, and the AI service.
+- **`services/ai`** is a separate FastAPI service responsible for computer vision and image-processing tasks.
+- **`packages/shared`** holds shared TypeScript types and utilities consumed by apps in the monorepo.
 - **`docker-compose.yml`** makes it easy to run the full system with one command.
 
 ---
@@ -400,8 +389,8 @@ This layer stores user data and assets:
 Before running the project, make sure you have:
 
 - **Node.js 20+**
+- **pnpm 9+** (`npm install -g pnpm`)
 - **Python 3.10**
-- **npm**
 - **Docker Desktop**
 - a **Firebase project**
 - a **Cloudinary account**
@@ -415,18 +404,19 @@ git clone https://github.com/toilact/ai-digital-wardrobe
 cd ai-digital-wardrobe
 ```
 
-### 2. Install frontend dependencies
+### 2. Install all dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. Install AI service dependencies
 
 ```bash
-cd ai-service
-pip install -r requirements.txt
-cd ..
+cd services/ai
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cd ../..
 ```
 
 ---
@@ -445,15 +435,15 @@ Before running the project, you need to download the MobileSAM checkpoint file m
 Create the checkpoint folder if it does not exist, then place the file here:
 
 ```bash
-ai-service/checkpoints/mobile_sam.pt
+services/ai/checkpoints/mobile_sam.pt
 ```
 
 ### Example
 
 ```bash
-mkdir -p ai-service/checkpoints
+mkdir -p services/ai/checkpoints
 # Then move your downloaded file into:
-# ai-service/checkpoints/mobile_sam.pt
+# services/ai/checkpoints/mobile_sam.pt
 ```
 
 ### Important notes
@@ -470,17 +460,17 @@ By default, the AI service expects:
 SAM_CHECKPOINT=/app/checkpoints/mobile_sam.pt
 ```
 
-When running locally from the `ai-service` folder, make sure the file also exists inside:
+When running locally, make sure the file also exists inside:
 
 ```bash
-ai-service/checkpoints/mobile_sam.pt
+services/ai/checkpoints/mobile_sam.pt
 ```
 
 ---
 
 ## 🔐 Environment Variables
 
-Create a `.env.local` file in the project root for the web app.
+Create a `.env.local` file at `apps/web/.env.local` for the web app.
 
 Example:
 
@@ -591,7 +581,7 @@ PNG_COMPRESS_LEVEL=3
 Make sure the checkpoint file exists before starting Docker:
 
 ```bash
-ai-service/checkpoints/mobile_sam.pt
+services/ai/checkpoints/mobile_sam.pt
 ```
 
 To run the full system with Docker:
@@ -612,14 +602,14 @@ After startup:
 ### Start frontend
 
 ```bash
-npm run dev
+pnpm --filter web dev
 ```
 
 ### Start AI service
 
 ```bash
-cd ai-service
-uvicorn app:app --host 0.0.0.0 --port 8000
+cd services/ai
+SAM_CHECKPOINT="$PWD/checkpoints/mobile_sam.pt" ENABLE_SAM=1 ./.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
 After startup:

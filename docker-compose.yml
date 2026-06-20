@@ -2,7 +2,7 @@ services:
   ai-service:
     container_name: ai-digital-wardrobe-ai
     build:
-      context: ./ai-service
+      context: ./services/ai
       dockerfile: Dockerfile
     restart: always
     ports:
@@ -28,18 +28,18 @@ services:
       - MAX_UPLOAD_MB=8
       - PNG_COMPRESS_LEVEL=3
     volumes:
-      - ./ai-service/checkpoints:/app/checkpoints
+      - ./services/ai/checkpoints:/app/checkpoints
 
   web:
     container_name: ai-digital-wardrobe-web
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/web/Dockerfile
     restart: always
     ports:
       - "3000:3000"
     env_file:
-      - .env.local
+      - apps/web/.env.local
     environment:
       - DOCKER=1
       - AI_SERVICE_URL=http://ai-service:8000

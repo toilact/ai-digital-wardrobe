@@ -1,6 +1,7 @@
 .git
 node_modules
-.next
-ai-service/checkpoints
-ai-service/__pycache__
-ai-service/.venv
+**/node_modules
+apps/web/.next
+services/ai/.venv
+services/ai/checkpoints
+**/__pycache__
