@@ -22,22 +22,22 @@ export async function geminiSemanticTags(pngBase64: string): Promise<SemanticTag
   const key = process.env.GEMINI_API_KEY;
   if (!key) return parseSemanticTags(null);
   const ai = new GoogleGenAI({ apiKey: key });
-  const res = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: 'Phân tích món đồ. Trả JSON: {"formality":0..1 (0=thể thao,1=dạ tiệc),"warmth":0..1 (0=mát mẻ,1=giữ ấm),"styleTags":["minimal"|"streetwear"|...]}',
-          },
-          { inlineData: { mimeType: "image/png", data: pngBase64 } },
-        ],
-      },
-    ],
-    config: { responseMimeType: "application/json" },
-  });
   try {
+    const res = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite-preview",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: 'Phân tích món đồ. Trả JSON: {"formality":0..1 (0=thể thao,1=dạ tiệc),"warmth":0..1 (0=mát mẻ,1=giữ ấm),"styleTags":["minimal"|"streetwear"|...]}',
+            },
+            { inlineData: { mimeType: "image/png", data: pngBase64 } },
+          ],
+        },
+      ],
+      config: { responseMimeType: "application/json" },
+    });
     return parseSemanticTags(JSON.parse(res.text ?? "{}"));
   } catch {
     return parseSemanticTags(null);
