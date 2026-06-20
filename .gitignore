@@ -57,5 +57,4 @@ services/ai/checkpoints/
 
 # OS/Editor
 .DS_Store
-services/ai/checkpoints/
 *.pth

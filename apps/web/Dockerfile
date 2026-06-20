@@ -1,46 +1,29 @@
 FROM node:20-slim AS base
-WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-EXPOSE 3000
+RUN corepack enable
+WORKDIR /app
 
-FROM node:20-slim AS build
-WORKDIR /src
-
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-RUN if [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm i --frozen-lockfile; \
-  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  else npm i; fi
-
+FROM base AS build
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc turbo.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared/package.json packages/shared/package.json
+COPY services/ai/package.json services/ai/package.json
+RUN pnpm install --frozen-lockfile
+COPY packages/shared packages/shared
+COPY apps/web apps/web
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
-
-COPY . .
-
-RUN [ -n "$NEXT_PUBLIC_FIREBASE_API_KEY" ] || unset NEXT_PUBLIC_FIREBASE_API_KEY; \
-    [ -n "$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN" ] || unset NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN; \
-    [ -n "$NEXT_PUBLIC_FIREBASE_PROJECT_ID" ] || unset NEXT_PUBLIC_FIREBASE_PROJECT_ID; \
-    [ -n "$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET" ] || unset NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET; \
-    [ -n "$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID" ] || unset NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID; \
-    [ -n "$NEXT_PUBLIC_FIREBASE_APP_ID" ] || unset NEXT_PUBLIC_FIREBASE_APP_ID; \
-    npm run build
-
-FROM build AS publish
-RUN mkdir -p /app/publish && \
-    cp -r package.json /app/publish/ && \
-    cp -r node_modules /app/publish/ && \
-    cp -r .next /app/publish/ && \
-    if [ -d public ]; then cp -r public /app/publish/; fi
+RUN pnpm --filter web build
 
 FROM base AS final
+ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /app
-ENV NODE_ENV=production
-ENV HOSTNAME=0.0.0.0
-ENV PORT=3000
-
-COPY --from=publish /app/publish .
-ENTRYPOINT ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]
+COPY --from=build /app/apps/web/.next/standalone ./
+COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build /app/apps/web/public ./apps/web/public
+EXPOSE 3000
+CMD ["node", "apps/web/server.js"]
