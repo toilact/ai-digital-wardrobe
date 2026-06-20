@@ -78,6 +78,15 @@ function uploadBufferToCloudinary(buffer: Buffer, folder: string) {
 
 type CatKey = "Áo" | "Quần" | "Váy" | "Đầm" | "Giày" | "Khác";
 
+const asciiCategories: Record<CatKey, string> = {
+  "Áo": "ao",
+  "Quần": "quan",
+  "Váy": "vay",
+  "Đầm": "dam",
+  "Giày": "giay",
+  "Khác": "khac",
+};
+
 type PreparedUpload = {
   validatedInput: WardrobeItemInput;
   imageUrl: string;
@@ -138,15 +147,6 @@ export async function POST(req: Request) {
       }
       validatedItems.push(result.data);
     }
-
-    const asciiCategories: Record<CatKey, string> = {
-      "Áo": "ao",
-      "Quần": "quan",
-      "Váy": "vay",
-      "Đầm": "dam",
-      "Giày": "giay",
-      "Khác": "khac",
-    };
 
     const prepared = await mapLimit(validatedItems, 1, async (validatedInput, idx) => {
       const b64 = validatedInput.image_png_base64.includes(",")

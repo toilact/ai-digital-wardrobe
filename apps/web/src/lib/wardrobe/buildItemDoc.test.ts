@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildItemDoc } from "./buildItemDoc";
 
 describe("buildItemDoc", () => {
-  it("produces full structured doc", () => {
+  it("produces full structured doc with sourceImageId present", () => {
     const doc = buildItemDoc("u1", {
       category: "Áo", slot: "top", subType: "áo thun", image_png_base64: "x",
       colors: { hex: "#fff", nameVi: "Trắng" }, formality: 0.2, styleTags: ["casual"],
@@ -15,5 +15,20 @@ describe("buildItemDoc", () => {
     expect(doc.labelStatus).toBe("auto");
     expect(doc.embedding).toEqual([0.1, 0.2]);
     expect(doc.imageUrl).toBe("https://img");
+    expect(doc.source).toBe("segformer+refine");
+    expect(doc.embeddingModel).toBe("clip-vit-b32");
+    expect(doc.cloudinaryPublicId).toBe("pid1");
+    expect(doc.subType).toBe("áo thun");
+    expect(doc.category).toBe("Áo");
+  });
+
+  it("produces full structured doc with sourceImageId absent", () => {
+    const doc = buildItemDoc("u1", {
+      category: "Áo", slot: "top", subType: "áo thun", image_png_base64: "x",
+      colors: { hex: "#fff", nameVi: "Trắng" }, formality: 0.2, styleTags: ["casual"],
+      warmth: 0.3, embedding: [0.1, 0.2], embeddingModel: "clip-vit-b32", sourceImageId: null,
+    } as any, "https://img", "pid1");
+    expect(doc.source).toBe("flatlay+sam");
+    expect(doc.sourceImageId).toBe(null);
   });
 });
