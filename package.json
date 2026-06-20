@@ -2,43 +2,13 @@
   "name": "ai-digital-wardrobe",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@google/genai": "^1.40.0",
-    "@google/generative-ai": "^0.24.1",
-    "cloudinary": "^2.9.0",
-    "firebase": "^12.8.0",
-    "firebase-admin": "^13.6.0",
-    "next": "16.1.6",
-    "nodemailer": "^8.0.2",
-    "openai": "^6.18.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-icons": "^5.5.0",
-    "sharp": "^0.35.2",
-    "zod": "^4.3.6",
-    "zod-to-json-schema": "^3.25.1"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/nodemailer": "^7.0.11",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "autoprefixer": "^10.4.24",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
-    "typescript": "^5"
-  },
-  "allowScripts": {
-    "sharp@0.34.5": true,
-    "sharp@0.35.2": true
+    "turbo": "^2.3.3"
   }
 }
