@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
 import { parsePersonOnAi } from "@/lib/wardrobe/aiClient";
+import { withTimeout } from "@/lib/wardrobe/withTimeout";
 
 export const runtime = "nodejs";
 
@@ -20,8 +21,12 @@ async function uploadSource(buffer: Buffer, uid: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       { folder: `wardrobe/${uid}/_sources`, resource_type: "image" },
-      (err, result) => (err || !result ? reject(err) : resolve(result.public_id!)),
+      (err, result) =>
+        err || !result
+          ? reject(err || new Error("Cloudinary source upload failed: no result"))
+          : resolve(result.public_id!),
     );
+    stream.on("error", reject);
     stream.end(buffer);
   });
 }
@@ -39,7 +44,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const [out, sourceImageId] = await Promise.all([
       parsePersonOnAi(new Blob([buffer])),
-      uploadSource(buffer, uid),
+      withTimeout(uploadSource(buffer, uid), 310000, "Cloudinary source upload timeout"),
     ]);
     return NextResponse.json({ ...out, sourceImageId });
   } catch (e: any) {

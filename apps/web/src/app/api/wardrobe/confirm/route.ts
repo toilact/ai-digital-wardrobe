@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getAdmin } from "@/lib/firebaseAdmin";
 import { hasActiveVip } from "@adw/shared";
+import { withTimeout } from "@/lib/wardrobe/withTimeout";
 
 export const runtime = "nodejs";
 
@@ -16,22 +17,6 @@ function getBearerToken(req: Request) {
   const h = req.headers.get("authorization") || "";
   const m = h.match(/^Bearer\s+(.+)$/i);
   return m?.[1];
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(message)), ms);
-    promise.then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      }
-    );
-  });
 }
 
 async function optimizeTransparentImage(buffer: Buffer): Promise<Buffer> {
