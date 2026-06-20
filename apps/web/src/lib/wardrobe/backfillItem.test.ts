@@ -9,5 +9,9 @@ describe("backfillPatch", () => {
     expect(p.embeddingModel).toBe("clip-vit-b32");
     expect(p.formality).toBe(0.4);
     expect(p.labelStatus).toBe("backfilled");
+    expect(p.wearCount).toBe(0);
+    expect(p.lastWornAt).toBe(null);
+    expect(p.styleTags).toEqual(["casual"]);
+    expect(p.warmth).toBe(0.5);
   });
 });
