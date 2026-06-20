@@ -1060,8 +1060,16 @@ async def cutout(
     label_backend: str = Form("clip"),  # clip | none
 ):
     try:
-        if file.content_type not in ("image/jpeg", "image/png", "image/webp"):
-            return JSONResponse({"ok": False, "message": "Only jpg/png/webp supported"}, status_code=400)
+        ext = os.path.splitext(file.filename or "")[1].lower()
+        allowed_types = ("image/jpeg", "image/jpg", "image/png", "image/webp", "application/octet-stream")
+        is_allowed = (
+            file.content_type in allowed_types 
+            or (file.content_type and file.content_type.startswith("image/"))
+            or ext in (".jpg", ".jpeg", ".png", ".webp")
+        )
+        if not is_allowed:
+            return JSONResponse({"ok": False, "message": f"Unsupported file type: {file.content_type} ({file.filename})"}, status_code=400)
+
 
         img_bytes = await file.read()
         if not img_bytes:

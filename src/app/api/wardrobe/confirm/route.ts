@@ -187,7 +187,16 @@ export async function POST(req: Request) {
         optimizedKB: Math.round(optimizedBuffer.length / 1024),
       });
 
-      const folder = `wardrobe/${uid}/${category}`;
+      const asciiCategories: Record<CatKey, string> = {
+        "Áo": "ao",
+        "Quần": "quan",
+        "Váy": "vay",
+        "Đầm": "dam",
+        "Giày": "giay",
+        "Khác": "khac",
+      };
+      const folderCategory = asciiCategories[category] || "khac";
+      const folder = `wardrobe/${uid}/${folderCategory}`;
       const { secure_url, public_id } = await uploadBufferToCloudinary(optimizedBuffer, folder);
 
       return {
@@ -239,9 +248,9 @@ export async function POST(req: Request) {
     }
 
     // Increment itemQuantity
-    batch.update(userDocRef, {
+    batch.set(userDocRef, {
       itemQuantity: admin.firestore.FieldValue.increment(saved.length)
-    });
+    }, { merge: true });
 
     await withTimeout(batch.commit(), 15000, "Firestore batch commit timeout");
 

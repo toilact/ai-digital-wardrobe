@@ -300,9 +300,16 @@ export default function WardrobeUploader({
         body: JSON.stringify({ items: picked }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
+
       if (!res.ok) {
-        setAlertMsg(data?.message || "Thêm vào tủ thất bại.");
+        setAlertMsg(typeof data?.message === "string" && data.message.length < 200 ? data.message : "Thêm vào tủ thất bại.");
         console.error("CONFIRM FAIL:", data);
         return;
       }
