@@ -2,3 +2,8 @@ packages:
   - "apps/*"
   - "services/*"
   - "packages/*"
+
+# Build scripts allowed to run on install (pnpm 9+). sharp ships prebuilt
+# binaries but we whitelist it explicitly so native rebuilds aren't silently skipped.
+onlyBuiltDependencies:
+  - sharp
