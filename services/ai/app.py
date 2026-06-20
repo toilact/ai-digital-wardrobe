@@ -1210,11 +1210,13 @@ async def parse_person(file: UploadFile = File(...)):
         for g in garments:
             png_bytes, alpha_final, _mask, meta = _build_cutout(img_rgb, g["mask01"], crop=True)
             pil_rgba = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+            _c = _dominant_color_vi(pil_rgba)
+            _colors = {"hex": _c["colorHex"], "nameVi": _c["color"]} if "colorHex" in _c else None
             items.append({
                 "slot": g["slot"],
                 "category": g["category"],
                 "image_png_base64": base64.b64encode(png_bytes).decode("ascii"),
-                "colors": _dominant_color_vi(pil_rgba),
+                "colors": _colors,
                 "embedding": _clip_embedding(pil_rgba),
                 "embeddingModel": "clip-vit-b32",
                 "bbox": meta.get("roi", [0, 0, img_rgb.shape[1], img_rgb.shape[0]]),
